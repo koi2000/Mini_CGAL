@@ -3,4 +3,22 @@ project(Mini_CGAL)
 
 set(CMAKE_CXX_STANDARD 14)
 
-add_executable(Mini_CGAL main.cpp)
+set(PPMC_SOURCE_DIR "PPMC")
+set(RANGECODER_SOURCE_DIR "PPMC/rangeCoder")
+find_package(CGAL REQUIRED)
+find_package(OpenGL REQUIRED)
+find_package(GLUT REQUIRED)
+
+include(${CGAL_USE_FILE})
+
+# 获取源文件列表
+file(GLOB_RECURSE SOURCE_FILES
+        "${PPMC_SOURCE_DIR}/*.h"
+        "${PPMC_SOURCE_DIR}/*.cpp"
+        "${RANGECODER_SOURCE_DIR}/*.h"
+        "${RANGECODER_SOURCE_DIR}/*.c"
+        )
+
+add_executable(Mini_CGAL main.cpp ${SOURCE_FILES})
+set_target_properties(Mini_CGAL PROPERTIES COMPILE_FLAGS -frounding-math)
+target_link_libraries(Mini_CGAL ${CGAL_LIBRARIES} ${OPENGL_LIBRARY} ${GLUT_LIBRARY} m)
