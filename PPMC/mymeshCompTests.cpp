@@ -34,29 +34,29 @@ bool MyMesh::willViolateManifold(const std::vector<Halfedge_const_handle>& polyg
     return false;
 }
 
-bool MyMesh::isRemovable(Vertex_const_handle v) const {
+bool MyMesh::isRemovable(Vertex_handle v) const {
+    //	if(size_of_vertices()<10){
+    //		return false;
+    //	}
     if (v != vh_departureConquest[0] && v != vh_departureConquest[1] && !v->isConquered() && v->vertex_degree() > 2 &&
-        v->vertex_degree() <= 16) {
+        v->vertex_degree() <= 8) {
+        // test convexity
         std::vector<Vertex_const_handle> vh_oneRing;
         std::vector<Halfedge_const_handle> heh_oneRing;
+
         vh_oneRing.reserve(v->vertex_degree());
         heh_oneRing.reserve(v->vertex_degree());
+        // vh_oneRing.push_back(v);
         Halfedge_around_vertex_const_circulator hit(v->vertex_begin()), end(hit);
         do {
             vh_oneRing.push_back(hit->opposite()->vertex());
             heh_oneRing.push_back(hit->opposite());
         } while (++hit != end);
-
-#if 1
-        bool b_ret = !willViolateManifold(heh_oneRing) && (b_testConvexity ? isConvex(vh_oneRing) : true);
-#else
-        bool b_ret = !willViolateManifold(heh_oneRing) &&
-                     (b_testConvexity ? isConvex(vh_oneRing) : true)
-                     //&& isPlanar(vh_oneRing, 0.05)
-                     && removalError(v, vh_oneRing) < 0.5;
-#endif
-
-        return b_ret;
+        //
+        bool removable = !willViolateManifold(heh_oneRing);
+        // && isProtruding(heh_oneRing);
+        //&& isConvex(vh_oneRing)
+        return removable;
     }
     return false;
 }

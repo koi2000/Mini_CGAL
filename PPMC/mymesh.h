@@ -17,12 +17,13 @@
 #include <queue>
 
 // Range coder includes.
-#include "rangeCoder/qsmodel.h"
-#include "rangeCoder/rangecod.h"
+#include "util.h"
+#include <unordered_set>
 
 typedef CGAL::Simple_cartesian<float> MyKernel;
 typedef MyKernel::Point_3 Point;
 typedef MyKernel::Vector_3 Vector;
+typedef MyKernel::Triangle_3 Triangle;
 
 typedef CGAL::Simple_cartesian<double> MyKernelDouble;
 typedef MyKernelDouble::Vector_3 VectorDouble;
@@ -37,22 +38,51 @@ enum Operation {
     DecimationConquest,
     RemovedVertexCoding,
     InsertedEdgeCoding,
-    AdaptiveQuantization,// Compression.
+    AdaptiveQuantization,  // Compression.
     UndecimationConquest,
     InsertedEdgeDecoding,
-    AdaptiveUnquantization// Decompression.
+    AdaptiveUnquantization  // Decompression.
 };
 
-template<class Ref>
-class MyFace : public CGAL::HalfedgeDS_face_base<Ref> {
-    enum Flag { Unknown = 0,
-                Splittable = 1,
-                Unsplittable = 2 };
-    enum ProcessedFlag { NotProcessed,
-                         Processed };
+class replacing_group {
+  public:
+    replacing_group() {
+        // cout<<this<<" is constructed"<<endl;
+        id = counter++;
+        alive++;
+    }
+    ~replacing_group() {
+        removed_vertices.clear();
+        alive--;
+    }
 
-public:
-    MyFace() : flag(Unknown), processedFlag(NotProcessed) {}
+    void print() {
+        // log("%5d (%2d refs %4d alive) - removed_vertices: %ld", id, ref, alive, removed_vertices.size());
+    }
+
+    unordered_set<Point> removed_vertices;
+    // unordered_set<Triangle> removed_triangles;
+    int id;
+    int ref = 0;
+
+    static int counter;
+    static int alive;
+};
+
+// My face type has a vertex flag
+template <class Refs> class MyFace : public CGAL::HalfedgeDS_face_base<Refs> {
+    enum Flag { Unknown = 0, Splittable = 1, Unsplittable = 2 };
+    enum ProcessedFlag { NotProcessed, Processed };
+
+    Flag flag = Unknown;
+    ProcessedFlag processedFlag = NotProcessed;
+
+    Point removedVertexPos;
+    float proxy_hausdorff_distance = 0.0;
+    float hausdorff_distance = 0.0;
+
+  public:
+    MyFace() {}
 
     inline void resetState() {
         flag = Unknown;
@@ -101,31 +131,52 @@ public:
         removedVertexPos = p;
     }
 
-    inline VectorInt getResidual() const {
-        return residual;
+  public:
+    inline pair<float, float> getHausdorfDistance() {
+        return pair<float, float>(proxy_hausdorff_distance, hausdorff_distance);
     }
 
-    inline void setResidual(VectorInt v) {
-        residual = v;
+    inline void resetHausdorff() {
+        hausdorff_distance = 0.0;
+        proxy_hausdorff_distance = 0.0;
     }
 
-private:
-    Flag flag;
-    ProcessedFlag processedFlag;
-    Point removedVertexPos;
-    VectorInt residual;
+    inline void setProxyHausdorff(float prh) {
+        proxy_hausdorff_distance = prh;
+    }
+
+    inline void setHausdorff(float hd) {
+        hausdorff_distance = hd;
+    }
+
+    inline void updateProxyHausdorff(float prh) {
+        proxy_hausdorff_distance = max(prh, proxy_hausdorff_distance);
+    }
+
+    inline void updateHausdorff(float hd) {
+        hausdorff_distance = max(hd, hausdorff_distance);
+    }
+
+    inline float getProxyHausdorff() {
+        return proxy_hausdorff_distance;
+    }
+
+    inline float getHausdorff() {
+        return hausdorff_distance;
+    }
+    replacing_group* rg = NULL;
+    vector<Triangle> triangles;
+    MyTriangle* tri = NULL;
 };
 
 // My vertex type has a isConquered flag
-template<class Refs>
-class MyVertex : public CGAL::HalfedgeDS_vertex_base<Refs, CGAL::Tag_true, Point> {
-    enum Flag { Unconquered = 0,
-                Conquered = 1 };
+template <class Refs> class MyVertex : public CGAL::HalfedgeDS_vertex_base<Refs, CGAL::Tag_true, Point> {
+    enum Flag { Unconquered = 0, Conquered = 1 };
 
-public:
+  public:
     MyVertex() : CGAL::HalfedgeDS_vertex_base<Refs, CGAL::Tag_true, Point>(), flag(Unconquered) {}
 
-    MyVertex(const Point &p) : CGAL::HalfedgeDS_vertex_base<Refs, CGAL::Tag_true, Point>(p), flag(Unconquered) {}
+    MyVertex(const Point& p) : CGAL::HalfedgeDS_vertex_base<Refs, CGAL::Tag_true, Point>(p), flag(Unconquered) {}
 
     inline void resetState() {
         flag = Unconquered;
@@ -163,7 +214,7 @@ public:
         oldPos = pos;
     }
 
-private:
+  private:
     Flag flag;
     size_t id;
     unsigned i_quantCellId;
@@ -171,19 +222,12 @@ private:
 };
 
 // My vertex type has a isConquered flag
-template<class Refs>
-class MyHalfedge : public CGAL::HalfedgeDS_halfedge_base<Refs> {
-    enum Flag { NotYetInQueue = 0,
-                InQueue = 1,
-                InQueue2 = 2,
-                NoLongerInQueue = 3 };
-    enum Flag2 { Original,
-                 Added,
-                 New };
-    enum ProcessedFlag { NotProcessed,
-                         Processed };
+template <class Refs> class MyHalfedge : public CGAL::HalfedgeDS_halfedge_base<Refs> {
+    enum Flag { NotYetInQueue = 0, InQueue = 1, InQueue2 = 2, NoLongerInQueue = 3 };
+    enum Flag2 { Original, Added, New };
+    enum ProcessedFlag { NotProcessed, Processed };
 
-public:
+  public:
     MyHalfedge() : flag(NotYetInQueue), flag2(Original), processedFlag(NotProcessed) {}
 
     inline void resetState() {
@@ -254,27 +298,28 @@ public:
         return flag2 == New;
     }
 
-private:
+  private:
     Flag flag;
     Flag2 flag2;
     ProcessedFlag processedFlag;
 };
 
-struct MyItems : public CGAL::Polyhedron_items_3 {
-    template<class Refs, class Traits>
-    struct Face_wrapper { typedef MyFace<Refs> Face; };
+struct MyItems : public CGAL::Polyhedron_items_3
+{
+    template <class Refs, class Traits> struct Face_wrapper
+    { typedef MyFace<Refs> Face; };
 
-    template<class Refs, class Traits>
-    struct Vertex_wrapper { typedef MyVertex<Refs> Vertex; };
+    template <class Refs, class Traits> struct Vertex_wrapper
+    { typedef MyVertex<Refs> Vertex; };
 
-    template<class Refs, class Traits>
-    struct Halfedge_wrapper { typedef MyHalfedge<Refs> Halfedge; };
+    template <class Refs, class Traits> struct Halfedge_wrapper
+    { typedef MyHalfedge<Refs> Halfedge; };
 };
 
 class MyMesh : public CGAL::Polyhedron_3<MyKernel, MyItems> {
     typedef CGAL::Polyhedron_3<MyKernel, MyItems> PolyhedronT;
 
-public:
+  public:
     MyMesh(char filename[],
            std::string filePathOutput,
            unsigned i_decompPercentage,
@@ -289,6 +334,9 @@ public:
            bool b_useTriangleMeshConnectivityPredictionFaces);
 
     ~MyMesh();
+
+    // simple
+    void encode(int lod);
 
     void stepOperation();
 
@@ -308,7 +356,7 @@ public:
 
     void startCompress();
 
-private:
+  private:
     // General
     void computeBoundingBox();
 
@@ -345,20 +393,20 @@ private:
 
     void adaptiveQuantizationStep();
 
-    void encodeAdaptiveQuantization(std::deque<unsigned> &symbols);
+    void encodeAdaptiveQuantization(std::deque<unsigned>& symbols);
 
     void lift();
 
     // Compression geometry and connectivity tests;
-    bool isRemovable(Vertex_const_handle v) const;
+    bool isRemovable(Vertex_handle v) const;
 
-    bool isConvex(const std::vector<Vertex_const_handle> &polygon) const;
+    bool isConvex(const std::vector<Vertex_const_handle>& polygon) const;
 
-    bool isPlanar(const std::vector<Vertex_const_handle> &polygon, float epsilon) const;
+    bool isPlanar(const std::vector<Vertex_const_handle>& polygon, float epsilon) const;
 
-    bool willViolateManifold(const std::vector<Halfedge_const_handle> &polygon) const;
+    bool willViolateManifold(const std::vector<Halfedge_const_handle>& polygon) const;
 
-    float removalError(Vertex_const_handle v, const std::vector<Vertex_const_handle> &polygon) const;
+    float removalError(Vertex_const_handle v, const std::vector<Vertex_const_handle>& polygon) const;
 
     // Decompression
     void startNextDecompressionOp();
@@ -396,13 +444,13 @@ private:
     // Utils
     Vector computeNormal(Halfedge_const_handle heh_gate) const;
 
-    Vector computeNormal(const std::vector<Vertex_const_handle> &polygon) const;
+    Vector computeNormal(const std::vector<Vertex_const_handle>& polygon) const;
 
     Vector computeNormal(Point p[3]) const;
 
     Point barycenter(Halfedge_handle heh_gate) const;
 
-    Point barycenter(const std::vector<Vertex_const_handle> &polygon) const;
+    Point barycenter(const std::vector<Vertex_const_handle>& polygon) const;
 
     unsigned vertexDegreeNotNew(Vertex_const_handle vh) const;
 
@@ -453,7 +501,7 @@ private:
 
     // Processing mode: 0 for compression and 1 for decompression.
     int i_mode;
-    bool b_jobCompleted;// True if the job has been completed.
+    bool b_jobCompleted;  // True if the job has been completed.
 
     Operation operation;
     unsigned i_curDecimationId;
@@ -469,7 +517,7 @@ private:
     // conquests.
     Vertex_handle vh_departureConquest[2];
 
-    std::deque<unsigned> typeOfOperation;// O - decimation, 1 - adaptive quantization.
+    std::deque<unsigned> typeOfOperation;  // O - decimation, 1 - adaptive quantization.
 
     // Geometry symbol list.
     std::deque<std::deque<VectorInt>> geometrySym;
@@ -501,8 +549,8 @@ private:
     size_t i_nbFacetsInit;
 
     // The compressed data;
-    char *p_data;
-    size_t dataOffset;// the offset to read and write.
+    char* p_data;
+    size_t dataOffset;  // the offset to read and write.
 
     std::string filePathOutput;
     unsigned i_decompPercentage;
@@ -543,4 +591,4 @@ private:
     bool b_useTriangleMeshConnectivityPredictionFaces;
 };
 
-#endif//PROGRESSIVEPOLYGONS_MYMESH_H
+#endif  // PROGRESSIVEPOLYGONS_MYMESH_H
