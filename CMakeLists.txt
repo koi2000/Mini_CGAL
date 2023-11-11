@@ -1,10 +1,25 @@
-cmake_minimum_required(VERSION 3.17)
+cmake_minimum_required(VERSION 3.16)
 project(Mini_CGAL)
 
 set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -g -Wno-unused-result")
+
+include_directories(
+    ./include
+    /usr/include
+    /usr/local/include
+    /usr/local/cgal/include
+    /usr/local/include/eigen3
+)
+
+# Add library paths
+link_directories(
+    /usr/local/cgal/lib
+    /usr/lib/x86_64-linux-gnu/
+)
 
 set(PPMC_SOURCE_DIR "PPMC")
-set(RANGECODER_SOURCE_DIR "PPMC/rangeCoder")
+# set(RANGECODER_SOURCE_DIR "PPMC/rangeCoder")
 find_package(CGAL REQUIRED)
 find_package(OpenGL REQUIRED)
 find_package(GLUT REQUIRED)
@@ -15,8 +30,8 @@ include(${CGAL_USE_FILE})
 file(GLOB_RECURSE SOURCE_FILES
         "${PPMC_SOURCE_DIR}/*.h"
         "${PPMC_SOURCE_DIR}/*.cpp"
-        "${RANGECODER_SOURCE_DIR}/*.h"
-        "${RANGECODER_SOURCE_DIR}/*.c"
+        # "${RANGECODER_SOURCE_DIR}/*.h"
+        # "${RANGECODER_SOURCE_DIR}/*.c"
         )
 
 add_executable(Mini_CGAL main.cpp ${SOURCE_FILES})

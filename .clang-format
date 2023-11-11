@@ -61,13 +61,13 @@ BraceWrapping:
   # ObjC定义后面
   AfterObjCDeclaration:	false
   # struct定义后面
-  AfterStruct:	true
+  AfterStruct:	false
   # union定义后面
-  AfterUnion:	true
+  AfterUnion:	false
 
   AfterExternBlock: false
   # catch之前
-  BeforeCatch:	true
+  BeforeCatch:	false
   # else之前
   BeforeElse:	false
   # 缩进大括号
