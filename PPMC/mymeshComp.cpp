@@ -87,24 +87,22 @@ void MyMesh::startNextCompresssionOp() {
         b_jobCompleted = true;
         i_nbDecimations = i_curDecimationId--;
         // Write the compressed data to the buffer.
-        // TODO: 
-        // writeBaseMesh();
+        writeBaseMesh();
         // 按顺序写入数据
         int i_deci = i_curDecimationId;
         assert(i_deci > 0);
         while (i_deci >= 0) {
-            // TODO: 
             // encodeHausdorff(i_deci);
-            // encodeRemovedVertices(i_deci);
-            // encodeInsertedEdges(i_deci);
+            encodeRemovedVertices(i_deci);
+            encodeInsertedEdges(i_deci);
             i_deci--;
         }
     } else {
         // 3dpro: compute and encode the Hausdorff distance for all the facets in this LOD
         // computeHausdorfDistance();
         // HausdorffCodingStep();
-        // RemovedVertexCodingStep();
-        // InsertedEdgeCodingStep();
+        RemovedVertexCodingStep();
+        InsertedEdgeCodingStep();
         // finish this round of decimation and start the next
         i_curDecimationId++;  // Increment the current decimation operation id.
     }
@@ -117,7 +115,7 @@ void MyMesh::merge(unordered_set<replacing_group*>& reps, replacing_group* ret) 
         // ret->removed_triangles.insert(r->removed_triangles.begin(), r->removed_triangles.end());
         // ret->removed_facets.insert(r->removed_facets.begin(), r->removed_facets.end());
         if (map_group.find(r) == map_group.end()) {
-            //log("%d is not found", r->id);
+            // log("%d is not found", r->id);
         }
         assert(map_group.find(r) != map_group.end());
         if (r->ref == 0) {
@@ -228,6 +226,164 @@ MyMesh::Halfedge_handle MyMesh::vertexCut(Halfedge_handle startH) {
     return hNewFace;
 }
 
-void MyMesh::RemovedVertexCodingStep(){
-    
+void MyMesh::RemovedVertexCodingStep() {
+    // resize the vectors to add the current conquest symbols
+    geometrySym.push_back(std::deque<Point>());
+    connectFaceSym.push_back(std::deque<unsigned>());
+
+    // Add the first halfedge to the queue.
+    pushHehInit();
+    // bfs to add all the point
+    while (!gateQueue.empty()) {
+        Halfedge_handle h = gateQueue.front();
+        gateQueue.pop();
+
+        Face_handle f = h->facet();
+
+        // If the face is already processed, pick the next halfedge:
+        if (f->isProcessed())
+            continue;
+
+        // Determine face symbol.
+        unsigned sym = f->isSplittable();
+
+        // Push the symbols.
+        connectFaceSym[i_curDecimationId].push_back(sym);
+
+        // Determine the geometry symbol.
+        if (sym) {
+            Point rmved = f->getRemovedVertexPos();
+            geometrySym[i_curDecimationId].push_back(rmved);
+            // record the removed points during compressing.
+        }
+
+        // Mark the face as processed.
+        f->setProcessedFlag();
+
+        // Add the other halfedges to the queue
+        Halfedge_handle hIt = h;
+        do {
+            Halfedge_handle hOpp = hIt->opposite();
+            assert(!hOpp->is_border());
+            if (!hOpp->facet()->isProcessed())
+                gateQueue.push(hOpp);
+            hIt = hIt->next();
+        } while (hIt != h);
+    }
+}
+
+void MyMesh::InsertedEdgeCodingStep() {
+    connectFaceSym.push_back(std::deque<unsigned>());
+    pushHehInit();
+    while (!gateQueue.empty()) {
+        Halfedge_handle h = gateQueue.front();
+        gateQueue.pop();
+        if (h->isProcessed()) {
+            continue;
+        }
+        // Mark the halfedge as processed.
+        h->setProcessed();
+        h->opposite()->setProcessed();
+
+        // Add the other halfedges to the queue
+        Halfedge_handle hIt = h->next();
+        while (hIt->opposite() != h) {
+            if (!hIt->isProcessed())
+                gateQueue.push(hIt);
+            hIt = hIt->opposite()->next();
+        }
+
+        // Don't write a symbol if the two faces of an edgde are unsplitable.
+        // this can help to save some space, since it is guaranteed that the edge is not inserted
+        bool b_toCode = h->facet()->isUnsplittable() && h->opposite()->facet()->isUnsplittable() ? false : true;
+
+        // Determine the edge symbol.
+        unsigned sym;
+        if (h->isOriginal())
+            sym = 0;
+        else
+            sym = 1;
+
+        // Store the symbol if needed.
+        if (b_toCode)
+            connectEdgeSym[i_curDecimationId].push_back(sym);
+    }
+}
+
+void MyMesh::writeBaseMesh() {
+    for (unsigned i = 0; i < 3; i++) {
+        writeFloat((float)mbb.low[i]);
+    }
+    for (unsigned i = 0; i < 3; i++) {
+        writeFloat((float)mbb.high[i]);
+    }
+    unsigned i_nbVerticesBaseMesh = size_of_vertices();
+    unsigned i_nbFacesBaseMesh = size_of_facets();
+    // Write the number of level of decimations.
+    writeInt16(i_nbDecimations);
+
+    // Write the number of vertices and faces on 16 bits.
+    writeInt(i_nbVerticesBaseMesh);
+    writeInt(i_nbFacesBaseMesh);
+    size_t id = 0;
+    for (unsigned j = 0; j < 2; ++j) {
+        writePoint(vh_departureConquest[j]->point());
+        vh_departureConquest[j]->setId(id++);
+    }
+    // Write the other vertices.
+    for (MyMesh::Vertex_iterator vit = vertices_begin(); vit != vertices_end(); ++vit) {
+        if (vit == vh_departureConquest[0] || vit == vh_departureConquest[1])
+            continue;
+        writePoint(vit->point());
+        // Set an id to the vertex.
+        vit->setId(id++);
+    }
+    // Write the base mesh face vertex indices.
+    for (MyMesh::Facet_iterator fit = facets_begin(); fit != facets_end(); ++fit) {
+        unsigned i_faceDegree = fit->facet_degree();
+        writeInt(i_faceDegree);
+        Halfedge_around_facet_const_circulator hit(fit->facet_begin()), end(hit);
+        do {
+            // Write the current vertex id.
+            writeInt(hit->vertex()->getId());
+        } while (++hit != end);
+    }
+}
+
+/**
+ * Encode an inserted edge list.
+ */
+void MyMesh::encodeInsertedEdges(unsigned i_operationId) {
+    std::deque<unsigned>& symbols = connectEdgeSym[i_operationId];
+    assert(symbols.size() > 0);
+
+    unsigned i_len = symbols.size();
+    for (unsigned i = 0; i < i_len; ++i) {
+        writeChar(symbols[i]);
+    }
+}
+
+/**
+ * Encode the geometry and the connectivity of a removed vertex list.
+ */
+void MyMesh::encodeRemovedVertices(unsigned i_operationId) {
+    std::deque<unsigned>& connSym = connectFaceSym[i_operationId];
+    std::deque<Point>& geomSym = geometrySym[i_operationId];
+
+    unsigned i_lenGeom = geomSym.size();
+    unsigned i_lenConn = connSym.size();
+    assert(i_lenGeom > 0);
+    assert(i_lenConn > 0);
+
+    unsigned k = 0;
+    for (unsigned i = 0; i < i_lenConn; ++i) {
+        // Encode the connectivity.
+        unsigned sym = connSym[i];
+        writeChar(sym);
+        // Encode the geometry if necessary.
+        if (sym) {
+            writePoint(geomSym[k]);
+            k++;
+        }
+    }
 }

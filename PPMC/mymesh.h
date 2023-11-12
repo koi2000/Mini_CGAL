@@ -61,6 +61,7 @@
 #include <boost/algorithm/string/replace.hpp>
 #include <vector>
 #include "util.h"
+#include "aab.h"
 
 // Size of the compressed data buffer.
 // for configuration
@@ -427,6 +428,7 @@ class MyMesh : public CGAL::Polyhedron_3<MyKernel, MyItems> {
     char* p_data;
     size_t dataOffset = 0;  // the offset to read and write.
 
+    aab mbb;  // the bounding box
     
     SegTree* segment_tree = NULL;
     TriangleTree* triangle_tree = NULL;
@@ -483,20 +485,6 @@ class MyMesh : public CGAL::Polyhedron_3<MyKernel, MyItems> {
     void insertRemovedVertices();
     void removeInsertedEdges();
 
-    // Utils
-    Vector computeNormal(Halfedge_const_handle heh_gate) const;
-    Vector computeNormal(const std::vector<Vertex_const_handle>& polygon) const;
-    Vector computeNormal(Point p[3]) const;
-    Vector computeNormal(Facet_const_handle f) const;
-    Vector computeVertexNormal(Halfedge_const_handle heh) const;
-    Point barycenter(Facet_const_handle f) const;
-    Point barycenter(Halfedge_handle heh_gate) const;
-    Point barycenter(const std::vector<Vertex_const_handle>& polygon) const;
-    unsigned vertexDegreeNotNew(Vertex_const_handle vh) const;
-    float triangleSurface(const Point p[]) const;
-    float edgeLen(Halfedge_const_handle heh) const;
-    float facePerimeter(const Face_handle fh) const;
-    float faceSurface(Halfedge_handle heh) const;
     void pushHehInit();
 
     void alphaFolding();
