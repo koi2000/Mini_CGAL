@@ -273,7 +273,7 @@ void MyMesh::RemovedVertexCodingStep() {
 }
 
 void MyMesh::InsertedEdgeCodingStep() {
-    connectFaceSym.push_back(std::deque<unsigned>());
+    connectEdgeSym.push_back(std::deque<unsigned>());
     pushHehInit();
     while (!gateQueue.empty()) {
         Halfedge_handle h = gateQueue.front();

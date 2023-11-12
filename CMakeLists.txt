@@ -37,3 +37,7 @@ file(GLOB_RECURSE SOURCE_FILES
 add_executable(Mini_CGAL main.cpp ${SOURCE_FILES})
 set_target_properties(Mini_CGAL PROPERTIES COMPILE_FLAGS -frounding-math)
 target_link_libraries(Mini_CGAL ${CGAL_LIBRARIES} ${OPENGL_LIBRARY} ${GLUT_LIBRARY} m)
+
+add_executable(compress tools/compress.cpp ${SOURCE_FILES})
+set_target_properties(Mini_CGAL PROPERTIES COMPILE_FLAGS -frounding-math)
+target_link_libraries(compress ${CGAL_LIBRARIES} ${OPENGL_LIBRARY} ${GLUT_LIBRARY} m)

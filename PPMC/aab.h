@@ -49,7 +49,7 @@ class aab {
     float high[3];
 
   public:
-    aab();
+    aab(){}
     aab(const aab& b);
     aab(float min_x, float min_y, float min_z, float max_x, float max_y, float max_z);
     void set_box(float l0, float l1, float l2, float h0, float h1, float h2);

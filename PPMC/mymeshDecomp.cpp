@@ -29,7 +29,12 @@ void MyMesh::startNextDecompresssionOp() {
     i_curDecimationId++;  // increment the current decimation operation id.
     // 2. decoding the removed vertices and add to target facets
     RemovedVerticesDecodingStep();
-    // 3. decoding the
+    // 3. decoding the inserted edge and marking the ones added
+    InsertedEdgeDecodingStep();
+    // 4. truly insert the removed vertices
+    insertRemovedVertices();
+    // 5. truly remove the added edges
+    removeInsertedEdges();
 }
 
 void MyMesh::readBaseMesh() {
@@ -159,10 +164,16 @@ void MyMesh::insertRemovedVertices() {
     while (!gateQueue.empty()) {
         Halfedge_handle h = gateQueue.front();
         gateQueue.pop();
+
         Face_handle f = h->facet();
-        if (f->isProcessed()) {
+
+        // If the face is already processed, pick the next halfedge:
+        if (f->isProcessed())
             continue;
-        }
+
+        // Mark the face as processed.
+        f->setProcessedFlag();
+
         // Add the other halfedges to the queue
         Halfedge_handle hIt = h;
         do {
@@ -173,10 +184,12 @@ void MyMesh::insertRemovedVertices() {
             hIt = hIt->next();
         } while (hIt != h);
         assert(!h->isNew());
-        if(f->isSplittable()){
-            // Insert the vertex
+
+        if (f->isSplittable()) {
+            // Insert the vertex.
             Halfedge_handle hehNewVertex = create_center_vertex(h);
             hehNewVertex->vertex()->point() = f->getRemovedVertexPos();
+
             // Mark all the created edges as new.
             Halfedge_around_vertex_circulator Hvc = hehNewVertex->vertex_begin();
             Halfedge_around_vertex_circulator Hvc_end = Hvc;
