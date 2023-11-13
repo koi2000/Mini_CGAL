@@ -9,7 +9,7 @@
             "type": "cppdbg",
             "request": "launch",
             //"program": "${workspaceFolder}/build/bin/observer",
-            "program": "/home/koi/mastercode/Mini_CGAL/build/compress",
+            "program": "/home/koi/mastercode/Mini_CGAL/build/Mini_CGAL_test",
             //"args": ["-f", "../../etc/observer.ini"],
             "args": ["/home/koi/mastercode/Mini_CGAL/build/fixed.OFF"],
             "stopAtEntry": false,

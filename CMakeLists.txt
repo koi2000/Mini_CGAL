@@ -3,6 +3,7 @@ project(Mini_CGAL)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -g -Wno-unused-result")
+set(CMAKE_BUILD_TYPE "Debug")
 
 include_directories(
     ./include
@@ -19,6 +20,7 @@ link_directories(
 )
 
 set(PPMC_SOURCE_DIR "PPMC")
+set(MINICGAL_SOURCE_DIR "MCGAL")
 # set(RANGECODER_SOURCE_DIR "PPMC/rangeCoder")
 find_package(CGAL REQUIRED)
 find_package(OpenGL REQUIRED)
@@ -30,14 +32,18 @@ include(${CGAL_USE_FILE})
 file(GLOB_RECURSE SOURCE_FILES
         "${PPMC_SOURCE_DIR}/*.h"
         "${PPMC_SOURCE_DIR}/*.cpp"
-        # "${RANGECODER_SOURCE_DIR}/*.h"
-        # "${RANGECODER_SOURCE_DIR}/*.c"
+        "${MINICGAL_SOURCE_DIR}/*.h"
+        "${MINICGAL_SOURCE_DIR}/*.cpp"
         )
 
-add_executable(Mini_CGAL main.cpp ${SOURCE_FILES})
-set_target_properties(Mini_CGAL PROPERTIES COMPILE_FLAGS -frounding-math)
-target_link_libraries(Mini_CGAL ${CGAL_LIBRARIES} ${OPENGL_LIBRARY} ${GLUT_LIBRARY} m)
+# add_executable(Mini_CGAL main.cpp ${SOURCE_FILES})
+# set_target_properties(Mini_CGAL PROPERTIES COMPILE_FLAGS -frounding-math)
+# target_link_libraries(Mini_CGAL ${CGAL_LIBRARIES} ${OPENGL_LIBRARY} ${GLUT_LIBRARY} m)
 
-add_executable(compress tools/compress.cpp ${SOURCE_FILES})
-set_target_properties(Mini_CGAL PROPERTIES COMPILE_FLAGS -frounding-math)
-target_link_libraries(compress ${CGAL_LIBRARIES} ${OPENGL_LIBRARY} ${GLUT_LIBRARY} m)
+# add_executable(compress tools/compress.cpp ${SOURCE_FILES})
+# set_target_properties(Mini_CGAL PROPERTIES COMPILE_FLAGS -frounding-math)
+# target_link_libraries(compress ${CGAL_LIBRARIES} ${OPENGL_LIBRARY} ${GLUT_LIBRARY} m)
+
+add_executable(Mini_CGAL_test tools/MiniCGAL_test.cpp ${SOURCE_FILES})
+set_target_properties(Mini_CGAL_test PROPERTIES COMPILE_FLAGS -frounding-math)
+target_link_libraries(Mini_CGAL_test ${CGAL_LIBRARIES} ${OPENGL_LIBRARY} ${GLUT_LIBRARY} m)
