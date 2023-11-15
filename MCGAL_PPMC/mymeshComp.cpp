@@ -45,7 +45,7 @@ void MyMesh::startNextCompresssionOp() {
         // pick a the first halfedge from the queue. f is the adjacent face.
         // TODO: 待完善
         // assert(!h->is_border());
-        Face_handle f = h->facet();
+        MyFace* f = static_cast<MyFace*>(h->face);
 
         // if the face is already processed, pick the next halfedge:
         if (f->isConquered()) {
@@ -54,12 +54,12 @@ void MyMesh::startNextCompresssionOp() {
         }
         // the face is not processed. Count the number of non conquered vertices that can be split
         bool hasRemovable = false;
-        Halfedge_handle unconqueredVertexHE;
+        MyHalfedge* unconqueredVertexHE;
 
-        for (Halfedge_handle hh = h->next(); hh != h; hh = hh->next()) {
-            if (isRemovable(hh->vertex())) {
+        for (MCGAL::Halfedge* hh = h->next; hh != h; hh = hh->next) {
+            if (isRemovable(static_cast<MyVertex*>(hh->vertex))) {
                 hasRemovable = true;
-                unconqueredVertexHE = hh;
+                unconqueredVertexHE = static_cast<MyHalfedge*>(hh);
                 break;
             }
         }
@@ -68,10 +68,10 @@ void MyMesh::startNextCompresssionOp() {
         if (!hasRemovable) {
             f->setUnsplittable();
             // and add the outer halfedges to the queue. Also mark the vertices of the face conquered
-            Halfedge_handle hh = h;
+            MyHalfedge* hh = h;
             do {
-                hh->vertex()->setConquered();
-                Halfedge_handle hOpp = hh->opposite();
+                hh->vertex->setConquered();
+                Halfedge_handle hOpp = hh->opposite;
                 assert(!hOpp->is_border());
                 if (!hOpp->facet()->isConquered()) {
                     gateQueue.push(hOpp);
