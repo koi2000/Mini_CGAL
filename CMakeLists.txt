@@ -21,6 +21,8 @@ link_directories(
 
 set(PPMC_SOURCE_DIR "PPMC")
 set(MINICGAL_SOURCE_DIR "MCGAL")
+set(MINICGAL_PPMC_SOURCE_DIR "MCGAL_PPMC")
+
 # set(RANGECODER_SOURCE_DIR "PPMC/rangeCoder")
 find_package(CGAL REQUIRED)
 find_package(OpenGL REQUIRED)
@@ -29,21 +31,29 @@ find_package(GLUT REQUIRED)
 include(${CGAL_USE_FILE})
 
 # 获取源文件列表
-file(GLOB_RECURSE SOURCE_FILES
-        "${PPMC_SOURCE_DIR}/*.h"
-        "${PPMC_SOURCE_DIR}/*.cpp"
-        "${MINICGAL_SOURCE_DIR}/*.h"
-        "${MINICGAL_SOURCE_DIR}/*.cpp"
-        )
+file(GLOB_RECURSE PPMC_FILES
+    "${PPMC_SOURCE_DIR}/*.h"
+    "${PPMC_SOURCE_DIR}/*.cpp"
+)
 
-# add_executable(Mini_CGAL main.cpp ${SOURCE_FILES})
-# set_target_properties(Mini_CGAL PROPERTIES COMPILE_FLAGS -frounding-math)
-# target_link_libraries(Mini_CGAL ${CGAL_LIBRARIES} ${OPENGL_LIBRARY} ${GLUT_LIBRARY} m)
+file(GLOB_RECURSE MINI_CGAL_FILES
+    "${MINICGAL_SOURCE_DIR}/*.h"
+    "${MINICGAL_SOURCE_DIR}/*.cpp"
+)
 
-# add_executable(compress tools/compress.cpp ${SOURCE_FILES})
-# set_target_properties(Mini_CGAL PROPERTIES COMPILE_FLAGS -frounding-math)
-# target_link_libraries(compress ${CGAL_LIBRARIES} ${OPENGL_LIBRARY} ${GLUT_LIBRARY} m)
+file(GLOB_RECURSE MINICGAL_PPMC_SOURCE_DIR
+    "${MINICGAL_PPMC_SOURCE_DIR}/*.h"
+    "${MINICGAL_PPMC_SOURCE_DIR}/*.cpp"
+)
 
-add_executable(Mini_CGAL_test tools/MiniCGAL_test.cpp ${SOURCE_FILES})
+add_executable(Mini_CGAL main.cpp ${PPMC_FILES})
+set_target_properties(Mini_CGAL PROPERTIES COMPILE_FLAGS -frounding-math)
+target_link_libraries(Mini_CGAL ${CGAL_LIBRARIES} ${OPENGL_LIBRARY} ${GLUT_LIBRARY} m)
+
+add_executable(compress tools/compress.cpp ${PPMC_FILES})
+set_target_properties(Mini_CGAL PROPERTIES COMPILE_FLAGS -frounding-math)
+target_link_libraries(compress ${CGAL_LIBRARIES} ${OPENGL_LIBRARY} ${GLUT_LIBRARY} m)
+
+add_executable(Mini_CGAL_test tools/MiniCGAL_test.cpp ${MINI_CGAL_FILES})
 set_target_properties(Mini_CGAL_test PROPERTIES COMPILE_FLAGS -frounding-math)
 target_link_libraries(Mini_CGAL_test ${CGAL_LIBRARIES} ${OPENGL_LIBRARY} ${GLUT_LIBRARY} m)

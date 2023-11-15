@@ -2,8 +2,8 @@
 #include <assert.h>
 #include <fstream>
 #include <iostream>
-#include <string>
 #include <sstream>
+#include <string>
 namespace MCGAL {
 
 Mesh::~Mesh() {
@@ -14,8 +14,12 @@ Mesh::~Mesh() {
         assert(p->halfedges.size() == (int)0 && p->opposite_half_edges.size() == 0);
         delete p;
     }
+    for (Halfedge* e : halfedges) {
+        delete e;
+    }
     vertices.clear();
     faces.clear();
+    halfedges.clear();
 }
 
 Face* Mesh::add_face(std::vector<Vertex*>& vs) {
@@ -32,7 +36,6 @@ bool Mesh::loadOFF(std::string path) {
         std::cerr << "Error: Unable to open file " << path << std::endl;
         return false;
     }
-    
 
     std::stringstream file;
     file << fp.rdbuf();  // Read the entire file content into a stringstream
@@ -58,7 +61,7 @@ bool Mesh::loadOFF(std::string path) {
         float x, y, z;
         file >> x >> y >> z;
         Vertex* vt = new Vertex(x, y, z);
-        vt->setId(i);
+        vt->setVid(i);
         this->vertices.insert(vt);
         vertices.push_back(vt);
     }
@@ -83,6 +86,51 @@ bool Mesh::loadOFF(std::string path) {
     vertices.clear();
     fp.close();
     return true;
+}
+
+std::istream& operator>>(std::istream& input, Mesh& mesh) {
+    std::string format;
+    // 读取 OFF 文件格式信息
+    input >> format >> mesh.nb_vertices >> mesh.nb_faces >> mesh.nb_edges;
+
+    if (format != "OFF") {
+        std::cerr << "Error: Invalid OFF file format" << std::endl;
+    }
+
+    // 辅助数组，用于创建faces
+    std::vector<Vertex*> vertices;
+    // 读取顶点并添加到 Mesh
+    for (std::size_t i = 0; i < mesh.nb_vertices; ++i) {
+        float x, y, z;
+        input >> x >> y >> z;
+        Vertex* vt = new Vertex(x, y, z);
+        vt->setVid(i);
+        mesh.vertices.insert(vt);
+        vertices.push_back(vt);
+    }
+
+    // 读取面信息并添加到 Mesh
+    for (int i = 0; i < mesh.nb_faces; ++i) {
+        int num_face_vertices;
+        input >> num_face_vertices;
+        // std::vector<Face*> faces;
+        std::vector<Vertex*> vts;
+        // std::vector<int> idxs;
+        for (int j = 0; j < num_face_vertices; ++j) {
+            int vertex_index;
+            input >> vertex_index;
+            vts.push_back(vertices[vertex_index]);
+            // idxs.push_back(vertex_index);
+        }
+        Face* face = mesh.add_face(vts);
+        for (Halfedge* halfedge : face->halfedges) {
+            mesh.halfedges.push_back(halfedge);
+        }
+        // this->face_index.push_back(idxs);
+    }
+    // 清空 vector
+    vertices.clear();
+    return input;
 }
 
 void Mesh::dumpto(std::string path) {
