@@ -41,7 +41,7 @@ file(GLOB_RECURSE MINI_CGAL_FILES
     "${MINICGAL_SOURCE_DIR}/*.cpp"
 )
 
-file(GLOB_RECURSE MINICGAL_PPMC_SOURCE_DIR
+file(GLOB_RECURSE MINICGAL_PPMC_FILES
     "${MINICGAL_PPMC_SOURCE_DIR}/*.h"
     "${MINICGAL_PPMC_SOURCE_DIR}/*.cpp"
 )
@@ -57,3 +57,7 @@ target_link_libraries(compress ${CGAL_LIBRARIES} ${OPENGL_LIBRARY} ${GLUT_LIBRAR
 add_executable(Mini_CGAL_test tools/MiniCGAL_test.cpp ${MINI_CGAL_FILES})
 set_target_properties(Mini_CGAL_test PROPERTIES COMPILE_FLAGS -frounding-math)
 target_link_libraries(Mini_CGAL_test ${CGAL_LIBRARIES} ${OPENGL_LIBRARY} ${GLUT_LIBRARY} m)
+
+add_executable(Mini_CGAL_PPMC_test tools/MiniCompress.cpp ${MINICGAL_PPMC_FILES})
+set_target_properties(Mini_CGAL_PPMC_test PROPERTIES COMPILE_FLAGS -frounding-math)
+target_link_libraries(Mini_CGAL_PPMC_test ${CGAL_LIBRARIES} ${OPENGL_LIBRARY} ${GLUT_LIBRARY} m)

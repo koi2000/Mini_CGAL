@@ -25,8 +25,6 @@
 
 using namespace std;
 
-namespace hispeed {
-
 /*
  * timer functions
  * */
@@ -325,6 +323,4 @@ inline void remove_slash(string& str) {
         str = str.substr(0, str.size() - 1);
     }
 }
-
-}  // namespace hispeed
 #endif

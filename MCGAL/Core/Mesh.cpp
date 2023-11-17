@@ -5,6 +5,8 @@
 #include <sstream>
 #include <string>
 namespace MCGAL {
+int replacing_group::counter = 0;
+int replacing_group::alive = 0;
 
 Mesh::~Mesh() {
     for (Face* f : faces) {

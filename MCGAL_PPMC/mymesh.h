@@ -16,178 +16,9 @@ const int DECOMPRESSION_MODE_ID = 1;
 #define PPMC_RANDOM_CONSTANT 0315
 
 
-class MyVertex : public MCGAL::Vertex {
-    enum Flag { Unconquered = 0, Conquered = 1 };
-
-    Flag flag = Unconquered;
-    unsigned int id = 0;
-
-  public:
-    MyVertex() : MCGAL::Vertex() {}
-    MyVertex(const Point& p) : MCGAL::Vertex(p) {}
-
-    inline void resetState() {
-        flag = Unconquered;
-    }
-
-    inline bool isConquered() const {
-        return flag == Conquered;
-    }
-
-    inline void setConquered() {
-        flag = Conquered;
-    }
-
-    inline size_t getId() const {
-        return id;
-    }
-
-    inline void setId(size_t nId) {
-        id = nId;
-    }
-};
-
-class MyHalfedge : public MCGAL::Halfedge {
-    enum Flag { NotYetInQueue = 0, InQueue = 1, NoLongerInQueue = 2 };
-    enum Flag2 { Original, Added, New };
-    enum ProcessedFlag { NotProcessed, Processed };
-
-    Flag flag = NotYetInQueue;
-    Flag2 flag2 = Original;
-    ProcessedFlag processedFlag = NotProcessed;
-
-  public:
-    MyHalfedge() {}
-
-    inline void resetState() {
-        flag = NotYetInQueue;
-        flag2 = Original;
-        processedFlag = NotProcessed;
-    }
-
-    /* Flag 1 */
-
-    inline void setInQueue() {
-        flag = InQueue;
-    }
-
-    inline void removeFromQueue() {
-        assert(flag == InQueue);
-        flag = NoLongerInQueue;
-    }
-
-    /* Processed flag */
-
-    inline void resetProcessedFlag() {
-        processedFlag = NotProcessed;
-    }
-
-    inline void setProcessed() {
-        processedFlag = Processed;
-    }
-
-    inline bool isProcessed() const {
-        return (processedFlag == Processed);
-    }
-
-    /* Flag 2 */
-
-    inline void setAdded() {
-        assert(flag2 == Original);
-        flag2 = Added;
-    }
-
-    inline void setNew() {
-        assert(flag2 == Original);
-        flag2 = New;
-    }
-
-    inline bool isAdded() const {
-        return flag2 == Added;
-    }
-
-    inline bool isOriginal() const {
-        return flag2 == Original;
-    }
-
-    inline bool isNew() const {
-        return flag2 == New;
-    }
-};
-
-class replacing_group;
-class MyTriangle;
-
-class MyFace : public MCGAL::Face {
-    typedef MCGAL::Point Point;
-    enum Flag { Unknown = 0, Splittable = 1, Unsplittable = 2 };
-    enum ProcessedFlag { NotProcessed, Processed };
-
-    Flag flag = Unknown;
-    ProcessedFlag processedFlag = NotProcessed;
-
-    Point removedVertexPos;
-    float proxy_hausdorff_distance = 0.0;
-    float hausdorff_distance = 0.0;
-
-  public:
-    MyFace() {}
-
-    inline void resetState() {
-        flag = Unknown;
-        processedFlag = NotProcessed;
-    }
-
-    inline void resetProcessedFlag() {
-        processedFlag = NotProcessed;
-    }
-
-    inline bool isConquered() const {
-        return (flag == Splittable || flag == Unsplittable);
-    }
-
-    inline bool isSplittable() const {
-        return (flag == Splittable);
-    }
-
-    inline bool isUnsplittable() const {
-        return (flag == Unsplittable);
-    }
-
-    inline void setSplittable() {
-        assert(flag == Unknown);
-        flag = Splittable;
-    }
-
-    inline void setUnsplittable() {
-        assert(flag == Unknown);
-        flag = Unsplittable;
-    }
-
-    inline void setProcessedFlag() {
-        processedFlag = Processed;
-    }
-
-    inline bool isProcessed() const {
-        return (processedFlag == Processed);
-    }
-
-    inline Point getRemovedVertexPos() const {
-        return removedVertexPos;
-    }
-
-    inline void setRemovedVertexPos(Point p) {
-        removedVertexPos = p;
-    }
-
-  public:
-    replacing_group* rg = NULL;
-};
-
-
 class MyMesh : public MCGAL::Mesh {
     // Gate queues
-    std::queue<MyHalfedge*> gateQueue;
+    std::queue<MCGAL::Halfedge*> gateQueue;
 
     // Processing mode: 0 for compression and 1 for decompression.
     int i_mode;
@@ -200,7 +31,7 @@ class MyMesh : public MCGAL::Mesh {
     unsigned i_nbRemovedVertices;
 
     // The vertices of the edge that is the departure of the coding and decoding conquests.
-    MyVertex* vh_departureConquest[2];
+    MCGAL::Vertex* vh_departureConquest[2];
     // Geometry symbol list.
     std::deque<std::deque<MCGAL::Point>> geometrySym;
 
@@ -219,13 +50,12 @@ class MyMesh : public MCGAL::Mesh {
     size_t dataOffset = 0;  // the offset to read and write.
 
     aab mbb;  // the bounding box
-    std::vector<MyTriangle*> original_facets;
 
     // Store the maximum Hausdorf Distance
     std::vector<MCGAL::Point> removedPoints;
 
     //
-    std::unordered_set<replacing_group*> map_group;
+    std::unordered_set<MCGAL::replacing_group*> map_group;
 
     bool own_data = true;
 
@@ -248,18 +78,18 @@ class MyMesh : public MCGAL::Mesh {
     void InsertedEdgeCodingStep();
     void HausdorffCodingStep();
 
-    void merge(std::unordered_set<replacing_group*>& reps, replacing_group*);
-    MyHalfedge* vertexCut(MyHalfedge* startH);
+    void merge(std::unordered_set<MCGAL::replacing_group*>& reps, MCGAL::replacing_group*);
+    MCGAL::Halfedge* vertexCut(MCGAL::Halfedge* startH);
     void encodeInsertedEdges(unsigned i_operationId);
     void encodeRemovedVertices(unsigned i_operationId);
     void encodeHausdorff(unsigned i_operationId);
 
     // Compression geometry and connectivity tests.
-    bool isRemovable(MyVertex* v) const;
-    bool isConvex(const std::vector<MyVertex*>& polygon) const;
-    bool isPlanar(const std::vector<MyVertex*>& polygon, float epsilon) const;
-    bool willViolateManifold(const std::vector<MyHalfedge*>& polygon) const;
-    float removalError(MyVertex* v, const std::vector<MyVertex*>& polygon) const;
+    bool isRemovable(MCGAL::Vertex* v) const;
+    bool isConvex(const std::vector<MCGAL::Vertex*>& polygon) const;
+    bool isPlanar(const std::vector<MCGAL::Vertex*>& polygon, float epsilon) const;
+    bool willViolateManifold(const std::vector<MCGAL::Halfedge*>& polygon) const;
+    float removalError(MCGAL::Vertex* v, const std::vector<MCGAL::Vertex*>& polygon) const;
 
     // Decompression
     void startNextDecompresssionOp();
@@ -313,30 +143,8 @@ class MyMesh : public MCGAL::Mesh {
         return p_data;
     }
 
+    void buildFromBuffer(std::deque<MCGAL::Point>* p_pointDeque, std::deque<uint32_t*>* p_faceDeque);
+
     MyMesh* clone_mesh();
 };
 
-class replacing_group {
-  public:
-    replacing_group() {
-        // cout<<this<<" is constructed"<<endl;
-        id = counter++;
-        alive++;
-    }
-    ~replacing_group() {
-        removed_vertices.clear();
-        alive--;
-    }
-
-    void print() {
-        // log("%5d (%2d refs %4d alive) - removed_vertices: %ld", id, ref, alive, removed_vertices.size());
-    }
-
-    std::unordered_set<MCGAL::Point> removed_vertices;
-    // unordered_set<Triangle> removed_triangles;
-    int id;
-    int ref = 0;
-
-    static int counter;
-    static int alive;
-};

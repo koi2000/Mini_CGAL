@@ -21,9 +21,9 @@ void MyMesh::startNextDecompresssionOp() {
         return;
     }
     // 1. reset the states. note that the states of the vertices need not to be reset
-    for (MyMesh::Halfedge_iterator hit = halfedges_begin(); hit != halfedges_end(); ++hit)
+    for (MCGAL::Halfedge* hit : halfedges)
         hit->resetState();
-    for (MyMesh::Face_iterator fit = facets_begin(); fit != facets_end(); ++fit)
+    for (MCGAL::Face* fit : faces)
         fit->resetState();
 
     i_curDecimationId++;  // increment the current decimation operation id.
@@ -50,11 +50,11 @@ void MyMesh::readBaseMesh() {
     unsigned i_nbVerticesBaseMesh = readInt();
     unsigned i_nbFacesBaseMesh = readInt();
 
-    std::deque<Point>* p_pointDeque = new std::deque<Point>();
+    std::deque<MCGAL::Point>* p_pointDeque = new std::deque<MCGAL::Point>();
     std::deque<uint32_t*>* p_faceDeque = new std::deque<uint32_t*>();
     // Read the vertex positions.
     for (unsigned i = 0; i < i_nbVerticesBaseMesh; ++i) {
-        Point pos = readPoint();
+        MCGAL::Point pos = readPoint();
         p_pointDeque->push_back(pos);
     }
     // read the face vertex indices
@@ -70,8 +70,7 @@ void MyMesh::readBaseMesh() {
         p_faceDeque->push_back(f);
     }
     // Let the builder do its job.
-    MyMeshBaseBuilder<HalfedgeDS> builder(p_pointDeque, p_faceDeque);
-    delegate(builder);
+    buildFromBuffer(p_pointDeque, p_faceDeque);
 
     // Free the memory.
     for (unsigned i = 0; i < p_faceDeque->size(); ++i) {
@@ -85,29 +84,30 @@ void MyMesh::RemovedVerticesDecodingStep() {
     //
     pushHehInit();
     while (!gateQueue.empty()) {
-        Halfedge_handle h = gateQueue.front();
+        MCGAL::Halfedge* h = gateQueue.front();
         gateQueue.pop();
 
-        Face_handle f = h->facet();
+        MCGAL::Face* f = h->face;
 
         // If the face is already processed, pick the next halfedge:
         if (f->isConquered())
             continue;
 
         // Add the other halfedges to the queue
-        Halfedge_handle hIt = h;
+        MCGAL::Halfedge* hIt = h;
         do {
-            Halfedge_handle hOpp = hIt->opposite();
-            assert(!hOpp->is_border());
-            if (!hOpp->facet()->isConquered())
+            MCGAL::Halfedge* hOpp = hIt->opposite;
+            // TODO: wait
+            // assert(!hOpp->is_border());
+            if (!hOpp->face->isConquered())
                 gateQueue.push(hOpp);
-            hIt = hIt->next();
+            hIt = hIt->next;
         } while (hIt != h);
 
         // Decode the face symbol.
         unsigned sym = readChar();
         if (sym == 1) {
-            Point rmved = readPoint();
+            MCGAL::Point rmved = readPoint();
             f->setSplittable();
             f->setRemovedVertexPos(rmved);
         } else {
@@ -122,7 +122,7 @@ void MyMesh::RemovedVerticesDecodingStep() {
 void MyMesh::InsertedEdgeDecodingStep() {
     pushHehInit();
     while (!gateQueue.empty()) {
-        Halfedge_handle h = gateQueue.front();
+        MCGAL::Halfedge* h = gateQueue.front();
         gateQueue.pop();
 
         // Test if the edge has already been conquered.
@@ -131,11 +131,11 @@ void MyMesh::InsertedEdgeDecodingStep() {
 
         // Mark the halfedge as processed.
         h->setProcessed();
-        h->opposite()->setProcessed();
+        h->opposite->setProcessed();
 
         // Test if there is a symbol for this edge.
         // There is no symbol if the two faces of an edge are unsplitable.
-        if (h->facet()->isSplittable() || h->opposite()->facet()->isSplittable()) {
+        if (h->face->isSplittable() || h->opposite->face->isSplittable()) {
             // Decode the edge symbol.
             unsigned sym = readChar();
             // Determine if the edge is original or not.
@@ -145,11 +145,11 @@ void MyMesh::InsertedEdgeDecodingStep() {
         }
 
         // Add the other halfedges to the queue
-        Halfedge_handle hIt = h->next();
-        while (hIt->opposite() != h) {
+        MCGAL::Halfedge* hIt = h->next;
+        while (hIt->opposite != h) {
             if (!hIt->isProcessed() && !hIt->isNew())
                 gateQueue.push(hIt);
-            hIt = hIt->opposite()->next();
+            hIt = hIt->opposite->next;
         }
         assert(!hIt->isNew());
     }
@@ -162,10 +162,10 @@ void MyMesh::insertRemovedVertices() {
     // Add the first halfedge to the queue.
     pushHehInit();
     while (!gateQueue.empty()) {
-        Halfedge_handle h = gateQueue.front();
+        MCGAL::Halfedge* h = gateQueue.front();
         gateQueue.pop();
 
-        Face_handle f = h->facet();
+        MCGAL::Face* f = h->face;
 
         // If the face is already processed, pick the next halfedge:
         if (f->isProcessed())
@@ -175,27 +175,27 @@ void MyMesh::insertRemovedVertices() {
         f->setProcessedFlag();
 
         // Add the other halfedges to the queue
-        Halfedge_handle hIt = h;
+        MCGAL::Halfedge* hIt = h;
         do {
-            Halfedge_handle hOpp = hIt->opposite();
-            assert(!hOpp->is_border());
-            if (!hOpp->facet()->isProcessed())
+            MCGAL::Halfedge* hOpp = hIt->opposite;
+            // TODO: wait
+            // assert(!hOpp->is_border());
+            if (!hOpp->face->isProcessed()) 
                 gateQueue.push(hOpp);
-            hIt = hIt->next();
+            hIt = hIt->next;
         } while (hIt != h);
         assert(!h->isNew());
 
         if (f->isSplittable()) {
             // Insert the vertex.
-            Halfedge_handle hehNewVertex = create_center_vertex(h);
-            hehNewVertex->vertex()->point() = f->getRemovedVertexPos();
+            MCGAL::Halfedge* hehNewVertex = create_center_vertex(h);
+            hehNewVertex->vertex->setPoint(f->getRemovedVertexPos());
 
             // Mark all the created edges as new.
-            Halfedge_around_vertex_circulator Hvc = hehNewVertex->vertex_begin();
-            Halfedge_around_vertex_circulator Hvc_end = Hvc;
-            CGAL_For_all(Hvc, Hvc_end) {
-                Hvc->setNew();
-                Hvc->opposite()->setNew();
+            MCGAL::Vertex* Hvc = hehNewVertex->vertex;
+            for (MCGAL::Halfedge* hit : Hvc->halfedges) {
+                hit->setNew();
+                hit->opposite->setNew();
             }
         }
     }
@@ -203,11 +203,11 @@ void MyMesh::insertRemovedVertices() {
 
 /**
  * Remove all the marked edges
-*/
-void MyMesh::removeInsertedEdges(){
-    for (MyMesh::Halfedge_iterator hit = halfedges_begin(); hit != halfedges_end(); hit++) {
+ */
+void MyMesh::removeInsertedEdges() {
+    for (MCGAL::Halfedge* hit : halfedges) {
         if (hit->isAdded()) {
-            join_facet(hit);
+            join_face(hit);
         }
     }
 }

@@ -1,8 +1,8 @@
 //
 // Created by DELL on 2023/11/9.
 //
-#include "mymesh.h"
 #include "math.h"
+#include "mymesh.h"
 
 void MyMesh::encode(int lod) {
     b_jobCompleted = false;
@@ -13,18 +13,12 @@ void MyMesh::encode(int lod) {
 
 void MyMesh::startNextCompresssionOp() {
     // 1. reset the stats
-    for (MCGAL::Vertex* vit : vertices){
-        MyVertex* mvit = static_cast<MyVertex*>(vit);
-        mvit->resetState();
-    }
-    for (MCGAL::Halfedge* hit : halfedges){
-        MyHalfedge* mhit = static_cast<MyHalfedge*>(hit);
-        mhit->resetState();
-    } 
-    for (MCGAL::Face* fit : faces){
-        MyFace* mfit = static_cast<MyFace*>(fit);
-        mfit->resetState();
-    }
+    for (MCGAL::Vertex* vit : vertices)
+        vit->resetState();
+    for (MCGAL::Halfedge* hit : halfedges)
+        hit->resetState();
+    for (MCGAL::Face* fit : faces)
+        fit->resetState();
     i_nbRemovedVertices = 0;  // Reset the number of removed vertices.
 
     // 2. do one round of decimation
@@ -33,19 +27,17 @@ void MyMesh::startNextCompresssionOp() {
         // teng: we always start from the middle, DO NOT use the rand function
         // size_t i_heInitId = (float)rand() / RAND_MAX * size_of_halfedges();
         size_t i_heInitId = size_of_halfedges() / 2;
-        MyHalfedge* hitInit = static_cast<MyHalfedge*>(halfedges[i_heInitId]);
+        MCGAL::Halfedge* hitInit = halfedges[i_heInitId];
         hitInit->setInQueue();
         gateQueue.push(hitInit);
     }
     // bfs all the halfedge
     while (!gateQueue.empty()) {
-        MyHalfedge* h = gateQueue.front();
+        MCGAL::Halfedge* h = gateQueue.front();
         gateQueue.pop();
-
-        // pick a the first halfedge from the queue. f is the adjacent face.
-        // TODO: 待完善
+        // TODO: wait
         // assert(!h->is_border());
-        MyFace* f = static_cast<MyFace*>(h->face);
+        MCGAL::Face* f = h->face;
 
         // if the face is already processed, pick the next halfedge:
         if (f->isConquered()) {
@@ -54,12 +46,12 @@ void MyMesh::startNextCompresssionOp() {
         }
         // the face is not processed. Count the number of non conquered vertices that can be split
         bool hasRemovable = false;
-        MyHalfedge* unconqueredVertexHE;
+        MCGAL::Halfedge* unconqueredVertexHE;
 
         for (MCGAL::Halfedge* hh = h->next; hh != h; hh = hh->next) {
-            if (isRemovable(static_cast<MyVertex*>(hh->vertex))) {
+            if (isRemovable(hh->vertex)) {
                 hasRemovable = true;
-                unconqueredVertexHE = static_cast<MyHalfedge*>(hh);
+                unconqueredVertexHE = hh;
                 break;
             }
         }
@@ -68,21 +60,22 @@ void MyMesh::startNextCompresssionOp() {
         if (!hasRemovable) {
             f->setUnsplittable();
             // and add the outer halfedges to the queue. Also mark the vertices of the face conquered
-            MyHalfedge* hh = h;
+            MCGAL::Halfedge* hh = h;
             do {
                 hh->vertex->setConquered();
-                Halfedge_handle hOpp = hh->opposite;
-                assert(!hOpp->is_border());
-                if (!hOpp->facet()->isConquered()) {
+                MCGAL::Halfedge* hOpp = hh->opposite;
+                // TODO: wait
+                // assert(!hOpp->is_border());
+                if (!hOpp->face->isConquered()) {
                     gateQueue.push(hOpp);
                     hOpp->setInQueue();
                 }
-            } while ((hh = hh->next()) != h);
+            } while ((hh = hh->next) != h);
             h->removeFromQueue();
         } else {
             // in that case, cornerCut that vertex.
             h->removeFromQueue();
-            vertexCut(unconqueredVertexHE);
+            vertexCut(find_prev(unconqueredVertexHE));
         }
     }
     // 3. do the encoding job
@@ -111,9 +104,9 @@ void MyMesh::startNextCompresssionOp() {
     }
 }
 
-void MyMesh::merge(unordered_set<replacing_group*>& reps, replacing_group* ret) {
+void MyMesh::merge(std::unordered_set<MCGAL::replacing_group*>& reps, MCGAL::replacing_group* ret) {
     assert(ret);
-    for (replacing_group* r : reps) {
+    for (MCGAL::replacing_group* r : reps) {
         ret->removed_vertices.insert(r->removed_vertices.begin(), r->removed_vertices.end());
         // ret->removed_triangles.insert(r->removed_triangles.begin(), r->removed_triangles.end());
         // ret->removed_facets.insert(r->removed_facets.begin(), r->removed_facets.end());
@@ -134,21 +127,23 @@ void MyMesh::merge(unordered_set<replacing_group*>& reps, replacing_group* ret) 
 
 // 顶点删除以及新建边
 // 存被删除的点的位置信息
-MyMesh::Halfedge_handle MyMesh::vertexCut(Halfedge_handle startH) {
-    Vertex_handle v = startH->vertex();
+MCGAL::Halfedge* MyMesh::vertexCut(MCGAL::Halfedge* startH) {
+    MCGAL::Vertex* v = startH->vertex;
 
     // make sure that the center vertex can be removed
     assert(!v->isConquered());
     assert(v->vertex_degree() > 2);
 
-    unordered_set<replacing_group*> rep_groups;
-    replacing_group* new_rg = new replacing_group();
+    std::unordered_set<MCGAL::replacing_group*> rep_groups;
+    MCGAL::replacing_group* new_rg = new MCGAL::replacing_group();
 
-    Halfedge_handle h = startH->opposite(), end(h);
+    MCGAL::Halfedge* h = startH->opposite;
+    MCGAL::Halfedge* end(h);
     int removed = 0;
     do {
-        assert(!h->is_border());
-        Face_handle f = h->facet();
+        // TODO: wait
+        // assert(!h->is_border());
+        MCGAL::Face* f = h->face;
         assert(!f->isConquered());  // we cannot cut again an already cut face, or a NULL patch
 
         /*
@@ -165,17 +160,17 @@ MyMesh::Halfedge_handle MyMesh::vertexCut(Halfedge_handle startH) {
         // if the face is not a triangle, cut the corner to make it a triangle
         if (f->facet_degree() > 3) {
             // loop around the face to find the appropriate other halfedge
-            Halfedge_handle hSplit(h->next());
-            for (; hSplit->next()->next() != h; hSplit = hSplit->next())
+            MCGAL::Halfedge* hSplit(h->next);
+            for (; hSplit->next->next != h; hSplit = hSplit->next)
                 ;
-            Halfedge_handle hCorner = split_facet(h, hSplit);
+            MCGAL::Halfedge* hCorner = split_facet(h, hSplit);
             // mark the new halfedges as added
             hCorner->setAdded();
-            hCorner->opposite()->setAdded();
+            hCorner->opposite->setAdded();
             // the corner one inherit the original facet
             // while the fRest is a newly generated facet
-            Face_handle fCorner = hCorner->face();
-            Face_handle fRest = hCorner->opposite()->face();
+            MCGAL::Face* fCorner = hCorner->face;
+            MCGAL::Face* fRest = hCorner->opposite->face;
             assert(fCorner->rg == f->rg);
             if (f->rg) {
                 fRest->rg = f->rg;
@@ -187,18 +182,18 @@ MyMesh::Halfedge_handle MyMesh::vertexCut(Halfedge_handle startH) {
         f->rg = NULL;
 
         // mark the vertex as conquered
-        h->vertex()->setConquered();
+        h->vertex->setConquered();
         removed++;
-    } while ((h = h->opposite()->next()) != end);
+    } while ((h = h->opposite->next) != end);
 
     // copy the position of the center vertex:
-    Point vPos = startH->vertex()->point();
+    MCGAL::Point vPos = startH->end_vertex->point();
     new_rg->removed_vertices.emplace(vPos);
 
     int bf = size_of_facets();
     // remove the center vertex
-    Halfedge_handle hNewFace = erase_center_vertex(startH);
-    Face_handle added_face = hNewFace->facet();
+    MCGAL::Halfedge* hNewFace = erase_center_vertex(startH);
+    MCGAL::Face* added_face = hNewFace->face;
     assert(added_face->rg == NULL);
     added_face->rg = new_rg;
     new_rg->ref++;
@@ -215,13 +210,14 @@ MyMesh::Halfedge_handle MyMesh::vertexCut(Halfedge_handle startH) {
     // the queue if the state of its face is unknown. Also mark it as in_queue
     h = hNewFace;
     do {
-        Halfedge_handle hOpp = h->opposite();
-        assert(!hOpp->is_border());
-        if (!hOpp->facet()->isConquered()) {
+        MCGAL::Halfedge* hOpp = h->opposite;
+        // TODO: wait
+        // assert(!hOpp->is_border());
+        if (!hOpp->face->isConquered()) {
             gateQueue.push(hOpp);
             hOpp->setInQueue();
         }
-    } while ((h = h->next()) != hNewFace);
+    } while ((h = h->next) != hNewFace);
 
     // Increment the number of removed vertices.
     i_nbRemovedVertices++;
@@ -231,17 +227,17 @@ MyMesh::Halfedge_handle MyMesh::vertexCut(Halfedge_handle startH) {
 
 void MyMesh::RemovedVertexCodingStep() {
     // resize the vectors to add the current conquest symbols
-    geometrySym.push_back(std::deque<Point>());
+    geometrySym.push_back(std::deque<MCGAL::Point>());
     connectFaceSym.push_back(std::deque<unsigned>());
 
     // Add the first halfedge to the queue.
     pushHehInit();
     // bfs to add all the point
     while (!gateQueue.empty()) {
-        Halfedge_handle h = gateQueue.front();
+        MCGAL::Halfedge* h = gateQueue.front();
         gateQueue.pop();
 
-        Face_handle f = h->facet();
+        MCGAL::Face* f = h->face;
 
         // If the face is already processed, pick the next halfedge:
         if (f->isProcessed())
@@ -255,7 +251,7 @@ void MyMesh::RemovedVertexCodingStep() {
 
         // Determine the geometry symbol.
         if (sym) {
-            Point rmved = f->getRemovedVertexPos();
+            MCGAL::Point rmved = f->getRemovedVertexPos();
             geometrySym[i_curDecimationId].push_back(rmved);
             // record the removed points during compressing.
         }
@@ -264,13 +260,14 @@ void MyMesh::RemovedVertexCodingStep() {
         f->setProcessedFlag();
 
         // Add the other halfedges to the queue
-        Halfedge_handle hIt = h;
+        MCGAL::Halfedge* hIt = h;
         do {
-            Halfedge_handle hOpp = hIt->opposite();
-            assert(!hOpp->is_border());
-            if (!hOpp->facet()->isProcessed())
+            MCGAL::Halfedge* hOpp = hIt->opposite;
+            // TODO: wait
+            // assert(!hOpp->is_border());
+            if (!hOpp->face->isProcessed())
                 gateQueue.push(hOpp);
-            hIt = hIt->next();
+            hIt = hIt->next;
         } while (hIt != h);
     }
 }
@@ -279,26 +276,26 @@ void MyMesh::InsertedEdgeCodingStep() {
     connectEdgeSym.push_back(std::deque<unsigned>());
     pushHehInit();
     while (!gateQueue.empty()) {
-        Halfedge_handle h = gateQueue.front();
+        MCGAL::Halfedge* h = gateQueue.front();
         gateQueue.pop();
         if (h->isProcessed()) {
             continue;
         }
         // Mark the halfedge as processed.
         h->setProcessed();
-        h->opposite()->setProcessed();
+        h->opposite->setProcessed();
 
         // Add the other halfedges to the queue
-        Halfedge_handle hIt = h->next();
-        while (hIt->opposite() != h) {
+        MCGAL::Halfedge* hIt = h->next;
+        while (hIt->opposite != h) {
             if (!hIt->isProcessed())
                 gateQueue.push(hIt);
-            hIt = hIt->opposite()->next();
+            hIt = hIt->opposite->next;
         }
 
         // Don't write a symbol if the two faces of an edgde are unsplitable.
         // this can help to save some space, since it is guaranteed that the edge is not inserted
-        bool b_toCode = h->facet()->isUnsplittable() && h->opposite()->facet()->isUnsplittable() ? false : true;
+        bool b_toCode = h->face->isUnsplittable() && h->opposite->face->isUnsplittable() ? false : true;
 
         // Determine the edge symbol.
         unsigned sym;
@@ -330,25 +327,28 @@ void MyMesh::writeBaseMesh() {
     writeInt(i_nbFacesBaseMesh);
     size_t id = 0;
     for (unsigned j = 0; j < 2; ++j) {
-        writePoint(vh_departureConquest[j]->point());
+        MCGAL::Point p = vh_departureConquest[j]->point();
+        writePoint(p);
         vh_departureConquest[j]->setId(id++);
     }
     // Write the other vertices.
-    for (MyMesh::Vertex_iterator vit = vertices_begin(); vit != vertices_end(); ++vit) {
+    for (MCGAL::Vertex* vit : vertices) {
         if (vit == vh_departureConquest[0] || vit == vh_departureConquest[1])
             continue;
-        writePoint(vit->point());
+        MCGAL::Point point = vit->point();
+        writePoint(point);
         // Set an id to the vertex.
         vit->setId(id++);
     }
     // Write the base mesh face vertex indices.
-    for (MyMesh::Facet_iterator fit = facets_begin(); fit != facets_end(); ++fit) {
+    for (MCGAL::Face* fit : faces) {
         unsigned i_faceDegree = fit->facet_degree();
         writeInt(i_faceDegree);
-        Halfedge_around_facet_const_circulator hit(fit->facet_begin()), end(hit);
+        MCGAL::Halfedge* hit(*fit->halfedges.begin());
+        MCGAL::Halfedge* end(hit);
         do {
             // Write the current vertex id.
-            writeInt(hit->vertex()->getId());
+            writeInt(hit->vertex->getId());
         } while (++hit != end);
     }
 }
@@ -371,7 +371,7 @@ void MyMesh::encodeInsertedEdges(unsigned i_operationId) {
  */
 void MyMesh::encodeRemovedVertices(unsigned i_operationId) {
     std::deque<unsigned>& connSym = connectFaceSym[i_operationId];
-    std::deque<Point>& geomSym = geometrySym[i_operationId];
+    std::deque<MCGAL::Point>& geomSym = geometrySym[i_operationId];
 
     unsigned i_lenGeom = geomSym.size();
     unsigned i_lenConn = connSym.size();
