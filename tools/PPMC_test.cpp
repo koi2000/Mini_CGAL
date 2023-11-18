@@ -9,6 +9,7 @@ MyMesh* read_mesh(char* path, bool complete_compression) {
 void compress(int argc, char** argv) {
     struct timeval start = hispeed::get_cur_time();
     MyMesh* mesh = read_mesh(argv[1], true);
+    mesh->dumpBuffer(argv[2]);
     hispeed::logt("compress", start);
     MyMesh* hm = new MyMesh(mesh);
     int lod = 100;

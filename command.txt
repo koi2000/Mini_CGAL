@@ -1,1 +1,6 @@
 sudo ./Mini_CGAL_PPMC_test /home/koi/mastercode/Mini_CGAL/static/fixed.OFF
+./Mini_CGAL_PPMC_test /home/koi/mastercode/Mini_CGAL/static/bun_zipper.off
+
+./PPMC_compress /home/koi/mastercode/Mini_CGAL/static/fixed.OFF ./buffer
+
+./MiniCGAL_Decompress /home/koi/mastercode/Mini_CGAL/static/buffer

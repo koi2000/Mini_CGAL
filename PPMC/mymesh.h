@@ -506,6 +506,9 @@ class MyMesh : public CGAL::Polyhedron_3<MyKernel, MyItems> {
     void writeBaseMesh();
     void readBaseMesh();
 
+    void dumpBuffer(char* path);
+    void loadBuffer(char* path);
+
     // 3dpro
     void computeHausdorfDistance();
     void updateVFMap();

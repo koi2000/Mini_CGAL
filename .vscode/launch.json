@@ -5,14 +5,45 @@
 	"version": "0.2.0",
 	"configurations": [
 		{
-			"name": "(gdb) 启动",
+			"name": "PPMC_Compress",
 			"type": "cppdbg",
 			"request": "launch",
 			//"program": "${workspaceFolder}/build/bin/observer",
-			"program": "/home/koi/mastercode/Mini_CGAL/build/Mini_CGAL_PPMC_test",
+			// "program": "/home/koi/mastercode/Mini_CGAL/build/Mini_CGAL_PPMC_test",
+			"program": "/home/koi/mastercode/Mini_CGAL/build/PPMC_compress",
 			//"args": ["-f", "../../etc/observer.ini"],
 			"args": [
-				"/home/koi/mastercode/Mini_CGAL/static/compressed_20.mesh.off"
+				// "/home/koi/mastercode/Mini_CGAL/static/compressed_20.mesh.off"
+				// "/home/koi/mastercode/Mini_CGAL/static/bun_zipper.off"
+				"/home/koi/mastercode/Mini_CGAL/static/fixed.OFF" ,
+				"/home/koi/mastercode/Mini_CGAL/static/buffer"
+			],
+			"stopAtEntry": false,
+			"cwd": "${fileDirname}",
+			"environment": [],
+			"externalConsole": false,
+			"MIMode": "gdb",
+			"preLaunchTask": "CMake Build",
+			"setupCommands": [
+				{
+					"description": "Enable pretty-printing for gdb",
+					"text": "-enable-pretty-printing",
+					"ignoreFailures": true
+				}
+			]
+		},
+		{
+			"name": "MiniCGAL_Decompress",
+			"type": "cppdbg",
+			"request": "launch",
+			//"program": "${workspaceFolder}/build/bin/observer",
+			// "program": "/home/koi/mastercode/Mini_CGAL/build/Mini_CGAL_PPMC_test",
+			"program": "/home/koi/mastercode/Mini_CGAL/build/MiniCGAL_Decompress",
+			//"args": ["-f", "../../etc/observer.ini"],
+			"args": [
+				// "/home/koi/mastercode/Mini_CGAL/static/compressed_20.mesh.off"
+				// "/home/koi/mastercode/Mini_CGAL/static/bun_zipper.off"
+				"/home/koi/mastercode/Mini_CGAL/static/buffer"
 			],
 			"stopAtEntry": false,
 			"cwd": "${fileDirname}",

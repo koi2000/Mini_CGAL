@@ -338,10 +338,11 @@ class Face {
         this->halfedges.clear();
         this->vertices.clear();
         for (int i = 0; i < hs.size(); i++) {
-            hs[i]->next = hs[(i + 1) % hs.size()];
-            hs[i]->face = this;
+            // hs[i]->next = hs[(i + 1) % hs.size()];
+            // hs[i]->face = this;
             halfedges.insert(hs[i]);
             vertices.insert(hs[i]->vertex);
+            hs[i]->face = this;
         }
     }
 
@@ -512,28 +513,37 @@ class Mesh {
         // create new halfedge
         Halfedge* hnew = new Halfedge(h->end_vertex, g->end_vertex);
         Halfedge* oppo_hnew = new Halfedge(g->end_vertex, h->end_vertex);
-
+        // set the opposite
+        hnew->opposite = oppo_hnew;
+        oppo_hnew->opposite = hnew;
+        // set the connect information
+        hnew->next = g->next;
+        oppo_hnew->next = h->next;
+        h->next = hnew;
+        g->next = oppo_hnew;
         // add the new halfedge to origin face
 
         // delete old halfedge from origin face
 
         // create new face depend on vertexs
-        Halfedge* hst = g->next;
-        Halfedge* hed = h->next;
+        Halfedge* gst = g->next;
+        Halfedge* ged = gst;
+        Halfedge* hst = h->next;
+        Halfedge* hed = gst;
         std::vector<Halfedge*> origin_face;
         std::vector<Halfedge*> new_face;
         do {
             new_face.push_back(hst);
             hst = hst->next;
         } while (hst != hed);
-        new_face.push_back(hnew);
-        hst = h->next;
-        hed = g->next;
+        // new_face.push_back(hnew);
+        // hst = h->next;
+        // hed = g->next;
         do {
-            origin_face.push_back(hst);
-            hst = hst->next;
-        } while (hst != hed);
-        origin_face.push_back(oppo_hnew);
+            origin_face.push_back(gst);
+            gst = gst->next;
+        } while (gst != ged);
+        // origin_face.push_back(oppo_hnew);
         origin->reset(origin_face);
         fnew->reset(new_face);
         // add halfedge and face to mesh
@@ -548,20 +558,40 @@ class Mesh {
         Vertex* vnew = new Vertex();
         Halfedge* hnew = new Halfedge(h->end_vertex, vnew);
         // close_tip(hnew, vnew);
-        hnew->opposite = new Halfedge(vnew, h->end_vertex);
+        Halfedge* oppo_new = new Halfedge(vnew, h->end_vertex);
+        this->halfedges.insert(hnew);
+        this->halfedges.insert(oppo_new);
+        hnew->opposite = oppo_new;
+        oppo_new->opposite = hnew;
         insert_tip(hnew->opposite, h);
-        hnew->face = new Face(hnew);
-        this->faces.insert(hnew->face);
+        // hnew->face = new Face(hnew);
+        // this->faces.insert(hnew->face);
         Halfedge* g = hnew->opposite->next;
+        std::vector<Halfedge*> origin_around_halfedge;
+        origin_around_halfedge.push_back(h);
         while (g->next != hnew) {
             Halfedge* gnew = new Halfedge(g->end_vertex, vnew);
-            gnew->opposite = new Halfedge(vnew, g->end_vertex);
-            insert_tip(gnew, hnew);
+            Halfedge* oppo_gnew = new Halfedge(vnew, g->end_vertex);
+            this->halfedges.insert(gnew);
+            this->halfedges.insert(oppo_gnew);
+            gnew->opposite = oppo_gnew;
+            oppo_gnew->opposite = gnew;
+            origin_around_halfedge.push_back(g);
+            // insert_tip(gnew, hnew);
+            gnew->next = hnew->opposite;
             insert_tip(gnew->opposite, g);
-            Face* fnew = new Face(gnew);
-            this->faces.insert(fnew);
+            // Face* fnew = new Face(gnew);
+            // this->faces.insert(fnew);
             g = gnew->opposite->next;
+            hnew = gnew;
         }
+        // collect all the halfedge
+        for (Halfedge* hit : origin_around_halfedge) {
+            Face* face = new Face(hit);
+            this->faces.insert(face);
+        }
+        // create new face and set new face
+
         return hnew;
     }
 
@@ -591,7 +621,7 @@ class Mesh {
             Halfedge* gprev = find_prev(g);
             remove_tip(gprev);
             // if (g->face != face) {
-                faces.erase(g->face);
+            faces.erase(g->face);
             // }
             Halfedge* gnext = g->next->opposite;
             this->halfedges.erase(g);

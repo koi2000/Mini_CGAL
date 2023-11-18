@@ -38,12 +38,12 @@ void MyMesh::startNextDecompresssionOp() {
 }
 
 void MyMesh::readBaseMesh() {
-    for (unsigned i = 0; i < 3; i++) {
-        mbb.low[i] = readFloat();
-    }
-    for (unsigned i = 0; i < 3; i++) {
-        mbb.high[i] = readFloat();
-    }
+    // for (unsigned i = 0; i < 3; i++) {
+    //     mbb.low[i] = readFloat();
+    // }
+    // for (unsigned i = 0; i < 3; i++) {
+    //     mbb.high[i] = readFloat();
+    // }
     // read the number of level of detail
     i_nbDecimations = readuInt16();
     // set the mesh bounding box

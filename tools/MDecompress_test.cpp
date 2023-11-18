@@ -1,7 +1,6 @@
 #include "../MCGAL_PPMC/mymesh.h"
 #include "../MCGAL_PPMC/util.h"
 
-
 using namespace std;
 MyMesh* read_mesh(char* path, bool complete_compression) {
     string mesh_str = read_file(path);
@@ -11,9 +10,10 @@ MyMesh* read_mesh(char* path, bool complete_compression) {
 
 void compress(int argc, char** argv) {
     struct timeval start = get_cur_time();
-    MyMesh* mesh = read_mesh(argv[1], true);
+    // MyMesh* mesh = read_mesh(argv[1], true);
+
     logt("compress", start);
-    MyMesh* hm = new MyMesh(mesh);
+    MyMesh* hm = new MyMesh(argv[1]);
     int lod = 100;
 
     char path[256];
@@ -24,8 +24,6 @@ void compress(int argc, char** argv) {
         sprintf(path, "./gisdata/compressed_%d.mesh.off", i);
         hm->write_to_off(path);
     }
-
-    delete mesh;
     delete hm;
 }
 

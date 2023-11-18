@@ -81,6 +81,16 @@ MyMesh::~MyMesh() {
     map_group.clear();
 }
 
+MyMesh::MyMesh(char* path) : MCGAL::Mesh() {
+    this->loadBuffer(path);
+    // assert(dsize > 0);
+    srand(PPMC_RANDOM_CONSTANT);
+    readBaseMesh();
+    // Set the vertices of the edge that is the departure of the coding and decoding conquests.
+    vh_departureConquest[0] = (*halfedges.begin())->vertex;
+    vh_departureConquest[1] = (*halfedges.begin())->end_vertex;
+}
+
 void MyMesh::pushHehInit() {
     MCGAL::Halfedge* hehBegin;
     MCGAL::Halfedge* hit(*vh_departureConquest[0]->halfedges.begin());
@@ -93,7 +103,6 @@ void MyMesh::pushHehInit() {
     // Push it to the queue.
     gateQueue.push(hehBegin);
 }
-
 
 bool MyMesh::willViolateManifold(const std::vector<MCGAL::Halfedge*>& polygon) const {
     unsigned i_degree = polygon.size();
@@ -112,7 +121,8 @@ bool MyMesh::willViolateManifold(const std::vector<MCGAL::Halfedge*>& polygon) c
                     unsigned i_prev = i == 0 ? i_degree - 1 : i - 1;
                     unsigned i_next = i == i_degree - 1 ? 0 : i + 1;
 
-                    if ((j == i_prev && polygon[i]->face->facet_degree() != 3)  // The vertex cut operation is forbidden.
+                    if ((j == i_prev &&
+                         polygon[i]->face->facet_degree() != 3)  // The vertex cut operation is forbidden.
                         || (j == i_next &&
                             polygon[i]->opposite->face->facet_degree() != 3))  // The vertex cut operation is forbidden.
                         return true;
@@ -139,10 +149,10 @@ bool MyMesh::isRemovable(MCGAL::Vertex* v) const {
         // vh_oneRing.push_back(v);
         // MCGAL::Halfedge* hit(*v->halfedges.begin());
         // MCGAL::Halfedge* end(hit);
-        for(MCGAL::Halfedge* hit: v->halfedges) {
+        for (MCGAL::Halfedge* hit : v->halfedges) {
             vh_oneRing.push_back(hit->opposite->vertex);
             heh_oneRing.push_back(hit->opposite);
-        } //while (hit != end);
+        }  // while (hit != end);
         //
         bool removable = !willViolateManifold(heh_oneRing);
         // && isProtruding(heh_oneRing);
@@ -207,6 +217,26 @@ std::istream& operator>>(std::istream& input, MyMesh& mesh) {
 
 void MyMesh::write_to_off(const char* path) {
     this->dumpto(path);
+}
+
+void MyMesh::dumpBuffer(char* path) {
+    ofstream fout(path, ios::binary);
+    int len = dataOffset;
+    fout.write((char*)&len, sizeof(int));
+    fout.write(p_data, len);
+    fout.close();
+}
+
+void MyMesh::loadBuffer(char* path) {
+    ifstream fin(path, ios::binary);
+    // int len2;
+    // fin.read((char*)&len2, sizeof(int));
+    dataOffset = 0;
+    // p_data = new char[len2 + 1];
+    // memset(p_data, 0, len2 + 1);
+    p_data = new char[BUFFER_SIZE];
+    memset(p_data, 0, BUFFER_SIZE);
+    fin.read(p_data, BUFFER_SIZE);
 }
 
 // TODO: 待完善

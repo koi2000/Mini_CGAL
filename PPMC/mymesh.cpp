@@ -121,6 +121,24 @@ MyMesh* MyMesh::clone_mesh() {
     return nmesh;
 }
 
+void MyMesh::dumpBuffer(char* path) {
+    ofstream fout(path, ios::binary);
+    // int len = dataOffset;
+    // fout.write((char*)&len, sizeof(int));
+    fout.write(p_data, BUFFER_SIZE);
+    fout.close();
+}
+
+void MyMesh::loadBuffer(char* path) {
+    ifstream fin(path, ios::binary);
+    int len2;
+    fin.read((char*)&len2, sizeof(int));
+    char* dest = new char[len2 + 1];
+    memset(dest, 0, len2 + 1);
+    fin.read(dest, len2);
+    delete dest;
+}
+
 string MyMesh::to_off() {
     std::stringstream os;
     os << *this;
@@ -168,4 +186,3 @@ void MyMesh::write_to_wkt(const char* path) {
     string ct = to_wkt();
     hispeed::write_file(ct, path);
 }
-

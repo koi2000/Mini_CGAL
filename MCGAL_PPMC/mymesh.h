@@ -1,10 +1,10 @@
 #include "../MCGAL/Core/core.h"
 #include "aab.h"
 #include <algorithm>
+#include <boost/algorithm/string/replace.hpp>
+#include <boost/foreach.hpp>
 #include <deque>
 #include <queue>
-#include <boost/foreach.hpp>
-#include <boost/algorithm/string/replace.hpp>
 #define BUFFER_SIZE 10 * 1024 * 1024
 
 const int COMPRESSION_MODE_ID = 0;
@@ -14,7 +14,6 @@ const int DECOMPRESSION_MODE_ID = 1;
 #define INV_GAMMA 2
 
 #define PPMC_RANDOM_CONSTANT 0315
-
 
 class MyMesh : public MCGAL::Mesh {
     // Gate queues
@@ -61,6 +60,7 @@ class MyMesh : public MCGAL::Mesh {
 
   public:
     int id = 0;
+    MyMesh(char* bufferPath);
     // constructor for encoding
     MyMesh(std::string& str, bool completeop = false);
 
@@ -119,7 +119,10 @@ class MyMesh : public MCGAL::Mesh {
 
     void writeBaseMesh();
     void readBaseMesh();
-    
+
+    void dumpBuffer(char* path);
+    void loadBuffer(char* path);
+
     void compute_mbb();
 
     // Polyhedron* to_polyhedron();
@@ -142,10 +145,9 @@ class MyMesh : public MCGAL::Mesh {
     const char* get_data() {
         return p_data;
     }
-    friend std::istream & operator>>(std::istream & in, MyMesh & A);
+    friend std::istream& operator>>(std::istream& in, MyMesh& A);
 
     void buildFromBuffer(std::deque<MCGAL::Point>* p_pointDeque, std::deque<uint32_t*>* p_faceDeque);
 
     MyMesh* clone_mesh();
 };
-

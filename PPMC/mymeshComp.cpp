@@ -311,12 +311,12 @@ void MyMesh::InsertedEdgeCodingStep() {
 }
 
 void MyMesh::writeBaseMesh() {
-    for (unsigned i = 0; i < 3; i++) {
-        writeFloat((float)mbb.low[i]);
-    }
-    for (unsigned i = 0; i < 3; i++) {
-        writeFloat((float)mbb.high[i]);
-    }
+    // for (unsigned i = 0; i < 3; i++) {
+    //     writeFloat((float)mbb.low[i]);
+    // }
+    // for (unsigned i = 0; i < 3; i++) {
+    //     writeFloat((float)mbb.high[i]);
+    // }
     unsigned i_nbVerticesBaseMesh = size_of_vertices();
     unsigned i_nbFacesBaseMesh = size_of_facets();
     // Write the number of level of decimations.
