@@ -5,8 +5,6 @@
 #include <sstream>
 #include <string>
 namespace MCGAL {
-int replacing_group::counter = 0;
-int replacing_group::alive = 0;
 
 Mesh::~Mesh() {
     for (Face* f : faces) {
@@ -26,6 +24,9 @@ Mesh::~Mesh() {
 
 Face* Mesh::add_face(std::vector<Vertex*>& vs) {
     Face* f = new Face(vs);
+    for (Halfedge* hit : f->halfedges) {
+        this->halfedges.insert(hit);
+    }
     faces.insert(f);
     return f;
 }
@@ -74,15 +75,15 @@ bool Mesh::loadOFF(std::string path) {
         file >> num_face_vertices;
         // std::vector<Face*> faces;
         std::vector<Vertex*> vts;
-        // std::vector<int> idxs;
+        std::vector<int> idxs;
         for (int j = 0; j < num_face_vertices; ++j) {
             int vertex_index;
             file >> vertex_index;
             vts.push_back(vertices[vertex_index]);
-            // idxs.push_back(vertex_index);
+            idxs.push_back(vertex_index);
         }
         this->add_face(vts);
-        // this->face_index.push_back(idxs);
+        this->face_index.push_back(idxs);
     }
     // 清空 vector
     vertices.clear();
@@ -117,18 +118,18 @@ std::istream& operator>>(std::istream& input, Mesh& mesh) {
         input >> num_face_vertices;
         // std::vector<Face*> faces;
         std::vector<Vertex*> vts;
-        // std::vector<int> idxs;
+        std::vector<int> idxs;
         for (int j = 0; j < num_face_vertices; ++j) {
             int vertex_index;
             input >> vertex_index;
             vts.push_back(vertices[vertex_index]);
-            // idxs.push_back(vertex_index);
+            idxs.push_back(vertex_index);
         }
         Face* face = mesh.add_face(vts);
         for (Halfedge* halfedge : face->halfedges) {
-            mesh.halfedges.push_back(halfedge);
+            mesh.halfedges.insert(halfedge);
         }
-        // this->face_index.push_back(idxs);
+        mesh.face_index.push_back(idxs);
     }
     // 清空 vector
     vertices.clear();
@@ -150,13 +151,21 @@ void Mesh::dumpto(std::string path) {
     }
 
     // 写入面的顶点索引
-    for (int i = 0; i < this->face_index.size(); i++) {
-        offFile << this->face_index[i].size() << " ";
-        for (int idx : this->face_index[i]) {
-            offFile << idx << "";
+    // for (int i = 0; i < this->face_index.size(); i++) {
+    //     offFile << this->face_index[i].size() << " ";
+    //     for (int idx : this->face_index[i]) {
+    //         offFile << idx << "";
+    //     }
+    //     offFile << "\n";
+    // }
+    for (Face* face : this->faces) {
+        offFile << face->vertices.size() << " ";
+        for (Vertex* vertex : face->vertices) {
+            offFile << vertex->getId() << " ";
         }
         offFile << "\n";
     }
+
     offFile.close();
 }
 

@@ -21,7 +21,7 @@ MyMesh::MyMesh(string& str, bool completeop) : MCGAL::Mesh() {
     // Fill the buffer with 0
     std::istringstream is;
     is.str(str.c_str());
-    // is >> *this;
+    is >> *this;
     if (size_of_facets() == 0) {
         std::cerr << "failed to parse the OFF file into Polyhedron" << endl;
         exit(EXIT_FAILURE);
@@ -66,7 +66,7 @@ MyMesh::MyMesh(char* data, size_t dsize, bool owndata) : MCGAL::Mesh() {
     readBaseMesh();
     // Set the vertices of the edge that is the departure of the coding and decoding conquests.
     vh_departureConquest[0] = (*halfedges.begin())->vertex;
-    vh_departureConquest[1] = (*halfedges.begin())->opposite->vertex;
+    vh_departureConquest[1] = (*halfedges.begin())->end_vertex;
 }
 
 MyMesh::~MyMesh() {
@@ -94,9 +94,6 @@ void MyMesh::pushHehInit() {
     gateQueue.push(hehBegin);
 }
 
-void MyMesh::buildFromBuffer(std::deque<MCGAL::Point>* p_pointDeque, std::deque<uint32_t*>* p_faceDeque) {
-    
-}
 
 bool MyMesh::willViolateManifold(const std::vector<MCGAL::Halfedge*>& polygon) const {
     unsigned i_degree = polygon.size();
@@ -140,12 +137,12 @@ bool MyMesh::isRemovable(MCGAL::Vertex* v) const {
         vh_oneRing.reserve(v->vertex_degree());
         heh_oneRing.reserve(v->vertex_degree());
         // vh_oneRing.push_back(v);
-        MCGAL::Halfedge* hit(*v->halfedges.begin());
-        MCGAL::Halfedge* end(hit);
-        do {
+        // MCGAL::Halfedge* hit(*v->halfedges.begin());
+        // MCGAL::Halfedge* end(hit);
+        for(MCGAL::Halfedge* hit: v->halfedges) {
             vh_oneRing.push_back(hit->opposite->vertex);
             heh_oneRing.push_back(hit->opposite);
-        } while (++hit != end);
+        } //while (hit != end);
         //
         bool removable = !willViolateManifold(heh_oneRing);
         // && isProtruding(heh_oneRing);
@@ -161,6 +158,55 @@ void MyMesh::compute_mbb() {
     //     Point p = vit->point();
     //     mbb.update(p.x(), p.y(), p.z());
     // }
+}
+
+std::istream& operator>>(std::istream& input, MyMesh& mesh) {
+    std::string format;
+    // 读取 OFF 文件格式信息
+    input >> format >> mesh.nb_vertices >> mesh.nb_faces >> mesh.nb_edges;
+
+    if (format != "OFF") {
+        std::cerr << "Error: Invalid OFF file format" << std::endl;
+    }
+
+    // 辅助数组，用于创建faces
+    std::vector<MCGAL::Vertex*> vertices;
+    // 读取顶点并添加到 Mesh
+    for (std::size_t i = 0; i < mesh.nb_vertices; ++i) {
+        float x, y, z;
+        input >> x >> y >> z;
+        MCGAL::Vertex* vt = new MCGAL::Vertex(x, y, z);
+        vt->setVid(i);
+        mesh.vertices.insert(vt);
+        vertices.push_back(vt);
+    }
+
+    // 读取面信息并添加到 Mesh
+    for (int i = 0; i < mesh.nb_faces; ++i) {
+        int num_face_vertices;
+        input >> num_face_vertices;
+        // std::vector<Face*> faces;
+        std::vector<MCGAL::Vertex*> vts;
+        std::vector<int> idxs;
+        for (int j = 0; j < num_face_vertices; ++j) {
+            int vertex_index;
+            input >> vertex_index;
+            vts.push_back(vertices[vertex_index]);
+            idxs.push_back(vertex_index);
+        }
+        MCGAL::Face* face = mesh.add_face(vts);
+        for (MCGAL::Halfedge* halfedge : face->halfedges) {
+            mesh.halfedges.insert(halfedge);
+        }
+        mesh.face_index.push_back(idxs);
+    }
+    // 清空 vector
+    vertices.clear();
+    return input;
+}
+
+void MyMesh::write_to_off(const char* path) {
+    this->dumpto(path);
 }
 
 // TODO: 待完善

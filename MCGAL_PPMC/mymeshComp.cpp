@@ -27,7 +27,12 @@ void MyMesh::startNextCompresssionOp() {
         // teng: we always start from the middle, DO NOT use the rand function
         // size_t i_heInitId = (float)rand() / RAND_MAX * size_of_halfedges();
         size_t i_heInitId = size_of_halfedges() / 2;
-        MCGAL::Halfedge* hitInit = halfedges[i_heInitId];
+        MCGAL::Halfedge* hitInit;
+        auto it = halfedges.begin();
+        while (i_heInitId--) {
+            it++;
+        }
+        hitInit = *it;
         hitInit->setInQueue();
         gateQueue.push(hitInit);
     }
@@ -66,7 +71,7 @@ void MyMesh::startNextCompresssionOp() {
                 MCGAL::Halfedge* hOpp = hh->opposite;
                 // TODO: wait
                 // assert(!hOpp->is_border());
-                if (!hOpp->face->isConquered()) {
+                if (!hOpp->face->isConquered() && !hOpp->vertex->isConquered() && !hOpp->end_vertex->isConquered()) {
                     gateQueue.push(hOpp);
                     hOpp->setInQueue();
                 }
@@ -75,7 +80,7 @@ void MyMesh::startNextCompresssionOp() {
         } else {
             // in that case, cornerCut that vertex.
             h->removeFromQueue();
-            vertexCut(find_prev(unconqueredVertexHE));
+            vertexCut(unconqueredVertexHE);
         }
     }
     // 3. do the encoding job
@@ -137,7 +142,7 @@ MCGAL::Halfedge* MyMesh::vertexCut(MCGAL::Halfedge* startH) {
     std::unordered_set<MCGAL::replacing_group*> rep_groups;
     MCGAL::replacing_group* new_rg = new MCGAL::replacing_group();
 
-    MCGAL::Halfedge* h = startH->opposite;
+    MCGAL::Halfedge* h = find_prev(startH)->opposite;
     MCGAL::Halfedge* end(h);
     int removed = 0;
     do {
@@ -171,11 +176,11 @@ MCGAL::Halfedge* MyMesh::vertexCut(MCGAL::Halfedge* startH) {
             // while the fRest is a newly generated facet
             MCGAL::Face* fCorner = hCorner->face;
             MCGAL::Face* fRest = hCorner->opposite->face;
-            assert(fCorner->rg == f->rg);
+            assert(fRest->rg == f->rg);
             if (f->rg) {
-                fRest->rg = f->rg;
+                fCorner->rg = f->rg;
                 // assert(fCorner->rg != NULL && fRest->rg == NULL);
-                fRest->rg->ref++;
+                fCorner->rg->ref++;
             }
             // log("split %ld + %ld %ld", fCorner->facet_degree(), fRest->facet_degree(), f->facet_degree());
         }
@@ -183,6 +188,7 @@ MCGAL::Halfedge* MyMesh::vertexCut(MCGAL::Halfedge* startH) {
 
         // mark the vertex as conquered
         h->vertex->setConquered();
+        h->end_vertex->setConquered();
         removed++;
     } while ((h = h->opposite->next) != end);
 
@@ -192,7 +198,7 @@ MCGAL::Halfedge* MyMesh::vertexCut(MCGAL::Halfedge* startH) {
 
     int bf = size_of_facets();
     // remove the center vertex
-    MCGAL::Halfedge* hNewFace = erase_center_vertex(startH);
+    MCGAL::Halfedge* hNewFace = erase_center_vertex(find_prev(startH));
     MCGAL::Face* added_face = hNewFace->face;
     assert(added_face->rg == NULL);
     added_face->rg = new_rg;
@@ -213,7 +219,7 @@ MCGAL::Halfedge* MyMesh::vertexCut(MCGAL::Halfedge* startH) {
         MCGAL::Halfedge* hOpp = h->opposite;
         // TODO: wait
         // assert(!hOpp->is_border());
-        if (!hOpp->face->isConquered()) {
+        if (!hOpp->face->isConquered() && !hOpp->vertex->isConquered() && !hOpp->end_vertex->isConquered()) {
             gateQueue.push(hOpp);
             hOpp->setInQueue();
         }
@@ -311,12 +317,6 @@ void MyMesh::InsertedEdgeCodingStep() {
 }
 
 void MyMesh::writeBaseMesh() {
-    for (unsigned i = 0; i < 3; i++) {
-        writeFloat((float)mbb.low[i]);
-    }
-    for (unsigned i = 0; i < 3; i++) {
-        writeFloat((float)mbb.high[i]);
-    }
     unsigned i_nbVerticesBaseMesh = size_of_vertices();
     unsigned i_nbFacesBaseMesh = size_of_facets();
     // Write the number of level of decimations.
@@ -344,12 +344,9 @@ void MyMesh::writeBaseMesh() {
     for (MCGAL::Face* fit : faces) {
         unsigned i_faceDegree = fit->facet_degree();
         writeInt(i_faceDegree);
-        MCGAL::Halfedge* hit(*fit->halfedges.begin());
-        MCGAL::Halfedge* end(hit);
-        do {
-            // Write the current vertex id.
+        for (MCGAL::Halfedge* hit : fit->halfedges) {
             writeInt(hit->vertex->getId());
-        } while (++hit != end);
+        }
     }
 }
 

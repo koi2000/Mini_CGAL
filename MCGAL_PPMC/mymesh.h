@@ -142,6 +142,7 @@ class MyMesh : public MCGAL::Mesh {
     const char* get_data() {
         return p_data;
     }
+    friend std::istream & operator>>(std::istream & in, MyMesh & A);
 
     void buildFromBuffer(std::deque<MCGAL::Point>* p_pointDeque, std::deque<uint32_t*>* p_faceDeque);
 

@@ -262,7 +262,7 @@ class Face {
     Point removedVertexPos;
 
   public:
-    std::vector<Vertex*> vertices;
+    std::unordered_set<Vertex*> vertices;
     std::unordered_set<Halfedge*> halfedges;
 
   public:
@@ -292,9 +292,9 @@ class Face {
     }
 
     Face(Vertex* v1, Vertex* v2, Vertex* v3) {
-        vertices.push_back(v1);
-        vertices.push_back(v2);
-        vertices.push_back(v3);
+        vertices.insert(v1);
+        vertices.insert(v2);
+        vertices.insert(v3);
     }
 
     Face* clone() {
@@ -305,11 +305,11 @@ class Face {
         Halfedge* prev = nullptr;
         Halfedge* head = nullptr;
         for (int i = 0; i < vs.size(); i++) {
-            vertices.push_back(vs[i]);
+            vertices.insert(vs[i]);
             Vertex* nextv = vs[(i + 1) % vs.size()];
             Halfedge* hf = new Halfedge(vs[i], nextv);
             halfedges.insert(hf);
-            vs[i]->halfedges.insert(hf);
+            // vs[i]->halfedges.insert(hf);
             hf->face = this;
             if (prev != NULL) {
                 prev->next = hf;
@@ -341,7 +341,7 @@ class Face {
             hs[i]->next = hs[(i + 1) % hs.size()];
             hs[i]->face = this;
             halfedges.insert(hs[i]);
-            vertices.push_back(hs[i]->vertex);
+            vertices.insert(hs[i]->vertex);
         }
     }
 
@@ -391,11 +391,12 @@ class Face {
         if (vertices.size() != rhs.vertices.size()) {
             return false;
         }
-        for (int i = 0; i < vertices.size(); i++) {
-            if (vertices[i] != rhs.vertices[i]) {
+        for (Vertex* vertix : vertices) {
+            if (!rhs.vertices.count(vertix)) {
                 return false;
             }
         }
+
         return true;
     }
     bool operator==(const Face& rhs) const {
@@ -463,7 +464,7 @@ class Face {
 class Mesh {
   public:
     std::unordered_set<Vertex*, Vertex::Hash, Vertex::Equal> vertices;
-    std::vector<Halfedge*> halfedges;
+    std::unordered_set<Halfedge*> halfedges;
     std::unordered_set<Face*> faces;
     // 用于dump OFF文件
     std::vector<std::vector<int>> face_index;
@@ -536,8 +537,8 @@ class Mesh {
         origin->reset(origin_face);
         fnew->reset(new_face);
         // add halfedge and face to mesh
-        this->halfedges.push_back(hnew);
-        this->halfedges.push_back(hnew);
+        this->halfedges.insert(hnew);
+        this->halfedges.insert(oppo_hnew);
         this->faces.insert(fnew);
         return hnew;
     }
@@ -585,17 +586,21 @@ class Mesh {
         Halfedge* g = h->next->opposite;
         Halfedge* hret = find_prev(h);
         Face* face = new Face();
+        faces.insert(face);
         while (g != h) {
             Halfedge* gprev = find_prev(g);
             remove_tip(gprev);
-            if (g->face != face) {
+            // if (g->face != face) {
                 faces.erase(g->face);
-            }
+            // }
             Halfedge* gnext = g->next->opposite;
+            this->halfedges.erase(g);
             g = gnext;
         }
+        faces.erase(h->face);
         remove_tip(hret);
         vertices.erase(h->end_vertex);
+        this->halfedges.erase(h);
         set_face_in_face_loop(hret, face);
         return hret;
     }
@@ -604,9 +609,9 @@ class Mesh {
         Halfedge* end = h;
         do {
             h->face = f;
-            h = h->next;
             f->halfedges.insert(h);
-            f->vertices.push_back(h->vertex);
+            f->vertices.insert(h->vertex);
+            h = h->next;
         } while (h != end);
     }
 

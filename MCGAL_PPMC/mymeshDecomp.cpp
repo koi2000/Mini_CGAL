@@ -2,7 +2,7 @@
 
 void MyMesh::decode(int lod) {
     assert(lod >= 0 && lod <= 100);
-    assert(!this->is_compression_mode());
+    // assert(!this->is_compression_mode());
     if (lod < i_decompPercentage) {
         return;
     }
@@ -38,12 +38,6 @@ void MyMesh::startNextDecompresssionOp() {
 }
 
 void MyMesh::readBaseMesh() {
-    for (unsigned i = 0; i < 3; i++) {
-        mbb.low[i] = readFloat();
-    }
-    for (unsigned i = 0; i < 3; i++) {
-        mbb.high[i] = readFloat();
-    }
     // read the number of level of detail
     i_nbDecimations = readuInt16();
     // set the mesh bounding box
@@ -78,6 +72,40 @@ void MyMesh::readBaseMesh() {
     }
     delete p_faceDeque;
     delete p_pointDeque;
+}
+
+void MyMesh::buildFromBuffer(std::deque<MCGAL::Point>* p_pointDeque, std::deque<uint32_t*>* p_faceDeque) {
+    this->vertices.clear();
+    this->halfedges.clear();
+    // 辅助数组，用于创建faces
+    std::vector<MCGAL::Vertex*> vertices;
+    // 读取顶点并添加到 Mesh
+    for (std::size_t i = 0; i < p_pointDeque->size(); ++i) {
+        float x, y, z;
+        MCGAL::Point p = p_pointDeque->at(i);
+        MCGAL::Vertex* vt = new MCGAL::Vertex(p);
+        vt->setVid(i);
+        this->vertices.insert(vt);
+        vertices.push_back(vt);
+    }
+
+    // 读取面信息并添加到 Mesh
+    for (int i = 0; i < p_faceDeque->size(); ++i) {
+        uint32_t* ptr = p_faceDeque->at(i);
+        int num_face_vertices = ptr[0];
+        // std::vector<Face*> faces;
+        std::vector<MCGAL::Vertex*> vts;
+        std::vector<int> idxs;
+        for (int j = 0; j < num_face_vertices; ++j) {
+            int vertex_index = ptr[j + 1];
+            vts.push_back(vertices[vertex_index]);
+            idxs.push_back(vertex_index);
+        }
+        this->add_face(vts);
+        this->face_index.push_back(idxs);
+    }
+    // 清空 vector
+    vertices.clear();
 }
 
 void MyMesh::RemovedVerticesDecodingStep() {
@@ -180,7 +208,7 @@ void MyMesh::insertRemovedVertices() {
             MCGAL::Halfedge* hOpp = hIt->opposite;
             // TODO: wait
             // assert(!hOpp->is_border());
-            if (!hOpp->face->isProcessed()) 
+            if (!hOpp->face->isProcessed())
                 gateQueue.push(hOpp);
             hIt = hIt->next;
         } while (hIt != h);

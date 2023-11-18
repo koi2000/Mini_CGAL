@@ -1,0 +1,1 @@
+sudo ./Mini_CGAL_PPMC_test /home/koi/mastercode/Mini_CGAL/static/fixed.OFF

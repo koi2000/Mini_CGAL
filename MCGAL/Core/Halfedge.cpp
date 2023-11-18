@@ -1,7 +1,7 @@
 #include "core.h"
 
 namespace MCGAL {
-    // create a new half edge, setup the opposite of this half edge if needed
+// create a new half edge, setup the opposite of this half edge if needed
 Halfedge::Halfedge(Vertex* v1, Vertex* v2) {
     vertex = v1;
     end_vertex = v2;
@@ -33,10 +33,13 @@ Halfedge::~Halfedge() {
 
     // detach from the vertices
     assert(vertex && end_vertex);
-    assert(vertex->halfedges.find(this) != vertex->halfedges.end());
-    assert(end_vertex->opposite_half_edges.find(this) != end_vertex->opposite_half_edges.end());
-    vertex->halfedges.erase(this);
-    end_vertex->opposite_half_edges.erase(this);
+    // assert(vertex->halfedges.find(this) != vertex->halfedges.end());
+    // assert(end_vertex->opposite_half_edges.find(this) != end_vertex->opposite_half_edges.end());
+    if (vertex->halfedges.find(this) != vertex->halfedges.end()) {
+        vertex->halfedges.erase(this);
+    }
+    if (end_vertex->opposite_half_edges.find(this) != end_vertex->opposite_half_edges.end()) {
+        end_vertex->opposite_half_edges.erase(this);
+    }
 }
 }  // namespace MCGAL
-
