@@ -84,11 +84,12 @@ void MyMesh::buildFromBuffer(std::deque<MCGAL::Point>* p_pointDeque, std::deque<
         float x, y, z;
         MCGAL::Point p = p_pointDeque->at(i);
         MCGAL::Vertex* vt = new MCGAL::Vertex(p);
-        vt->setVid(i);
+        vt->setId(i);
         this->vertices.insert(vt);
         vertices.push_back(vt);
     }
-
+    vh_departureConquest[0] = vertices[0];
+    vh_departureConquest[1] = vertices[1];
     // 读取面信息并添加到 Mesh
     for (int i = 0; i < p_faceDeque->size(); ++i) {
         uint32_t* ptr = p_faceDeque->at(i);
@@ -224,6 +225,7 @@ void MyMesh::insertRemovedVertices() {
             for (MCGAL::Halfedge* hit : Hvc->halfedges) {
                 hit->setNew();
                 hit->opposite->setNew();
+                // hit->face->setProcessedFlag();
             }
         }
     }

@@ -11,7 +11,7 @@ Mesh::~Mesh() {
         delete f;
     }
     for (Vertex* p : vertices) {
-        assert(p->halfedges.size() == (int)0 && p->opposite_half_edges.size() == 0);
+        // assert(p->halfedges.size() == (int)0 && p->opposite_half_edges.size() == 0);
         delete p;
     }
     for (Halfedge* e : halfedges) {
@@ -146,8 +146,10 @@ void Mesh::dumpto(std::string path) {
     offFile << "OFF\n";
     offFile << this->vertices.size() << " " << this->faces.size() << " 0\n";
     // 写入顶点坐标
+    int id = 0;
     for (Vertex* vertex : this->vertices) {
         offFile << vertex->x() << " " << vertex->y() << " " << vertex->z() << "\n";
+        vertex->setId(id++);
     }
 
     // 写入面的顶点索引

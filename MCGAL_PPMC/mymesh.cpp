@@ -87,19 +87,21 @@ MyMesh::MyMesh(char* path) : MCGAL::Mesh() {
     srand(PPMC_RANDOM_CONSTANT);
     readBaseMesh();
     // Set the vertices of the edge that is the departure of the coding and decoding conquests.
-    vh_departureConquest[0] = (*halfedges.begin())->vertex;
-    vh_departureConquest[1] = (*halfedges.begin())->end_vertex;
+    // vh_departureConquest[0] = vertices.;
+    // vh_departureConquest[1] = (*halfedges.begin())->end_vertex;
 }
 
 void MyMesh::pushHehInit() {
     MCGAL::Halfedge* hehBegin;
-    MCGAL::Halfedge* hit(*vh_departureConquest[0]->halfedges.begin());
-    while (1) {
-        hehBegin = hit->opposite;
+    // std::unordered_set<MCGAL::Halfedge*> hset = vh_departureConquest[0]->halfedges;
+    std::unordered_set<MCGAL::Halfedge*>::iterator hit = vh_departureConquest[0]->halfedges.begin();
+    std::unordered_set<MCGAL::Halfedge*>::iterator hed = vh_departureConquest[0]->halfedges.end();
+    for (; hit != hed; hit++) {
+        hehBegin = (*hit)->opposite;
         if (hehBegin->vertex == vh_departureConquest[1])
             break;
-        ++hit;
     }
+    assert(hehBegin->vertex == vh_departureConquest[1]);
     // Push it to the queue.
     gateQueue.push(hehBegin);
 }

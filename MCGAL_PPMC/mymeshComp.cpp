@@ -20,6 +20,9 @@ void MyMesh::startNextCompresssionOp() {
     for (MCGAL::Face* fit : faces)
         fit->resetState();
     i_nbRemovedVertices = 0;  // Reset the number of removed vertices.
+    while (!gateQueue.empty()) {
+        gateQueue.pop();
+    }
 
     // 2. do one round of decimation
     // choose a halfedge that can be processed:
@@ -71,7 +74,7 @@ void MyMesh::startNextCompresssionOp() {
                 MCGAL::Halfedge* hOpp = hh->opposite;
                 // TODO: wait
                 // assert(!hOpp->is_border());
-                if (!hOpp->face->isConquered() && !hOpp->vertex->isConquered() && !hOpp->end_vertex->isConquered()) {
+                if (!hOpp->face->isConquered()) {
                     gateQueue.push(hOpp);
                     hOpp->setInQueue();
                 }
@@ -150,7 +153,6 @@ MCGAL::Halfedge* MyMesh::vertexCut(MCGAL::Halfedge* startH) {
         // assert(!h->is_border());
         MCGAL::Face* f = h->face;
         assert(!f->isConquered());  // we cannot cut again an already cut face, or a NULL patch
-
         /*
          * the old facets around the vertex will be removed in the vertex cut operation
          * and being replaced with a merged one. but the replacing group information
@@ -187,13 +189,13 @@ MCGAL::Halfedge* MyMesh::vertexCut(MCGAL::Halfedge* startH) {
         f->rg = NULL;
 
         // mark the vertex as conquered
-        h->vertex->setConquered();
         h->end_vertex->setConquered();
+        // h->end_vertex->setConquered();
         removed++;
     } while ((h = h->opposite->next) != end);
 
     // copy the position of the center vertex:
-    MCGAL::Point vPos = startH->end_vertex->point();
+    MCGAL::Point vPos = startH->vertex->point();
     new_rg->removed_vertices.emplace(vPos);
 
     int bf = size_of_facets();
@@ -219,7 +221,7 @@ MCGAL::Halfedge* MyMesh::vertexCut(MCGAL::Halfedge* startH) {
         MCGAL::Halfedge* hOpp = h->opposite;
         // TODO: wait
         // assert(!hOpp->is_border());
-        if (!hOpp->face->isConquered() && !hOpp->vertex->isConquered() && !hOpp->end_vertex->isConquered()) {
+        if (!hOpp->face->isConquered()) {
             gateQueue.push(hOpp);
             hOpp->setInQueue();
         }
