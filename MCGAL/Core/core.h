@@ -2,7 +2,15 @@
 #include <string>
 #include <unordered_set>
 #include <vector>
+#include <math.h>
 namespace MCGAL {
+
+inline bool compareFloat(float f1, float f2) {
+    if (fabs(f1 - f2) < 1e-6) {
+        return true;
+    }
+    return false;
+}
 
 class Point {
   public:
@@ -656,6 +664,8 @@ class Mesh {
         Halfedge* hret = find_prev(h);
         Face* face = new Face();
         faces.insert(face);
+        Vertex* h1 = new Vertex(-0.002533, 0.110473, -0.021026);
+        Vertex* h2 = new Vertex(-0.002448, 0.112634, -0.019337);
         while (g != h) {
             Halfedge* gprev = find_prev(g);
             remove_tip(gprev);
@@ -665,7 +675,22 @@ class Mesh {
             Halfedge* gnext = g->next->opposite;
             this->halfedges.erase(g);
             this->halfedges.erase(g->opposite);
-
+            Vertex* v1 = g->vertex;
+            Vertex* v2 = g->end_vertex;
+            if (compareFloat(v1->x(), h1->x()) && compareFloat(v1->y(), h1->y()) && compareFloat(v1->z(), h1->z())) {
+                if (compareFloat(v2->x(), h2->x()) && compareFloat(v2->y(), h2->y()) &&
+                    compareFloat(v2->z(), h2->z())) {
+                    printf("delete the vertex\n");
+                }
+            }
+            v1 = g->opposite->vertex;
+            v2 = g->opposite->end_vertex;
+            if (compareFloat(v1->x(), h1->x()) && compareFloat(v1->y(), h1->y()) && compareFloat(v1->z(), h1->z())) {
+                if (compareFloat(v2->x(), h2->x()) && compareFloat(v2->y(), h2->y()) &&
+                    compareFloat(v2->z(), h2->z())) {
+                    printf("delete the vertex\n");
+                }
+            }
             // g->vertex->halfedges.erase(g);
             // g->opposite->vertex->halfedges.erase(g->opposite);
 
@@ -681,7 +706,20 @@ class Mesh {
 
         this->halfedges.erase(h);
         this->halfedges.erase(h->opposite);
-
+        Vertex* v1 = h->vertex;
+        Vertex* v2 = h->end_vertex;
+        if (compareFloat(v1->x(), h1->x()) && compareFloat(v1->y(), h1->y()) && compareFloat(v1->z(), h1->z())) {
+            if (compareFloat(v2->x(), h2->x()) && compareFloat(v2->y(), h2->y()) && compareFloat(v2->z(), h2->z())) {
+                printf("h delete the vertex\n");
+            }
+        }
+        v1 = h->opposite->vertex;
+        v2 = h->opposite->end_vertex;
+        if (compareFloat(v1->x(), h1->x()) && compareFloat(v1->y(), h1->y()) && compareFloat(v1->z(), h1->z())) {
+            if (compareFloat(v2->x(), h2->x()) && compareFloat(v2->y(), h2->y()) && compareFloat(v2->z(), h2->z())) {
+                printf("h opposite delete the vertex\n");
+            }
+        }
         // h->vertex->halfedges.erase(h);
         // h->opposite->vertex->halfedges.erase(h->opposite);
         set_face_in_face_loop(hret, face);
