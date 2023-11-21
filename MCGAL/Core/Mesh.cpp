@@ -145,6 +145,7 @@ void Mesh::dumpto(std::string path) {
     // 写入 OFF 文件头部信息
     offFile << "OFF\n";
     offFile << this->vertices.size() << " " << this->faces.size() << " 0\n";
+    offFile << "\n";
     // 写入顶点坐标
     int id = 0;
     for (Vertex* vertex : this->vertices) {
@@ -162,9 +163,15 @@ void Mesh::dumpto(std::string path) {
     // }
     for (Face* face : this->faces) {
         offFile << face->vertices.size() << " ";
-        for (Vertex* vertex : face->vertices) {
-            offFile << vertex->getId() << " ";
-        }
+        Halfedge* hst = *face->halfedges.begin();
+        Halfedge* hed = *face->halfedges.begin();
+        // for (Vertex* vertex : face->vertices) {
+        //     offFile << vertex->getId() << " ";
+        // }
+        do {
+            offFile << hst->vertex->getId() << " ";
+            hst = hst->next;
+        } while (hst != hed);
         offFile << "\n";
     }
 

@@ -15,11 +15,13 @@ void compress(int argc, char** argv) {
     int lod = 100;
 
     char path[256];
-    for (uint i = 20; i <= lod; i += 20) {
+    sprintf(path, "./gisdata1/compressed_0.mesh.off");
+    hm->write_to_off(path);
+    for (uint i = 10; i <= lod; i += 10) {
         hm->decode(i);
         hispeed::logt("decode to %d", start, i);
         // log("%d %f", i, MyMesh->getHausdorfDistance());
-        sprintf(path, "./gisdata/compressed_%d.mesh.off", i);
+        sprintf(path, "./gisdata1/compressed_%d.mesh.off", i);
         hm->write_to_off(path);
     }
 

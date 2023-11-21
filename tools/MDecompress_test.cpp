@@ -17,6 +17,8 @@ void compress(int argc, char** argv) {
     int lod = 100;
 
     char path[256];
+    sprintf(path, "./gisdata/compressed_0.mesh.off");
+    hm->write_to_off(path);
     for (uint i = 20; i <= lod; i += 20) {
         hm->decode(i);
         logt("decode to %d", start, i);

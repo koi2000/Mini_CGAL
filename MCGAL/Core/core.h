@@ -1,8 +1,8 @@
 #include <assert.h>
+#include <math.h>
 #include <string>
 #include <unordered_set>
 #include <vector>
-#include <math.h>
 namespace MCGAL {
 
 inline bool compareFloat(float f1, float f2) {
@@ -192,13 +192,14 @@ class Halfedge {
     enum Flag { NotYetInQueue = 0, InQueue = 1, NoLongerInQueue = 2 };
     enum Flag2 { Original, Added, New };
     enum ProcessedFlag { NotProcessed, Processed };
+    enum RemovedFlag { NotRemoved, Removed };
 
     Flag flag = NotYetInQueue;
     Flag2 flag2 = Original;
     ProcessedFlag processedFlag = NotProcessed;
+    RemovedFlag removedFlag = NotRemoved;
 
   public:
-    Halfedge() {}
     Vertex* vertex = nullptr;
     Vertex* end_vertex = nullptr;
     Face* face = nullptr;
@@ -211,6 +212,7 @@ class Halfedge {
         flag = NotYetInQueue;
         flag2 = Original;
         processedFlag = NotProcessed;
+        removedFlag = NotRemoved;
     }
 
     /* Flag 1 */
@@ -266,6 +268,15 @@ class Halfedge {
         return flag2 == New;
     }
 
+    /* Flag 3*/
+    inline void setRemoved() {
+        removedFlag = Removed;
+    }
+
+    inline bool isRemoved() {
+        return removedFlag == Removed;
+    }
+
     // Hash function for Point
     struct Hash {
         size_t operator()(Halfedge* halfedge) const {
@@ -314,16 +325,18 @@ class Face {
   public:
     Face(){};
     ~Face() {
-        for (Halfedge* h : halfedges) {
-            delete h;
-        }
+        // for (Halfedge* h : halfedges) {
+        //     delete h;
+        // }
         halfedges.clear();
         vertices.clear();
     }
 
     Face(const Face& face) {
-        this->vertices = face.vertices;
-        this->halfedges = face.halfedges;
+        // this->vertices = face.vertices;
+        // this->halfedges = face.halfedges;
+        this->flag = face.flag;
+        this->processedFlag = face.processedFlag;
     }
 
     Face(Halfedge* hit) {
@@ -386,8 +399,8 @@ class Face {
         for (int i = 0; i < hs.size(); i++) {
             // hs[i]->next = hs[(i + 1) % hs.size()];
             // hs[i]->face = this;
-            halfedges.insert(hs[i]);
-            vertices.insert(hs[i]->vertex);
+            this->halfedges.insert(hs[i]);
+            this->vertices.insert(hs[i]->vertex);
             hs[i]->face = this;
         }
     }
@@ -600,7 +613,8 @@ class Mesh {
     }
 
     Halfedge* create_center_vertex(Halfedge* h) {
-        this->faces.erase(h->face);
+        // this->faces.erase(h->face);
+        // Face* origin = h->face;
         Vertex* vnew = new Vertex();
         this->vertices.insert(vnew);
         Halfedge* hnew = new Halfedge(h->end_vertex, vnew);
@@ -608,14 +622,14 @@ class Mesh {
         // add new halfedge to current mesh and set opposite
         this->halfedges.insert(hnew);
         this->halfedges.insert(oppo_new);
-        hnew->opposite = oppo_new;
-        oppo_new->opposite = hnew;
+        // hnew->opposite = oppo_new;
+        // oppo_new->opposite = hnew;
         // set the next element
         // now the next of hnew and prev of oppo_new is unknowen
         insert_tip(hnew->opposite, h);
         Halfedge* g = hnew->opposite->next;
         std::vector<Halfedge*> origin_around_halfedge;
-        origin_around_halfedge.push_back(h);
+        // origin_around_halfedge.push_back(h);
 
         Halfedge* hed = hnew;
         while (g->next != hed) {
@@ -623,8 +637,8 @@ class Mesh {
             Halfedge* oppo_gnew = new Halfedge(vnew, g->end_vertex);
             this->halfedges.insert(gnew);
             this->halfedges.insert(oppo_gnew);
-            gnew->opposite = oppo_gnew;
-            oppo_gnew->opposite = gnew;
+            // gnew->opposite = oppo_gnew;
+            // oppo_gnew->opposite = gnew;
             origin_around_halfedge.push_back(g);
             gnew->next = hnew->opposite;
             insert_tip(gnew->opposite, g);
@@ -633,21 +647,21 @@ class Mesh {
             hnew = gnew;
         }
         hed->next = hnew->opposite;
+        h->face->reset(h);
         // collect all the halfedge
         for (Halfedge* hit : origin_around_halfedge) {
             Face* face = new Face(hit);
             this->faces.insert(face);
-            hit->vertex->reset();
         }
         return oppo_new;
     }
 
-    void close_tip(Halfedge* h, Vertex* v) const {
+    inline void close_tip(Halfedge* h, Vertex* v) const {
         h->next = h->opposite;
         h->vertex = v;
     }
 
-    void insert_tip(Halfedge* h, Halfedge* v) const {
+    inline void insert_tip(Halfedge* h, Halfedge* v) const {
         h->next = v->next;
         v->next = h->opposite;
     }
@@ -664,8 +678,8 @@ class Mesh {
         Halfedge* hret = find_prev(h);
         Face* face = new Face();
         faces.insert(face);
-        Vertex* h1 = new Vertex(-0.002533, 0.110473, -0.021026);
-        Vertex* h2 = new Vertex(-0.002448, 0.112634, -0.019337);
+        Vertex* h1 = new Vertex(0.031457, 0.037887, -0.000065);
+        Vertex* h2 = new Vertex(-0.026529, 0.118060, 0.031540);
         while (g != h) {
             Halfedge* gprev = find_prev(g);
             remove_tip(gprev);
@@ -691,8 +705,8 @@ class Mesh {
                     printf("delete the vertex\n");
                 }
             }
-            // g->vertex->halfedges.erase(g);
-            // g->opposite->vertex->halfedges.erase(g->opposite);
+            g->vertex->halfedges.erase(g);
+            g->opposite->vertex->halfedges.erase(g->opposite);
 
             g = gnext;
         }
@@ -720,8 +734,8 @@ class Mesh {
                 printf("h opposite delete the vertex\n");
             }
         }
-        // h->vertex->halfedges.erase(h);
-        // h->opposite->vertex->halfedges.erase(h->opposite);
+        h->vertex->halfedges.erase(h);
+        h->opposite->vertex->halfedges.erase(h->opposite);
         set_face_in_face_loop(hret, face);
         return hret;
     }
@@ -738,7 +752,7 @@ class Mesh {
         } while (h != end);
     }
 
-    void remove_tip(Halfedge* h) const {
+    inline void remove_tip(Halfedge* h) const {
         h->next = h->next->opposite->next;
     }
 
@@ -749,24 +763,16 @@ class Mesh {
         remove_tip(gprev);
         // hds->edges_erase(h);
         // halfedges.erase(h);
-        for (auto it = halfedges.begin(); it != halfedges.end(); it++) {
-            if (*it == h) {
-                halfedges.erase(it);
-                break;
-            }
-        }
+        // this->halfedges.erase(h);
+        // this->halfedges.erase(h->opposite);
+        h->opposite->setRemoved();
 
-        for (auto it = halfedges.begin(); it != halfedges.end(); it++) {
-            if (*it == h->opposite) {
-                halfedges.erase(it);
-                break;
-            }
-        }
-        if (gprev->face != h->face)
-            faces.erase(gprev->face);
-
-        h = hprev;
-        h->face->reset(h);
+        h->vertex->halfedges.erase(h);
+        h->opposite->vertex->halfedges.erase(h->opposite);
+        // if (gprev->face != h->face)
+        this->faces.erase(gprev->face);
+        delete gprev->face;
+        hprev->face->reset(hprev);
         return hprev;
     }
 };

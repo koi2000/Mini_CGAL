@@ -123,9 +123,9 @@ MyMesh* MyMesh::clone_mesh() {
 
 void MyMesh::dumpBuffer(char* path) {
     ofstream fout(path, ios::binary);
-    // int len = dataOffset;
-    // fout.write((char*)&len, sizeof(int));
-    fout.write(p_data, BUFFER_SIZE);
+    int len = dataOffset;
+    fout.write((char*)&len, sizeof(int));
+    fout.write(p_data, len);
     fout.close();
 }
 

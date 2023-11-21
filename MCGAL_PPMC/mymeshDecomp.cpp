@@ -225,7 +225,7 @@ void MyMesh::insertRemovedVertices() {
             for (MCGAL::Halfedge* hit : Hvc->halfedges) {
                 hit->setNew();
                 hit->opposite->setNew();
-                // hit->face->setProcessedFlag();
+                hit->face->setProcessedFlag();
             }
         }
     }
@@ -235,9 +235,25 @@ void MyMesh::insertRemovedVertices() {
  * Remove all the marked edges
  */
 void MyMesh::removeInsertedEdges() {
-    for (MCGAL::Halfedge* hit : halfedges) {
-        if (hit->isAdded()) {
-            join_face(hit);
+    // for (MCGAL::Halfedge* hit : halfedges) {
+    //     if (hit->isAdded()) {
+    //         join_face(hit);
+    //     }
+    // }
+    for (auto hit = halfedges.begin(); hit != halfedges.end();) {
+        if ((*hit)->isRemoved()) {
+            // *hit = nullptr;
+            delete *hit;
+            hit = halfedges.erase(hit);
+            continue;
+        }
+        if ((*hit)->isAdded()) {
+            join_face(*hit);
+            delete *hit;
+            // *hit = nullptr;
+            hit = halfedges.erase(hit);
+        } else {
+            hit++;
         }
     }
 }

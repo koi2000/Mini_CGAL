@@ -65,8 +65,8 @@ MyMesh::MyMesh(char* data, size_t dsize, bool owndata) : MCGAL::Mesh() {
     }
     readBaseMesh();
     // Set the vertices of the edge that is the departure of the coding and decoding conquests.
-    vh_departureConquest[0] = (*halfedges.begin())->vertex;
-    vh_departureConquest[1] = (*halfedges.begin())->end_vertex;
+    // vh_departureConquest[0] = (*halfedges.begin())->vertex;
+    // vh_departureConquest[1] = (*halfedges.begin())->end_vertex;
 }
 
 MyMesh::~MyMesh() {
@@ -94,14 +94,14 @@ MyMesh::MyMesh(char* path) : MCGAL::Mesh() {
 void MyMesh::pushHehInit() {
     MCGAL::Halfedge* hehBegin;
     // std::unordered_set<MCGAL::Halfedge*> hset = vh_departureConquest[0]->halfedges;
-    std::unordered_set<MCGAL::Halfedge*>::iterator hit = vh_departureConquest[0]->halfedges.begin();
-    std::unordered_set<MCGAL::Halfedge*>::iterator hed = vh_departureConquest[0]->halfedges.end();
+    std::unordered_set<MCGAL::Halfedge*>::iterator hit = vh_departureConquest[1]->halfedges.begin();
+    std::unordered_set<MCGAL::Halfedge*>::iterator hed = vh_departureConquest[1]->halfedges.end();
     for (; hit != hed; hit++) {
         hehBegin = (*hit)->opposite;
-        if (hehBegin->vertex == vh_departureConquest[1])
+        if (hehBegin->vertex == vh_departureConquest[0])
             break;
     }
-    assert(hehBegin->vertex == vh_departureConquest[1]);
+    assert(hehBegin->vertex == vh_departureConquest[0]);
     // Push it to the queue.
     gateQueue.push(hehBegin);
 }
@@ -231,14 +231,14 @@ void MyMesh::dumpBuffer(char* path) {
 
 void MyMesh::loadBuffer(char* path) {
     ifstream fin(path, ios::binary);
-    // int len2;
-    // fin.read((char*)&len2, sizeof(int));
+    int len2;
+    fin.read((char*)&len2, sizeof(int));
     dataOffset = 0;
-    // p_data = new char[len2 + 1];
-    // memset(p_data, 0, len2 + 1);
-    p_data = new char[BUFFER_SIZE];
-    memset(p_data, 0, BUFFER_SIZE);
-    fin.read(p_data, BUFFER_SIZE);
+    p_data = new char[len2];
+    memset(p_data, 0, len2);
+    // p_data = new char[BUFFER_SIZE];
+    // memset(p_data, 0, BUFFER_SIZE);
+    fin.read(p_data, len2);
 }
 
 // TODO: 待完善
