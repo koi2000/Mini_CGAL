@@ -93,8 +93,6 @@ Halfedge* Mesh::create_center_vertex(Halfedge* h) {
         Halfedge* oppo_gnew = new Halfedge(vnew, g->end_vertex);
         this->halfedges.insert(gnew);
         this->halfedges.insert(oppo_gnew);
-        // gnew->opposite = oppo_gnew;
-        // oppo_gnew->opposite = gnew;
         origin_around_halfedge.push_back(g);
         gnew->next = hnew->opposite;
         insert_tip(gnew->opposite, g);
@@ -112,12 +110,12 @@ Halfedge* Mesh::create_center_vertex(Halfedge* h) {
     return oppo_new;
 }
 
-void Mesh::close_tip(Halfedge* h, Vertex* v) const {
+inline void Mesh::close_tip(Halfedge* h, Vertex* v) const {
     h->next = h->opposite;
     h->vertex = v;
 }
 
-void Mesh::insert_tip(Halfedge* h, Halfedge* v) const {
+inline void Mesh::insert_tip(Halfedge* h, Halfedge* v) const {
     h->next = v->next;
     v->next = h->opposite;
 }
@@ -176,7 +174,7 @@ void Mesh::set_face_in_face_loop(Halfedge* h, Face* f) const {
     } while (h != end);
 }
 
-void Mesh::remove_tip(Halfedge* h) const {
+inline void Mesh::remove_tip(Halfedge* h) const {
     h->next = h->next->opposite->next;
 }
 

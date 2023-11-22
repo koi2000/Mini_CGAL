@@ -446,9 +446,9 @@ class Mesh {
 
     Halfedge* create_center_vertex(Halfedge* h);
 
-    void close_tip(Halfedge* h, Vertex* v) const;
+    inline void close_tip(Halfedge* h, Vertex* v) const;
 
-    void insert_tip(Halfedge* h, Halfedge* v) const;
+    inline void insert_tip(Halfedge* h, Halfedge* v) const;
 
     Halfedge* find_prev(Halfedge* h) const;
 
@@ -456,7 +456,7 @@ class Mesh {
 
     void set_face_in_face_loop(Halfedge* h, Face* f) const;
 
-    void remove_tip(Halfedge* h) const;
+    inline void remove_tip(Halfedge* h) const;
 
     Halfedge* join_face(Halfedge* h);
 };

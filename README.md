@@ -17,6 +17,7 @@ Mesh
 ## Performance analysis
 the performance of MCGAL is poor. 
 
+possible reason: find_prev
 
 ```
 15:24:41.0354 thread 11830:	1 RemovedVerticesDecodingStep takes 0.080000 ms
