@@ -323,153 +323,30 @@ class Face {
     std::unordered_set<Halfedge*, Halfedge::Hash, Halfedge::Equal> halfedges;
 
   public:
+    ~Face();
+
+    // constructor
     Face(){};
-    ~Face() {
-        // for (Halfedge* h : halfedges) {
-        //     delete h;
-        // }
-        halfedges.clear();
-        vertices.clear();
-    }
+    Face(const Face& face);
+    Face(Halfedge* hit);
+    Face(std::vector<Vertex*>& vs);
 
-    Face(const Face& face) {
-        // this->vertices = face.vertices;
-        // this->halfedges = face.halfedges;
-        this->flag = face.flag;
-        this->processedFlag = face.processedFlag;
-    }
-
-    Face(Halfedge* hit) {
-        Halfedge* st(hit);
-        Halfedge* ed(hit);
-        std::vector<Halfedge*> edges;
-        do {
-            edges.push_back(st);
-            st = st->next;
-        } while (st != ed);
-        this->reset(edges);
-    }
-
-    Face(Vertex* v1, Vertex* v2, Vertex* v3) {
-        vertices.insert(v1);
-        vertices.insert(v2);
-        vertices.insert(v3);
-    }
-
-    Face* clone() {
-        return new Face(*this);
-    }
-
-    Face(std::vector<Vertex*>& vs) {
-        Halfedge* prev = nullptr;
-        Halfedge* head = nullptr;
-        for (int i = 0; i < vs.size(); i++) {
-            vertices.insert(vs[i]);
-            Vertex* nextv = vs[(i + 1) % vs.size()];
-            Halfedge* hf = new Halfedge(vs[i], nextv);
-            halfedges.insert(hf);
-            // vs[i]->halfedges.insert(hf);
-            hf->face = this;
-            if (prev != NULL) {
-                prev->next = hf;
-            } else {
-                head = hf;
-            }
-            if (i == vs.size() - 1) {
-                hf->next = head;
-            }
-            prev = hf;
-        }
-    }
-
-    void reset(Halfedge* h) {
-        Halfedge* st = h;
-        Halfedge* ed = h;
-        std::vector<Halfedge*> edges;
-        do {
-            edges.push_back(st);
-            st = st->next;
-        } while (st != ed);
-        reset(edges);
-    }
-
-    void reset(std::vector<Halfedge*>& hs) {
-        this->halfedges.clear();
-        this->vertices.clear();
-        for (int i = 0; i < hs.size(); i++) {
-            // hs[i]->next = hs[(i + 1) % hs.size()];
-            // hs[i]->face = this;
-            this->halfedges.insert(hs[i]);
-            this->vertices.insert(hs[i]->vertex);
-            hs[i]->face = this;
-        }
-    }
-
-    void erase_vertices(std::vector<Vertex*> rvertices) {
-        // eunmerate to delete element
-        for (Vertex* vt : rvertices) {
-            for (auto iter = vertices.begin(); iter != vertices.end();) {
-                if (*iter == vt) {
-                    iter = vertices.erase(iter);
-                } else {
-                    iter++;
-                }
-            }
-            for (auto iter = halfedges.begin(); iter != halfedges.end();) {
-                if ((*iter)->end_vertex == vt || (*iter)->vertex == vt) {
-                    (*iter)->face = nullptr;
-                    iter = halfedges.erase(iter);
-                } else {
-                    iter++;
-                }
-            }
-        }
-    }
-
-    void print() {
-        printf("totally %ld vertices:\n", vertices.size());
-        int idx = 0;
-        for (Vertex* v : vertices) {
-            printf("%d:\t", idx++);
-            v->print();
-        }
-    }
-
-    void print_off() {
-        printf("OFF\n%ld 1 0\n", vertices.size());
-        for (Vertex* v : vertices) {
-            v->print();
-        }
-        printf("%ld\t", vertices.size());
-        for (int i = 0; i < vertices.size(); i++) {
-            printf("%d ", i);
-        }
-        printf("\n");
-    }
-
-    bool equal(const Face& rhs) const {
-        if (vertices.size() != rhs.vertices.size()) {
-            return false;
-        }
-        for (Vertex* vertix : vertices) {
-            if (!rhs.vertices.count(vertix)) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-    bool operator==(const Face& rhs) const {
-        return this->equal(rhs);
-    }
-
-    int facet_degree() {
-        return vertices.size();
-    }
-    // split the face and make sure the one without v as the new
-    Face* split(Vertex* v);
+    // utils
+    Face* clone();
+    void reset(Halfedge* h);
+    void reset(std::vector<Halfedge*>& hs);
     void remove(Halfedge* h);
+    int facet_degree();
 
+    // override
+    bool equal(const Face& rhs) const;
+    bool operator==(const Face& rhs) const;
+
+    // to_string method
+    void print();
+    void print_off();
+
+    // set flags
     inline void resetState() {
         flag = Unknown;
         processedFlag = NotProcessed;
@@ -565,216 +442,23 @@ class Mesh {
         return halfedges.size();
     }
 
-    Halfedge* split_facet(Halfedge* h, Halfedge* g) {
-        Face* origin = h->face;
-        // early expose
-        Face* fnew = new Face();
-        // create new halfedge
-        Halfedge* hnew = new Halfedge(h->end_vertex, g->end_vertex);
-        Halfedge* oppo_hnew = new Halfedge(g->end_vertex, h->end_vertex);
-        // set the opposite
-        // hnew->opposite = oppo_hnew;
-        // oppo_hnew->opposite = hnew;
-        // set the connect information
-        hnew->next = g->next;
-        oppo_hnew->next = h->next;
-        h->next = hnew;
-        g->next = oppo_hnew;
-        // add the new halfedge to origin face
+    Halfedge* split_facet(Halfedge* h, Halfedge* g);
 
-        // delete old halfedge from origin face
+    Halfedge* create_center_vertex(Halfedge* h);
 
-        // create new face depend on vertexs
-        Halfedge* gst = g;
-        Halfedge* ged = gst;
-        Halfedge* hst = h;
-        Halfedge* hed = hst;
-        std::vector<Halfedge*> origin_face;
-        std::vector<Halfedge*> new_face;
-        do {
-            new_face.push_back(hst);
-            hst = hst->next;
-        } while (hst != hed);
-        // new_face.push_back(hnew);
-        // hst = h->next;
-        // hed = g->next;
-        do {
-            origin_face.push_back(gst);
-            gst = gst->next;
-        } while (gst != ged);
-        // origin_face.push_back(oppo_hnew);
-        origin->reset(origin_face);
-        fnew->reset(new_face);
-        // add halfedge and face to mesh
-        this->halfedges.insert(hnew);
-        this->halfedges.insert(oppo_hnew);
-        this->faces.insert(fnew);
-        return hnew;
-    }
+    void close_tip(Halfedge* h, Vertex* v) const;
 
-    Halfedge* create_center_vertex(Halfedge* h) {
-        // this->faces.erase(h->face);
-        // Face* origin = h->face;
-        Vertex* vnew = new Vertex();
-        this->vertices.insert(vnew);
-        Halfedge* hnew = new Halfedge(h->end_vertex, vnew);
-        Halfedge* oppo_new = new Halfedge(vnew, h->end_vertex);
-        // add new halfedge to current mesh and set opposite
-        this->halfedges.insert(hnew);
-        this->halfedges.insert(oppo_new);
-        // hnew->opposite = oppo_new;
-        // oppo_new->opposite = hnew;
-        // set the next element
-        // now the next of hnew and prev of oppo_new is unknowen
-        insert_tip(hnew->opposite, h);
-        Halfedge* g = hnew->opposite->next;
-        std::vector<Halfedge*> origin_around_halfedge;
-        // origin_around_halfedge.push_back(h);
+    void insert_tip(Halfedge* h, Halfedge* v) const;
 
-        Halfedge* hed = hnew;
-        while (g->next != hed) {
-            Halfedge* gnew = new Halfedge(g->end_vertex, vnew);
-            Halfedge* oppo_gnew = new Halfedge(vnew, g->end_vertex);
-            this->halfedges.insert(gnew);
-            this->halfedges.insert(oppo_gnew);
-            // gnew->opposite = oppo_gnew;
-            // oppo_gnew->opposite = gnew;
-            origin_around_halfedge.push_back(g);
-            gnew->next = hnew->opposite;
-            insert_tip(gnew->opposite, g);
+    Halfedge* find_prev(Halfedge* h) const;
 
-            g = gnew->opposite->next;
-            hnew = gnew;
-        }
-        hed->next = hnew->opposite;
-        h->face->reset(h);
-        // collect all the halfedge
-        for (Halfedge* hit : origin_around_halfedge) {
-            Face* face = new Face(hit);
-            this->faces.insert(face);
-        }
-        return oppo_new;
-    }
+    Halfedge* erase_center_vertex(Halfedge* h);
 
-    inline void close_tip(Halfedge* h, Vertex* v) const {
-        h->next = h->opposite;
-        h->vertex = v;
-    }
+    void set_face_in_face_loop(Halfedge* h, Face* f) const;
 
-    inline void insert_tip(Halfedge* h, Halfedge* v) const {
-        h->next = v->next;
-        v->next = h->opposite;
-    }
+    void remove_tip(Halfedge* h) const;
 
-    Halfedge* find_prev(Halfedge* h) const {
-        Halfedge* g = h;
-        while (g->next != h)
-            g = g->next;
-        return g;
-    }
-
-    Halfedge* erase_center_vertex(Halfedge* h) {
-        Halfedge* g = h->next->opposite;
-        Halfedge* hret = find_prev(h);
-        Face* face = new Face();
-        faces.insert(face);
-        Vertex* h1 = new Vertex(0.031457, 0.037887, -0.000065);
-        Vertex* h2 = new Vertex(-0.026529, 0.118060, 0.031540);
-        while (g != h) {
-            Halfedge* gprev = find_prev(g);
-            remove_tip(gprev);
-            // if (g->face != face) {
-            faces.erase(g->face);
-            // }
-            Halfedge* gnext = g->next->opposite;
-            this->halfedges.erase(g);
-            this->halfedges.erase(g->opposite);
-            Vertex* v1 = g->vertex;
-            Vertex* v2 = g->end_vertex;
-            if (compareFloat(v1->x(), h1->x()) && compareFloat(v1->y(), h1->y()) && compareFloat(v1->z(), h1->z())) {
-                if (compareFloat(v2->x(), h2->x()) && compareFloat(v2->y(), h2->y()) &&
-                    compareFloat(v2->z(), h2->z())) {
-                    printf("delete the vertex\n");
-                }
-            }
-            v1 = g->opposite->vertex;
-            v2 = g->opposite->end_vertex;
-            if (compareFloat(v1->x(), h1->x()) && compareFloat(v1->y(), h1->y()) && compareFloat(v1->z(), h1->z())) {
-                if (compareFloat(v2->x(), h2->x()) && compareFloat(v2->y(), h2->y()) &&
-                    compareFloat(v2->z(), h2->z())) {
-                    printf("delete the vertex\n");
-                }
-            }
-            g->vertex->halfedges.erase(g);
-            g->opposite->vertex->halfedges.erase(g->opposite);
-
-            g = gnext;
-        }
-        faces.erase(h->face);
-        remove_tip(hret);
-        vertices.erase(h->end_vertex);
-        for (Halfedge* hit : h->end_vertex->halfedges) {
-            hit->end_vertex->halfedges.erase(hit->opposite);
-        }
-        h->end_vertex->halfedges.clear();
-
-        this->halfedges.erase(h);
-        this->halfedges.erase(h->opposite);
-        Vertex* v1 = h->vertex;
-        Vertex* v2 = h->end_vertex;
-        if (compareFloat(v1->x(), h1->x()) && compareFloat(v1->y(), h1->y()) && compareFloat(v1->z(), h1->z())) {
-            if (compareFloat(v2->x(), h2->x()) && compareFloat(v2->y(), h2->y()) && compareFloat(v2->z(), h2->z())) {
-                printf("h delete the vertex\n");
-            }
-        }
-        v1 = h->opposite->vertex;
-        v2 = h->opposite->end_vertex;
-        if (compareFloat(v1->x(), h1->x()) && compareFloat(v1->y(), h1->y()) && compareFloat(v1->z(), h1->z())) {
-            if (compareFloat(v2->x(), h2->x()) && compareFloat(v2->y(), h2->y()) && compareFloat(v2->z(), h2->z())) {
-                printf("h opposite delete the vertex\n");
-            }
-        }
-        h->vertex->halfedges.erase(h);
-        h->opposite->vertex->halfedges.erase(h->opposite);
-        set_face_in_face_loop(hret, face);
-        return hret;
-    }
-
-    void set_face_in_face_loop(Halfedge* h, Face* f) const {
-        f->halfedges.clear();
-        f->vertices.clear();
-        Halfedge* end = h;
-        do {
-            h->face = f;
-            f->halfedges.insert(h);
-            f->vertices.insert(h->vertex);
-            h = h->next;
-        } while (h != end);
-    }
-
-    inline void remove_tip(Halfedge* h) const {
-        h->next = h->next->opposite->next;
-    }
-
-    Halfedge* join_face(Halfedge* h) {
-        Halfedge* hprev = find_prev(h);
-        Halfedge* gprev = find_prev(h->opposite);
-        remove_tip(hprev);
-        remove_tip(gprev);
-        // hds->edges_erase(h);
-        // halfedges.erase(h);
-        // this->halfedges.erase(h);
-        // this->halfedges.erase(h->opposite);
-        h->opposite->setRemoved();
-
-        h->vertex->halfedges.erase(h);
-        h->opposite->vertex->halfedges.erase(h->opposite);
-        // if (gprev->face != h->face)
-        this->faces.erase(gprev->face);
-        delete gprev->face;
-        hprev->face->reset(hprev);
-        return hprev;
-    }
+    Halfedge* join_face(Halfedge* h);
 };
 
 class replacing_group {

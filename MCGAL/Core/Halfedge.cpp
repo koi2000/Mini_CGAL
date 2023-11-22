@@ -7,13 +7,6 @@ Halfedge::Halfedge(Vertex* v1, Vertex* v2) {
     end_vertex = v2;
     vertex->halfedges.insert(this);
     end_vertex->opposite_half_edges.insert(this);
-    Vertex* h1 = new Vertex(0.031457, 0.037887, -0.000065);
-    Vertex* h2 = new Vertex(0.033419, 0.039939, -0.002264);
-    if (compareFloat(v1->x(), h1->x()) && compareFloat(v1->y(), h1->y()) && compareFloat(v1->z(), h1->z())) {
-        if (compareFloat(v2->x(), h2->x()) && compareFloat(v2->y(), h2->y()) && compareFloat(v2->z(), h2->z())) {
-            printf("create the vertex\n");
-        }
-    }
     // in case this is the second half edge
     for (Halfedge* h : v2->halfedges) {
         if (h->end_vertex == v1) {

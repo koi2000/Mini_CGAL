@@ -19,7 +19,7 @@ void compress(int argc, char** argv) {
         hm->decode(i);
         logt("decode to %d", start, i);
         // log("%d %f", i, MyMesh->getHausdorfDistance());
-        sprintf(path, "./gisdata/compressed_%d.mesh.off", i);
+        sprintf(path, "./gisdata2/compressed_%d.mesh.off", i);
         hm->write_to_off(path);
     }
 
