@@ -39,8 +39,6 @@ Halfedge* Mesh::split_facet(Halfedge* h, Halfedge* g) {
     Halfedge* hnew = new Halfedge(h->end_vertex, g->end_vertex);
     Halfedge* oppo_hnew = new Halfedge(g->end_vertex, h->end_vertex);
     // set the opposite
-    // hnew->opposite = oppo_hnew;
-    // oppo_hnew->opposite = hnew;
     // set the connect information
     hnew->next = g->next;
     oppo_hnew->next = h->next;
@@ -61,9 +59,6 @@ Halfedge* Mesh::split_facet(Halfedge* h, Halfedge* g) {
         new_face.push_back(hst);
         hst = hst->next;
     } while (hst != hed);
-    // new_face.push_back(hnew);
-    // hst = h->next;
-    // hed = g->next;
     do {
         origin_face.push_back(gst);
         gst = gst->next;
@@ -79,8 +74,6 @@ Halfedge* Mesh::split_facet(Halfedge* h, Halfedge* g) {
 }
 
 Halfedge* Mesh::create_center_vertex(Halfedge* h) {
-    // this->faces.erase(h->face);
-    // Face* origin = h->face;
     Vertex* vnew = new Vertex();
     this->vertices.insert(vnew);
     Halfedge* hnew = new Halfedge(h->end_vertex, vnew);
@@ -88,14 +81,11 @@ Halfedge* Mesh::create_center_vertex(Halfedge* h) {
     // add new halfedge to current mesh and set opposite
     this->halfedges.insert(hnew);
     this->halfedges.insert(oppo_new);
-    // hnew->opposite = oppo_new;
-    // oppo_new->opposite = hnew;
     // set the next element
     // now the next of hnew and prev of oppo_new is unknowen
     insert_tip(hnew->opposite, h);
     Halfedge* g = hnew->opposite->next;
     std::vector<Halfedge*> origin_around_halfedge;
-    // origin_around_halfedge.push_back(h);
 
     Halfedge* hed = hnew;
     while (g->next != hed) {
@@ -195,15 +185,10 @@ Halfedge* Mesh::join_face(Halfedge* h) {
     Halfedge* gprev = find_prev(h->opposite);
     remove_tip(hprev);
     remove_tip(gprev);
-    // hds->edges_erase(h);
-    // halfedges.erase(h);
-    // this->halfedges.erase(h);
-    // this->halfedges.erase(h->opposite);
     h->opposite->setRemoved();
 
     h->vertex->halfedges.erase(h);
     h->opposite->vertex->halfedges.erase(h->opposite);
-    // if (gprev->face != h->face)
     this->faces.erase(gprev->face);
     delete gprev->face;
     hprev->face->reset(hprev);

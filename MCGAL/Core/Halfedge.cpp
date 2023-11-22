@@ -19,6 +19,7 @@ Halfedge::Halfedge(Vertex* v1, Vertex* v2) {
             assert(h->opposite == NULL);
             h->opposite = this;
             this->opposite = h;
+            break;
         }
     }
 }

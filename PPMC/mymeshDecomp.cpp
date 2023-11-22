@@ -1,5 +1,5 @@
 #include "mymesh.h"
-
+#include "util.h"
 void MyMesh::decode(int lod) {
     assert(lod >= 0 && lod <= 100);
     assert(!this->is_compression_mode());
@@ -28,13 +28,18 @@ void MyMesh::startNextDecompresssionOp() {
 
     i_curDecimationId++;  // increment the current decimation operation id.
     // 2. decoding the removed vertices and add to target facets
+    struct timeval start = hispeed::get_cur_time();
     RemovedVerticesDecodingStep();
+    hispeed::logt("%d RemovedVerticesDecodingStep", start, i_curDecimationId);
     // 3. decoding the inserted edge and marking the ones added
     InsertedEdgeDecodingStep();
+    hispeed::logt("%d InsertedEdgeDecodingStep", start, i_curDecimationId);
     // 4. truly insert the removed vertices
     insertRemovedVertices();
+    hispeed::logt("%d insertRemovedVertices", start, i_curDecimationId);
     // 5. truly remove the added edges
     removeInsertedEdges();
+    hispeed::logt("%d removeInsertedEdges", start, i_curDecimationId);
 }
 
 void MyMesh::readBaseMesh() {
