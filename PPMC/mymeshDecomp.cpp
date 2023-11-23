@@ -89,6 +89,7 @@ void MyMesh::readBaseMesh() {
 void MyMesh::RemovedVerticesDecodingStep() {
     //
     pushHehInit();
+    int count = 0;
     while (!gateQueue.empty()) {
         Halfedge_handle h = gateQueue.front();
         gateQueue.pop();
@@ -98,7 +99,7 @@ void MyMesh::RemovedVerticesDecodingStep() {
         // If the face is already processed, pick the next halfedge:
         if (f->isConquered())
             continue;
-
+        count++;
         // Add the other halfedges to the queue
         Halfedge_handle hIt = h;
         do {
@@ -119,6 +120,7 @@ void MyMesh::RemovedVerticesDecodingStep() {
             f->setUnsplittable();
         }
     }
+    hispeed::log("%d RemovedVerticesDecodingStep count %d", this->i_curDecimationId, count);
 }
 
 /**
@@ -126,6 +128,7 @@ void MyMesh::RemovedVerticesDecodingStep() {
  */
 void MyMesh::InsertedEdgeDecodingStep() {
     pushHehInit();
+    int count = 0;
     while (!gateQueue.empty()) {
         Halfedge_handle h = gateQueue.front();
         gateQueue.pop();
@@ -133,7 +136,7 @@ void MyMesh::InsertedEdgeDecodingStep() {
         // Test if the edge has already been conquered.
         if (h->isProcessed())
             continue;
-
+        count++;
         // Mark the halfedge as processed.
         h->setProcessed();
         h->opposite()->setProcessed();
@@ -158,6 +161,7 @@ void MyMesh::InsertedEdgeDecodingStep() {
         }
         assert(!hIt->isNew());
     }
+    hispeed::log("%d InsertedEdgeDecodingStep count %d", this->i_curDecimationId, count);
 }
 
 /**
@@ -166,6 +170,7 @@ void MyMesh::InsertedEdgeDecodingStep() {
 void MyMesh::insertRemovedVertices() {
     // Add the first halfedge to the queue.
     pushHehInit();
+    int count = 0;
     while (!gateQueue.empty()) {
         Halfedge_handle h = gateQueue.front();
         gateQueue.pop();
@@ -175,7 +180,7 @@ void MyMesh::insertRemovedVertices() {
         // If the face is already processed, pick the next halfedge:
         if (f->isProcessed())
             continue;
-
+        count++;
         // Mark the face as processed.
         f->setProcessedFlag();
 
@@ -204,6 +209,7 @@ void MyMesh::insertRemovedVertices() {
             }
         }
     }
+    hispeed::log("%d insertRemovedVertices count %d", this->i_curDecimationId, count);
 }
 
 /**

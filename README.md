@@ -14,6 +14,13 @@ Halfedge
 
 Mesh
 
+## TODO:
+check bfs count
+
+using perf to find out most time consming block
+
+using pool to replace new object
+
 ## Performance analysis
 the performance of MCGAL is poor. 
 

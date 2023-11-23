@@ -3,9 +3,17 @@ sudo ./MiniCGAL_Compress /home/koi/mastercode/Mini_CGAL/static/fixed.OFF
 
 ./PPMC_compress /home/koi/mastercode/Mini_CGAL/static/fixed.OFF ./buffer
 
+nohup ./PPMC_compress /home/koi/mastercode/Mini_CGAL/static/fixed.OFF ./buffer >> ppmc.log &
+
 ./MiniCGAL_Decompress /home/koi/mastercode/Mini_CGAL/static/buffer
 ./MiniCGAL_Decompress ./buffer
 
+
+sudo perf record -e cpu-clock  ./MiniCGAL_Decompress /home/koi/mastercode/Mini_CGAL/static/buffer
+
+gprof -b ./MiniCGAL_Decompress   gmon.out  > result.txt
+
+gprof -b ./MiniCGAL_Decompress  gmon.out | python ../tools/gprof2dot.py | dot -Tpng -o result1.png
 
 unfinished problem
 
