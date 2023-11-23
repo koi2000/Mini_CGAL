@@ -27,6 +27,61 @@ the performance of MCGAL is poor.
 possible reason: find_prev
 
 ```
+17:34:17.0382 thread 2824:      compress takes 0.055000 ms
+Error opening file: ./gisdata/compressed_0.mesh.off
+17:34:17.0384 thread 2824:      1 RemovedVerticesDecodingStep takes 0.085000 ms
+17:34:17.0385 thread 2824:      1 InsertedEdgeDecodingStep takes 0.124000 ms
+17:34:17.0387 thread 2824:      1 insertRemovedVertices takes 2.069000 ms
+17:34:17.0388 thread 2824:      1 removeInsertedEdges takes 0.987000 ms
+17:34:17.0388 thread 2824:      2 RemovedVerticesDecodingStep takes 0.150000 ms
+17:34:17.0388 thread 2824:      2 InsertedEdgeDecodingStep takes 0.230000 ms
+17:34:17.0392 thread 2824:      2 insertRemovedVertices takes 3.890000 ms
+17:34:17.0394 thread 2824:      2 removeInsertedEdges takes 1.612000 ms
+17:34:17.0394 thread 2824:      decode to 20 takes 11.318000 ms
+Error opening file: ./gisdata/compressed_20.mesh.off
+17:34:17.0394 thread 2824:      3 RemovedVerticesDecodingStep takes 0.155000 ms
+17:34:17.0394 thread 2824:      3 InsertedEdgeDecodingStep takes 0.293000 ms
+17:34:17.0398 thread 2824:      3 insertRemovedVertices takes 4.160000 ms
+17:34:17.0404 thread 2824:      3 removeInsertedEdges takes 6.184000 ms
+17:34:17.0406 thread 2824:      4 RemovedVerticesDecodingStep takes 0.305000 ms
+17:34:17.0406 thread 2824:      4 InsertedEdgeDecodingStep takes 0.624000 ms
+17:34:17.0415 thread 2824:      4 insertRemovedVertices takes 9.177000 ms
+17:34:17.0422 thread 2824:      4 removeInsertedEdges takes 7.008000 ms
+17:34:17.0422 thread 2824:      decode to 40 takes 28.812000 ms
+Error opening file: ./gisdata/compressed_40.mesh.off
+17:34:17.0424 thread 2824:      5 RemovedVerticesDecodingStep takes 0.602000 ms
+17:34:17.0425 thread 2824:      5 InsertedEdgeDecodingStep takes 0.874000 ms
+17:34:17.0438 thread 2824:      5 insertRemovedVertices takes 13.603000 ms
+17:34:17.0448 thread 2824:      5 removeInsertedEdges takes 10.038000 ms
+17:34:17.0451 thread 2824:      6 RemovedVerticesDecodingStep takes 1.039000 ms
+17:34:17.0453 thread 2824:      6 InsertedEdgeDecodingStep takes 2.399000 ms
+17:34:17.0482 thread 2824:      6 insertRemovedVertices takes 28.376000 ms
+17:34:17.0499 thread 2824:      6 removeInsertedEdges takes 16.828000 ms
+17:34:17.0499 thread 2824:      decode to 60 takes 76.345000 ms
+Error opening file: ./gisdata/compressed_60.mesh.off
+17:34:17.0504 thread 2824:      7 RemovedVerticesDecodingStep takes 1.456000 ms
+17:34:17.0506 thread 2824:      7 InsertedEdgeDecodingStep takes 2.192000 ms
+17:34:17.0547 thread 2824:      7 insertRemovedVertices takes 41.345000 ms
+17:34:17.0572 thread 2824:      7 removeInsertedEdges takes 25.004000 ms
+17:34:17.0582 thread 2824:      8 RemovedVerticesDecodingStep takes 3.204000 ms
+17:34:17.0587 thread 2824:      8 InsertedEdgeDecodingStep takes 5.092000 ms
+17:34:17.0663 thread 2824:      8 insertRemovedVertices takes 75.882000 ms
+17:34:17.0702 thread 2824:      8 removeInsertedEdges takes 39.349000 ms
+17:34:17.0702 thread 2824:      decode to 80 takes 203.617000 ms
+Error opening file: ./gisdata/compressed_80.mesh.off
+17:34:17.0715 thread 2824:      9 RemovedVerticesDecodingStep takes 4.020000 ms
+17:34:17.0732 thread 2824:      9 InsertedEdgeDecodingStep takes 16.729000 ms
+17:34:17.0835 thread 2824:      9 insertRemovedVertices takes 103.238000 ms
+17:34:17.0925 thread 2824:      9 removeInsertedEdges takes 89.978000 ms
+17:34:17.0968 thread 2824:      10 RemovedVerticesDecodingStep takes 30.859000 ms
+17:34:17.0989 thread 2824:      10 InsertedEdgeDecodingStep takes 20.321000 ms
+17:34:18.0156 thread 2824:      10 insertRemovedVertices takes 167.224000 ms
+17:34:18.0177 thread 2824:      10 removeInsertedEdges takes 21.207000 ms
+17:34:18.0177 thread 2824:      decode to 100 takes 474.956000 ms
+Error opening file: ./gisdata/compressed_100.mesh.off
+```
+
+```
 15:24:41.0354 thread 11830:	1 RemovedVerticesDecodingStep takes 0.080000 ms
 15:24:41.0354 thread 11830:	1 InsertedEdgeDecodingStep takes 0.120000 ms
 15:24:41.0356 thread 11830:	1 insertRemovedVertices takes 2.188000 ms

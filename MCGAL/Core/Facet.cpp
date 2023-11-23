@@ -60,6 +60,50 @@ Face::Face(std::vector<Vertex*>& vs) {
     }
 }
 
+Face::Face(std::vector<Vertex*>& vs, Mesh* mesh) {
+    Halfedge* prev = nullptr;
+    Halfedge* head = nullptr;
+    for (int i = 0; i < vs.size(); i++) {
+        vertices.insert(vs[i]);
+        Vertex* nextv = vs[(i + 1) % vs.size()];
+        Halfedge* hf = std::move(mesh->allocateHalfedgeFromPool(vs[i], nextv));
+        halfedges.insert(hf);
+        // vs[i]->halfedges.insert(hf);
+        hf->face = this;
+        if (prev != NULL) {
+            prev->next = hf;
+        } else {
+            head = hf;
+        }
+        if (i == vs.size() - 1) {
+            hf->next = head;
+        }
+        prev = hf;
+    }
+}
+
+void Face::reset(std::vector<Vertex*>& vs, Mesh* mesh) {
+    Halfedge* prev = nullptr;
+    Halfedge* head = nullptr;
+    for (int i = 0; i < vs.size(); i++) {
+        vertices.insert(vs[i]);
+        Vertex* nextv = vs[(i + 1) % vs.size()];
+        Halfedge* hf = mesh->allocateHalfedgeFromPool(vs[i], nextv);
+        halfedges.insert(hf);
+        // vs[i]->halfedges.insert(hf);
+        hf->face = this;
+        if (prev != NULL) {
+            prev->next = hf;
+        } else {
+            head = hf;
+        }
+        if (i == vs.size() - 1) {
+            hf->next = head;
+        }
+        prev = hf;
+    }
+}
+
 void Face::reset(Halfedge* h) {
     Halfedge* st = h;
     Halfedge* ed = h;

@@ -54,7 +54,6 @@ MyMesh::MyMesh(string& str, bool completeop) : MCGAL::Mesh() {
 MyMesh::MyMesh(char* data, size_t dsize, bool owndata) : MCGAL::Mesh() {
     assert(dsize > 0);
     srand(PPMC_RANDOM_CONSTANT);
-
     own_data = owndata;
     i_mode = DECOMPRESSION_MODE_ID;
     if (owndata) {
@@ -104,6 +103,15 @@ void MyMesh::pushHehInit() {
     assert(hehBegin->vertex == vh_departureConquest[0]);
     // Push it to the queue.
     gateQueue.push(hehBegin);
+}
+
+MCGAL::Face* MyMesh::add_face_by_pool(std::vector<MCGAL::Vertex*>& vs) {
+    MCGAL::Face* f = allocateFaceFromPool(vs, this);
+    for (MCGAL::Halfedge* hit : f->halfedges) {
+        this->halfedges.insert(hit);
+    }
+    faces.insert(f);
+    return f;
 }
 
 bool MyMesh::willViolateManifold(const std::vector<MCGAL::Halfedge*>& polygon) const {
@@ -199,18 +207,15 @@ std::istream& operator>>(std::istream& input, MyMesh& mesh) {
         input >> num_face_vertices;
         // std::vector<Face*> faces;
         std::vector<MCGAL::Vertex*> vts;
-        std::vector<int> idxs;
         for (int j = 0; j < num_face_vertices; ++j) {
             int vertex_index;
             input >> vertex_index;
             vts.push_back(vertices[vertex_index]);
-            idxs.push_back(vertex_index);
         }
         MCGAL::Face* face = mesh.add_face(vts);
         for (MCGAL::Halfedge* halfedge : face->halfedges) {
             mesh.halfedges.insert(halfedge);
         }
-        mesh.face_index.push_back(idxs);
     }
     // 清空 vector
     vertices.clear();

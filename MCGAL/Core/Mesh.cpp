@@ -17,6 +17,9 @@ Mesh::~Mesh() {
     for (Halfedge* e : halfedges) {
         delete e;
     }
+    delete[] vpool;
+    delete[] hpool;
+    delete[] fpool;
     vertices.clear();
     faces.clear();
     halfedges.clear();
@@ -29,6 +32,14 @@ Face* Mesh::add_face(std::vector<Vertex*>& vs) {
     }
     faces.insert(f);
     return f;
+}
+
+Face* Mesh::add_face(Face* face) {
+    for (Halfedge* hit : face->halfedges) {
+        this->halfedges.insert(hit);
+    }
+    faces.insert(face);
+    return face;
 }
 
 Halfedge* Mesh::split_facet(Halfedge* h, Halfedge* g) {
@@ -76,8 +87,8 @@ Halfedge* Mesh::split_facet(Halfedge* h, Halfedge* g) {
 Halfedge* Mesh::create_center_vertex(Halfedge* h) {
     Vertex* vnew = new Vertex();
     this->vertices.insert(vnew);
-    Halfedge* hnew = new Halfedge(h->end_vertex, vnew);
-    Halfedge* oppo_new = new Halfedge(vnew, h->end_vertex);
+    Halfedge* hnew = allocateHalfedgeFromPool(h->end_vertex, vnew);
+    Halfedge* oppo_new = allocateHalfedgeFromPool(vnew, h->end_vertex);
     // add new halfedge to current mesh and set opposite
     this->halfedges.insert(hnew);
     this->halfedges.insert(oppo_new);
@@ -89,8 +100,8 @@ Halfedge* Mesh::create_center_vertex(Halfedge* h) {
 
     Halfedge* hed = hnew;
     while (g->next != hed) {
-        Halfedge* gnew = new Halfedge(g->end_vertex, vnew);
-        Halfedge* oppo_gnew = new Halfedge(vnew, g->end_vertex);
+        Halfedge* gnew = allocateHalfedgeFromPool(g->end_vertex, vnew);
+        Halfedge* oppo_gnew = allocateHalfedgeFromPool(vnew, g->end_vertex);
         this->halfedges.insert(gnew);
         this->halfedges.insert(oppo_gnew);
         origin_around_halfedge.push_back(g);
@@ -104,7 +115,7 @@ Halfedge* Mesh::create_center_vertex(Halfedge* h) {
     h->face->reset(h);
     // collect all the halfedge
     for (Halfedge* hit : origin_around_halfedge) {
-        Face* face = new Face(hit);
+        Face* face = allocateFaceFromPool(hit);
         this->faces.insert(face);
     }
     return oppo_new;
@@ -225,15 +236,12 @@ bool Mesh::loadOFF(std::string path) {
         int num_face_vertices;
         file >> num_face_vertices;
         std::vector<Vertex*> vts;
-        std::vector<int> idxs;
         for (int j = 0; j < num_face_vertices; ++j) {
             int vertex_index;
             file >> vertex_index;
             vts.push_back(vertices[vertex_index]);
-            idxs.push_back(vertex_index);
         }
         this->add_face(vts);
-        this->face_index.push_back(idxs);
     }
     vertices.clear();
     fp.close();
@@ -266,18 +274,16 @@ std::istream& operator>>(std::istream& input, Mesh& mesh) {
         input >> num_face_vertices;
         // std::vector<Face*> faces;
         std::vector<Vertex*> vts;
-        std::vector<int> idxs;
+
         for (int j = 0; j < num_face_vertices; ++j) {
             int vertex_index;
             input >> vertex_index;
             vts.push_back(vertices[vertex_index]);
-            idxs.push_back(vertex_index);
         }
         Face* face = mesh.add_face(vts);
         for (Halfedge* halfedge : face->halfedges) {
             mesh.halfedges.insert(halfedge);
         }
-        mesh.face_index.push_back(idxs);
     }
     // clear vector
     vertices.clear();
