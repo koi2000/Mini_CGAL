@@ -18,6 +18,9 @@ const int DECOMPRESSION_MODE_ID = 1;
 class MyMesh : public MCGAL::Mesh {
     // Gate queues
     std::queue<MCGAL::Halfedge*> gateQueue;
+    MCGAL::Vertex* vpool = nullptr;
+    MCGAL::Halfedge* hpool = nullptr;
+    MCGAL::Face* fpool = nullptr;
 
     // Processing mode: 0 for compression and 1 for decompression.
     int i_mode;

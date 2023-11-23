@@ -21,10 +21,14 @@ void MyMesh::startNextDecompresssionOp() {
         return;
     }
     // 1. reset the states. note that the states of the vertices need not to be reset
-    for (MCGAL::Halfedge* hit : halfedges)
-        hit->resetState();
-    for (MCGAL::Face* fit : faces)
+    // for (MCGAL::Halfedge* hit : halfedges)
+    //     hit->resetState();
+    for (MCGAL::Face* fit : faces) {
         fit->resetState();
+        for (MCGAL::Halfedge* hit : fit->halfedges) {
+            hit->resetState();
+        }
+    }
 
     i_curDecimationId++;  // increment the current decimation operation id.
     // 2. decoding the removed vertices and add to target facets
@@ -81,10 +85,10 @@ void MyMesh::readBaseMesh() {
 
 void MyMesh::buildFromBuffer(std::deque<MCGAL::Point>* p_pointDeque, std::deque<uint32_t*>* p_faceDeque) {
     this->vertices.clear();
-    this->halfedges.clear();
-    // 辅助数组，用于创建faces
+    // this->halfedges.clear();
+    // used to create faces
     std::vector<MCGAL::Vertex*> vertices;
-    // 读取顶点并添加到 Mesh
+    // read vertex and add to Mesh
     for (std::size_t i = 0; i < p_pointDeque->size(); ++i) {
         float x, y, z;
         MCGAL::Point p = p_pointDeque->at(i);
@@ -95,7 +99,7 @@ void MyMesh::buildFromBuffer(std::deque<MCGAL::Point>* p_pointDeque, std::deque<
     }
     vh_departureConquest[0] = vertices[0];
     vh_departureConquest[1] = vertices[1];
-    // 读取面信息并添加到 Mesh
+    // read face and add to Mesh
     for (int i = 0; i < p_faceDeque->size(); ++i) {
         uint32_t* ptr = p_faceDeque->at(i);
         int num_face_vertices = ptr[0];
@@ -110,7 +114,7 @@ void MyMesh::buildFromBuffer(std::deque<MCGAL::Point>* p_pointDeque, std::deque<
         this->add_face(vts);
         this->face_index.push_back(idxs);
     }
-    // 清空 vector
+    // clear vector
     vertices.clear();
 }
 
@@ -240,11 +244,16 @@ void MyMesh::insertRemovedVertices() {
  * Remove all the marked edges
  */
 void MyMesh::removeInsertedEdges() {
-    // for (MCGAL::Halfedge* hit : halfedges) {
-    //     if (hit->isAdded()) {
-    //         join_face(hit);
-    //     }
-    // }
+    std::vector<MCGAL::Halfedge*> halfedges;
+    // halfedges.reserve(halfedge_count);
+    int i = 0;
+    for (auto fit = faces.begin(); fit != faces.end(); fit++) {
+        for (MCGAL::Halfedge* hit : (*fit)->halfedges) {
+            // halfedges[i] = hit;
+            halfedges.push_back(hit);
+            // i++;
+        }
+    }
     for (auto hit = halfedges.begin(); hit != halfedges.end();) {
         if ((*hit)->isRemoved()) {
             // *hit = nullptr;
@@ -261,4 +270,6 @@ void MyMesh::removeInsertedEdges() {
             hit++;
         }
     }
+    halfedges.clear();
+    return;
 }

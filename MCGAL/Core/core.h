@@ -405,7 +405,8 @@ class Mesh {
     // std::unordered_set<Vertex*, Vertex::Hash, Vertex::Equal> vertices;
     std::unordered_set<Vertex*> vertices;
     // std::unordered_set<Halfedge*, Halfedge::Hash, Halfedge::Equal> halfedges;
-    std::unordered_set<Halfedge*> halfedges;
+    // std::unordered_set<Halfedge*> halfedges;
+    int halfedge_count = 0;
     std::unordered_set<Face*> faces;
     // 用于dump OFF文件
     std::vector<std::vector<int>> face_index;
@@ -442,9 +443,14 @@ class Mesh {
         return faces.size();
     }
 
+    
     size_t size_of_halfedges() {
-        return halfedges.size();
+        return halfedge_count;
     }
+
+    // size_t size_of_halfedges() {
+    //     return halfedges.size();
+    // }
 
     Halfedge* split_facet(Halfedge* h, Halfedge* g);
 

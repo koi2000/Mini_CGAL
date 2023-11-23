@@ -15,10 +15,15 @@ void MyMesh::startNextCompresssionOp() {
     // 1. reset the stats
     for (MCGAL::Vertex* vit : vertices)
         vit->resetState();
-    for (MCGAL::Halfedge* hit : halfedges)
-        hit->resetState();
-    for (MCGAL::Face* fit : faces)
+    // for (MCGAL::Halfedge* hit : halfedges)
+    //     hit->resetState();
+    for (MCGAL::Face* fit : faces) {
         fit->resetState();
+        for (MCGAL::Halfedge* hit : fit->halfedges) {
+            hit->resetState();
+        }
+    }
+    
     i_nbRemovedVertices = 0;  // Reset the number of removed vertices.
     while (!gateQueue.empty()) {
         gateQueue.pop();
@@ -29,14 +34,15 @@ void MyMesh::startNextCompresssionOp() {
     if (i_curDecimationId < 10) {
         // teng: we always start from the middle, DO NOT use the rand function
         // size_t i_heInitId = (float)rand() / RAND_MAX * size_of_halfedges();
-        size_t i_heInitId = size_of_halfedges() / 2;
-        MCGAL::Halfedge* hitInit;
-        auto it = halfedges.begin();
-        while (i_heInitId--) {
-            it++;
-        }
-        hitInit = *it;
-        hitInit->setInQueue();
+        // size_t i_heInitId = size_of_halfedges() / 2;
+        // MCGAL::Halfedge* hitInit;
+        // auto it = halfedges.begin();
+        // while (i_heInitId--) {
+        //     it++;
+        // }
+        // hitInit = *it;
+        // hitInit->setInQueue();
+        MCGAL::Halfedge* hitInit = *vh_departureConquest[0]->halfedges.begin();
         gateQueue.push(hitInit);
     }
     // bfs all the halfedge

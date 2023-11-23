@@ -42,8 +42,10 @@ MyMesh::MyMesh(string& str, bool completeop) : MCGAL::Mesh() {
     // }
 
     // Set the vertices of the edge that is the departure of the coding and decoding conquests.
-    vh_departureConquest[0] = (*halfedges.begin())->vertex;
-    vh_departureConquest[1] = (*halfedges.begin())->opposite->vertex;
+    // vh_departureConquest[0] = (*halfedges.begin())->vertex;
+    // vh_departureConquest[1] = (*halfedges.begin())->opposite->vertex;
+    vh_departureConquest[0] = *vertices.begin();
+    vh_departureConquest[1] = (*(*vertices.begin())->halfedges.begin())->end_vertex;
 
     if (completeop) {
         encode(0);
@@ -207,9 +209,10 @@ std::istream& operator>>(std::istream& input, MyMesh& mesh) {
             idxs.push_back(vertex_index);
         }
         MCGAL::Face* face = mesh.add_face(vts);
-        for (MCGAL::Halfedge* halfedge : face->halfedges) {
-            mesh.halfedges.insert(halfedge);
-        }
+        // for (MCGAL::Halfedge* halfedge : face->halfedges) {
+        //     mesh.halfedges.insert(halfedge);
+        // }
+        mesh.halfedge_count+=face->halfedges.size();
         mesh.face_index.push_back(idxs);
     }
     // 清空 vector

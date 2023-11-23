@@ -14,19 +14,19 @@ Mesh::~Mesh() {
         // assert(p->halfedges.size() == (int)0 && p->opposite_half_edges.size() == 0);
         delete p;
     }
-    for (Halfedge* e : halfedges) {
-        delete e;
-    }
+    // for (Halfedge* e : halfedges) {
+    //     delete e;
+    // }
     vertices.clear();
     faces.clear();
-    halfedges.clear();
+    // halfedges.clear();
 }
 
 Face* Mesh::add_face(std::vector<Vertex*>& vs) {
     Face* f = new Face(vs);
-    for (Halfedge* hit : f->halfedges) {
-        this->halfedges.insert(hit);
-    }
+    // for (Halfedge* hit : f->halfedges) {
+    //     this->halfedges.insert(hit);
+    // }
     faces.insert(f);
     return f;
 }
@@ -67,8 +67,10 @@ Halfedge* Mesh::split_facet(Halfedge* h, Halfedge* g) {
     origin->reset(origin_face);
     fnew->reset(new_face);
     // add halfedge and face to mesh
-    this->halfedges.insert(hnew);
-    this->halfedges.insert(oppo_hnew);
+    // this->halfedges.insert(hnew);
+    this->halfedge_count++;
+    // this->halfedges.insert(oppo_hnew);
+    this->halfedge_count++;
     this->faces.insert(fnew);
     return hnew;
 }
@@ -79,8 +81,10 @@ Halfedge* Mesh::create_center_vertex(Halfedge* h) {
     Halfedge* hnew = new Halfedge(h->end_vertex, vnew);
     Halfedge* oppo_new = new Halfedge(vnew, h->end_vertex);
     // add new halfedge to current mesh and set opposite
-    this->halfedges.insert(hnew);
-    this->halfedges.insert(oppo_new);
+    // this->halfedges.insert(hnew);
+    this->halfedge_count++;
+    this->halfedge_count++;
+    // this->halfedges.insert(oppo_new);
     // set the next element
     // now the next of hnew and prev of oppo_new is unknowen
     insert_tip(hnew->opposite, h);
@@ -91,8 +95,10 @@ Halfedge* Mesh::create_center_vertex(Halfedge* h) {
     while (g->next != hed) {
         Halfedge* gnew = new Halfedge(g->end_vertex, vnew);
         Halfedge* oppo_gnew = new Halfedge(vnew, g->end_vertex);
-        this->halfedges.insert(gnew);
-        this->halfedges.insert(oppo_gnew);
+        // this->halfedges.insert(gnew);
+        // this->halfedges.insert(oppo_gnew);
+        this->halfedge_count++;
+        this->halfedge_count++;
         origin_around_halfedge.push_back(g);
         gnew->next = hnew->opposite;
         insert_tip(gnew->opposite, g);
@@ -139,8 +145,10 @@ Halfedge* Mesh::erase_center_vertex(Halfedge* h) {
         faces.erase(g->face);
         // }
         Halfedge* gnext = g->next->opposite;
-        this->halfedges.erase(g);
-        this->halfedges.erase(g->opposite);
+        // this->halfedges.erase(g);
+        // this->halfedges.erase(g->opposite);
+        this->halfedge_count--;
+        this->halfedge_count--;
         g->vertex->halfedges.erase(g);
         g->opposite->vertex->halfedges.erase(g->opposite);
 
@@ -154,8 +162,10 @@ Halfedge* Mesh::erase_center_vertex(Halfedge* h) {
     }
     h->end_vertex->halfedges.clear();
 
-    this->halfedges.erase(h);
-    this->halfedges.erase(h->opposite);
+    // this->halfedges.erase(h);
+    // this->halfedges.erase(h->opposite);
+    this->halfedge_count--;
+    this->halfedge_count--;
     h->vertex->halfedges.erase(h);
     h->opposite->vertex->halfedges.erase(h->opposite);
     set_face_in_face_loop(hret, face);
@@ -192,6 +202,23 @@ Halfedge* Mesh::join_face(Halfedge* h) {
     hprev->face->reset(hprev);
     return hprev;
 }
+
+// Halfedge* Mesh::join_face(Halfedge* h) {
+//     Halfedge* hprev = find_prev(h->opposite);
+//     Halfedge* gprev = find_prev(h);
+//     remove_tip(hprev);
+//     remove_tip(gprev);
+//     // h->opposite->setRemoved();
+    
+//     h->vertex->halfedges.erase(h);
+//     h->opposite->vertex->halfedges.erase(h->opposite);
+//     // this->faces.erase(gprev->face);
+//     // delete gprev->face;
+//     delete h->opposite;
+//     delete h;
+//     hprev->face->reset(hprev);
+//     return hprev;
+// }
 
 bool Mesh::loadOFF(std::string path) {
     std::ifstream fp(path);
@@ -274,9 +301,10 @@ std::istream& operator>>(std::istream& input, Mesh& mesh) {
             idxs.push_back(vertex_index);
         }
         Face* face = mesh.add_face(vts);
-        for (Halfedge* halfedge : face->halfedges) {
-            mesh.halfedges.insert(halfedge);
-        }
+        // for (Halfedge* halfedge : face->halfedges) {
+        //     mesh.halfedges.insert(halfedge);
+        // }
+        mesh.halfedge_count+=face->halfedges.size();
         mesh.face_index.push_back(idxs);
     }
     // clear vector
