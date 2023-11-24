@@ -8,7 +8,7 @@ Point
 
 Vertex
 
-Face
+Facet
 
 Halfedge
 

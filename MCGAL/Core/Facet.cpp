@@ -1,7 +1,7 @@
 #include "core.h"
 
 namespace MCGAL {
-void Face::remove(Halfedge* rh) {
+void Facet::remove(Halfedge* rh) {
     halfedges.erase(rh);
     for (Halfedge* h : halfedges) {
         if (h->next == rh) {
@@ -11,19 +11,19 @@ void Face::remove(Halfedge* rh) {
     delete rh;
 }
 
-Face::Face(const Face& face) {
+Facet::Facet(const Facet& face) {
     // this->vertices = face.vertices;
     // this->halfedges = face.halfedges;
     this->flag = face.flag;
     this->processedFlag = face.processedFlag;
 }
 
-Face::~Face() {
+Facet::~Facet() {
     halfedges.clear();
     vertices.clear();
 }
 
-Face::Face(Halfedge* hit) {
+Facet::Facet(Halfedge* hit) {
     Halfedge* st(hit);
     Halfedge* ed(hit);
     std::vector<Halfedge*> edges;
@@ -34,11 +34,11 @@ Face::Face(Halfedge* hit) {
     this->reset(edges);
 }
 
-Face* Face::clone() {
-    return new Face(*this);
+Facet* Facet::clone() {
+    return new Facet(*this);
 }
 
-Face::Face(std::vector<Vertex*>& vs) {
+Facet::Facet(std::vector<Vertex*>& vs) {
     Halfedge* prev = nullptr;
     Halfedge* head = nullptr;
     for (int i = 0; i < vs.size(); i++) {
@@ -60,7 +60,7 @@ Face::Face(std::vector<Vertex*>& vs) {
     }
 }
 
-Face::Face(std::vector<Vertex*>& vs, Mesh* mesh) {
+Facet::Facet(std::vector<Vertex*>& vs, Mesh* mesh) {
     Halfedge* prev = nullptr;
     Halfedge* head = nullptr;
     for (int i = 0; i < vs.size(); i++) {
@@ -82,7 +82,7 @@ Face::Face(std::vector<Vertex*>& vs, Mesh* mesh) {
     }
 }
 
-void Face::reset(std::vector<Vertex*>& vs, Mesh* mesh) {
+void Facet::reset(std::vector<Vertex*>& vs, Mesh* mesh) {
     Halfedge* prev = nullptr;
     Halfedge* head = nullptr;
     for (int i = 0; i < vs.size(); i++) {
@@ -104,7 +104,7 @@ void Face::reset(std::vector<Vertex*>& vs, Mesh* mesh) {
     }
 }
 
-void Face::reset(Halfedge* h) {
+void Facet::reset(Halfedge* h) {
     Halfedge* st = h;
     Halfedge* ed = h;
     std::vector<Halfedge*> edges;
@@ -115,7 +115,7 @@ void Face::reset(Halfedge* h) {
     reset(edges);
 }
 
-void Face::reset(std::vector<Halfedge*>& hs) {
+void Facet::reset(std::vector<Halfedge*>& hs) {
     this->halfedges.clear();
     this->vertices.clear();
     for (int i = 0; i < hs.size(); i++) {
@@ -127,7 +127,7 @@ void Face::reset(std::vector<Halfedge*>& hs) {
     }
 }
 
-void Face::print() {
+void Facet::print() {
     printf("totally %ld vertices:\n", vertices.size());
     int idx = 0;
     for (Vertex* v : vertices) {
@@ -136,7 +136,7 @@ void Face::print() {
     }
 }
 
-void Face::print_off() {
+void Facet::print_off() {
     printf("OFF\n%ld 1 0\n", vertices.size());
     for (Vertex* v : vertices) {
         v->print();
@@ -148,7 +148,7 @@ void Face::print_off() {
     printf("\n");
 }
 
-bool Face::equal(const Face& rhs) const {
+bool Facet::equal(const Facet& rhs) const {
     if (vertices.size() != rhs.vertices.size()) {
         return false;
     }
@@ -160,11 +160,11 @@ bool Face::equal(const Face& rhs) const {
 
     return true;
 }
-bool Face::operator==(const Face& rhs) const {
+bool Facet::operator==(const Facet& rhs) const {
     return this->equal(rhs);
 }
 
-int Face::facet_degree() {
+int Facet::facet_degree() {
     return vertices.size();
 }
 

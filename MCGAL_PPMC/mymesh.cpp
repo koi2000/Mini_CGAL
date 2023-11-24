@@ -105,8 +105,8 @@ void MyMesh::pushHehInit() {
     gateQueue.push(hehBegin);
 }
 
-MCGAL::Face* MyMesh::add_face_by_pool(std::vector<MCGAL::Vertex*>& vs) {
-    MCGAL::Face* f = allocateFaceFromPool(vs, this);
+MCGAL::Facet* MyMesh::add_face_by_pool(std::vector<MCGAL::Vertex*>& vs) {
+    MCGAL::Facet* f = allocateFaceFromPool(vs, this);
     // for (MCGAL::Halfedge* hit : f->halfedges) {
     //     this->halfedges.insert(hit);
     // }
@@ -205,14 +205,14 @@ std::istream& operator>>(std::istream& input, MyMesh& mesh) {
     for (int i = 0; i < mesh.nb_faces; ++i) {
         int num_face_vertices;
         input >> num_face_vertices;
-        // std::vector<Face*> faces;
+        // std::vector<Facet*> faces;
         std::vector<MCGAL::Vertex*> vts;
         for (int j = 0; j < num_face_vertices; ++j) {
             int vertex_index;
             input >> vertex_index;
             vts.push_back(vertices[vertex_index]);
         }
-        MCGAL::Face* face = mesh.add_face(vts);
+        MCGAL::Facet* face = mesh.add_face(vts);
         // for (MCGAL::Halfedge* halfedge : face->halfedges) {
         //     mesh.halfedges.insert(halfedge);
         // }

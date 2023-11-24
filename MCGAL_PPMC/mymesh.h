@@ -72,7 +72,7 @@ class MyMesh : public MCGAL::Mesh {
     void decode(int lod = 100);
 
     // get from pool
-    MCGAL::Face* add_face_by_pool(std::vector<MCGAL::Vertex*>& vts);
+    MCGAL::Facet* add_face_by_pool(std::vector<MCGAL::Vertex*>& vts);
 
     // Compression
     void startNextCompresssionOp();

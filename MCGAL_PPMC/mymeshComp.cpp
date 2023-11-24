@@ -15,7 +15,7 @@ void MyMesh::startNextCompresssionOp() {
     // 1. reset the stats
     for (MCGAL::Vertex* vit : vertices)
         vit->resetState();
-    for (MCGAL::Face* fit : faces) {
+    for (MCGAL::Facet* fit : faces) {
         fit->resetState();
         for (MCGAL::Halfedge* hit : fit->halfedges) {
             hit->resetState();
@@ -49,7 +49,7 @@ void MyMesh::startNextCompresssionOp() {
         gateQueue.pop();
         // TODO: wait
         // assert(!h->is_border());
-        MCGAL::Face* f = h->face;
+        MCGAL::Facet* f = h->face;
 
         // if the face is already processed, pick the next halfedge:
         if (f->isConquered()) {
@@ -155,7 +155,7 @@ MCGAL::Halfedge* MyMesh::vertexCut(MCGAL::Halfedge* startH) {
     do {
         // TODO: wait
         // assert(!h->is_border());
-        MCGAL::Face* f = h->face;
+        MCGAL::Facet* f = h->face;
         assert(!f->isConquered());  // we cannot cut again an already cut face, or a NULL patch
         /*
          * the old facets around the vertex will be removed in the vertex cut operation
@@ -180,8 +180,8 @@ MCGAL::Halfedge* MyMesh::vertexCut(MCGAL::Halfedge* startH) {
             hCorner->opposite->setAdded();
             // the corner one inherit the original facet
             // while the fRest is a newly generated facet
-            MCGAL::Face* fCorner = hCorner->face;
-            MCGAL::Face* fRest = hCorner->opposite->face;
+            MCGAL::Facet* fCorner = hCorner->face;
+            MCGAL::Facet* fRest = hCorner->opposite->face;
             assert(fRest->rg == f->rg);
             if (f->rg) {
                 fCorner->rg = f->rg;
@@ -205,7 +205,7 @@ MCGAL::Halfedge* MyMesh::vertexCut(MCGAL::Halfedge* startH) {
     int bf = size_of_facets();
     // remove the center vertex
     MCGAL::Halfedge* hNewFace = erase_center_vertex(find_prev(startH));
-    MCGAL::Face* added_face = hNewFace->face;
+    MCGAL::Facet* added_face = hNewFace->face;
     assert(added_face->rg == NULL);
     added_face->rg = new_rg;
     new_rg->ref++;
@@ -249,7 +249,7 @@ void MyMesh::RemovedVertexCodingStep() {
         MCGAL::Halfedge* h = gateQueue.front();
         gateQueue.pop();
 
-        MCGAL::Face* f = h->face;
+        MCGAL::Facet* f = h->face;
 
         // If the face is already processed, pick the next halfedge:
         if (f->isProcessed())
@@ -347,7 +347,7 @@ void MyMesh::writeBaseMesh() {
         vit->setId(id++);
     }
     // Write the base mesh face vertex indices.
-    for (MCGAL::Face* fit : faces) {
+    for (MCGAL::Facet* fit : faces) {
         unsigned i_faceDegree = fit->facet_degree();
         writeInt(i_faceDegree);
         for (MCGAL::Halfedge* hit : fit->halfedges) {

@@ -7,7 +7,7 @@
 namespace MCGAL {
 
 Mesh::~Mesh() {
-    for (Face* f : faces) {
+    for (Facet* f : faces) {
         delete f;
     }
     for (Vertex* p : vertices) {
@@ -25,8 +25,8 @@ Mesh::~Mesh() {
     // halfedges.clear();
 }
 
-Face* Mesh::add_face(std::vector<Vertex*>& vs) {
-    Face* f = new Face(vs);
+Facet* Mesh::add_face(std::vector<Vertex*>& vs) {
+    Facet* f = new Facet(vs);
     // for (Halfedge* hit : f->halfedges) {
     //     this->halfedges.insert(hit);
     // }
@@ -34,7 +34,7 @@ Face* Mesh::add_face(std::vector<Vertex*>& vs) {
     return f;
 }
 
-Face* Mesh::add_face(Face* face) {
+Facet* Mesh::add_face(Facet* face) {
     // for (Halfedge* hit : face->halfedges) {
     //     this->halfedges.insert(hit);
     // }
@@ -43,9 +43,9 @@ Face* Mesh::add_face(Face* face) {
 }
 
 Halfedge* Mesh::split_facet(Halfedge* h, Halfedge* g) {
-    Face* origin = h->face;
+    Facet* origin = h->face;
     // early expose
-    Face* fnew = new Face();
+    Facet* fnew = new Facet();
     // create new halfedge
     Halfedge* hnew = new Halfedge(h->end_vertex, g->end_vertex);
     Halfedge* oppo_hnew = new Halfedge(g->end_vertex, h->end_vertex);
@@ -115,7 +115,7 @@ Halfedge* Mesh::create_center_vertex(Halfedge* h) {
     h->face->reset(h);
     // collect all the halfedge
     for (Halfedge* hit : origin_around_halfedge) {
-        Face* face = allocateFaceFromPool(hit);
+        Facet* face = allocateFaceFromPool(hit);
         this->faces.insert(face);
     }
     return oppo_new;
@@ -141,7 +141,7 @@ Halfedge* Mesh::find_prev(Halfedge* h) const {
 Halfedge* Mesh::erase_center_vertex(Halfedge* h) {
     Halfedge* g = h->next->opposite;
     Halfedge* hret = find_prev(h);
-    Face* face = new Face();
+    Facet* face = new Facet();
     faces.insert(face);
     while (g != h) {
         Halfedge* gprev = find_prev(g);
@@ -173,7 +173,7 @@ Halfedge* Mesh::erase_center_vertex(Halfedge* h) {
     return hret;
 }
 
-void Mesh::set_face_in_face_loop(Halfedge* h, Face* f) const {
+void Mesh::set_face_in_face_loop(Halfedge* h, Facet* f) const {
     f->halfedges.clear();
     f->vertices.clear();
     Halfedge* end = h;
@@ -272,7 +272,7 @@ std::istream& operator>>(std::istream& input, Mesh& mesh) {
     for (int i = 0; i < mesh.nb_faces; ++i) {
         int num_face_vertices;
         input >> num_face_vertices;
-        // std::vector<Face*> faces;
+        // std::vector<Facet*> faces;
         std::vector<Vertex*> vts;
 
         for (int j = 0; j < num_face_vertices; ++j) {
@@ -280,7 +280,7 @@ std::istream& operator>>(std::istream& input, Mesh& mesh) {
             input >> vertex_index;
             vts.push_back(vertices[vertex_index]);
         }
-        Face* face = mesh.add_face(vts);
+        Facet* face = mesh.add_face(vts);
         // for (Halfedge* halfedge : face->halfedges) {
         //     mesh.halfedges.insert(halfedge);
         // }
@@ -307,7 +307,7 @@ void Mesh::dumpto(std::string path) {
         vertex->setId(id++);
     }
 
-    for (Face* face : this->faces) {
+    for (Facet* face : this->faces) {
         offFile << face->vertices.size() << " ";
         Halfedge* hst = *face->halfedges.begin();
         Halfedge* hed = *face->halfedges.begin();

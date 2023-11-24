@@ -7,7 +7,9 @@ namespace MCGAL {
 
 #define VERTEX_POOL_SIZE 500 * 1024
 #define HALFEDGE_POOL_SIZE 500 * 1024
-#define FACE_POOL_SIZE 500 * 1024
+#define FACET_POOL_SIZE 500 * 1024
+
+#define BUCKET_SIZE 2048
 
 inline bool compareFloat(float f1, float f2) {
     if (fabs(f1 - f2) < 1e-6) {
@@ -85,7 +87,7 @@ class Point {
 };
 
 class Halfedge;
-class Face;
+class Facet;
 class Vertex;
 
 class Vertex : public Point {
@@ -209,7 +211,7 @@ class Halfedge {
     Halfedge(){};
     Vertex* vertex = nullptr;
     Vertex* end_vertex = nullptr;
-    Face* face = nullptr;
+    Facet* face = nullptr;
     Halfedge* next = nullptr;
     Halfedge* opposite = nullptr;
     Halfedge(Vertex* v1, Vertex* v2);
@@ -327,7 +329,7 @@ class Halfedge {
 
 class replacing_group;
 class Mesh;
-class Face {
+class Facet {
     typedef MCGAL::Point Point;
     enum Flag { Unknown = 0, Splittable = 1, Unsplittable = 2 };
     enum ProcessedFlag { NotProcessed, Processed };
@@ -344,17 +346,17 @@ class Face {
     // std::unordered_set<Halfedge*, Halfedge::Hash, Halfedge::Equal> halfedges;
 
   public:
-    ~Face();
+    ~Facet();
 
     // constructor
-    Face(){};
-    Face(const Face& face);
-    Face(Halfedge* hit);
-    Face(std::vector<Vertex*>& vs);
-    Face(std::vector<Vertex*>& vs, Mesh* mesh);
+    Facet(){};
+    Facet(const Facet& face);
+    Facet(Halfedge* hit);
+    Facet(std::vector<Vertex*>& vs);
+    Facet(std::vector<Vertex*>& vs, Mesh* mesh);
 
     // utils
-    Face* clone();
+    Facet* clone();
     void reset(Halfedge* h);
     void reset(std::vector<Halfedge*>& hs);
     void reset(std::vector<Vertex*>& vs, Mesh* mesh);
@@ -362,8 +364,8 @@ class Face {
     int facet_degree();
 
     // override
-    bool equal(const Face& rhs) const;
-    bool operator==(const Face& rhs) const;
+    bool equal(const Facet& rhs) const;
+    bool operator==(const Facet& rhs) const;
 
     // to_string method
     void print();
@@ -427,14 +429,14 @@ class Mesh {
     std::unordered_set<Vertex*> vertices;
     // std::unordered_set<Halfedge*, Halfedge::Hash, Halfedge::Equal> halfedges;
     // std::unordered_set<Halfedge*> halfedges;
-    std::unordered_set<Face*> faces;
+    std::unordered_set<Facet*> faces;
     int nb_vertices = 0;
     int nb_faces = 0;
     int nb_edges = 0;
 
     MCGAL::Vertex** vpool = nullptr;
     MCGAL::Halfedge** hpool = nullptr;
-    MCGAL::Face** fpool = nullptr;
+    MCGAL::Facet** fpool = nullptr;
     int vindex = 0;
     int hindex = 0;
     int findex = 0;
@@ -443,15 +445,15 @@ class Mesh {
     Mesh() {
         vpool = new MCGAL::Vertex*[VERTEX_POOL_SIZE];
         hpool = new MCGAL::Halfedge*[HALFEDGE_POOL_SIZE];
-        fpool = new MCGAL::Face*[FACE_POOL_SIZE];
+        fpool = new MCGAL::Facet*[FACET_POOL_SIZE];
         for (int i = 0; i < VERTEX_POOL_SIZE; i++) {
             vpool[i] = new MCGAL::Vertex();
         }
         for (int i = 0; i < HALFEDGE_POOL_SIZE; i++) {
             hpool[i] = new MCGAL::Halfedge();
         }
-        for (int i = 0; i < FACE_POOL_SIZE; i++) {
-            fpool[i] = new MCGAL::Face();
+        for (int i = 0; i < FACET_POOL_SIZE; i++) {
+            fpool[i] = new MCGAL::Facet();
         }
     }
     ~Mesh();
@@ -475,16 +477,16 @@ class Mesh {
         return hpool[hindex++];
     }
 
-    inline MCGAL::Face* allocateFaceFromPool() {
+    inline MCGAL::Facet* allocateFaceFromPool() {
         return fpool[findex++];
     }
 
-    inline MCGAL::Face* allocateFaceFromPool(MCGAL::Halfedge* h) {
+    inline MCGAL::Facet* allocateFaceFromPool(MCGAL::Halfedge* h) {
         fpool[findex]->reset(h);
         return fpool[findex++];
     }
 
-    inline MCGAL::Face* allocateFaceFromPool(std::vector<MCGAL::Vertex*> vts, Mesh* mesh) {
+    inline MCGAL::Facet* allocateFaceFromPool(std::vector<MCGAL::Vertex*> vts, Mesh* mesh) {
         fpool[findex]->reset(vts, mesh);
         return fpool[findex++];
     }
@@ -497,9 +499,9 @@ class Mesh {
     Vertex* get_vertex(int vseq = 0);
 
     // element operating
-    Face* add_face(std::vector<Vertex*>& vs);
-    Face* add_face(Face* face);
-    Face* remove_vertex(Vertex* v);
+    Facet* add_face(std::vector<Vertex*>& vs);
+    Facet* add_face(Facet* face);
+    Facet* remove_vertex(Vertex* v);
     Halfedge* merge_edges(Vertex* v);
 
     /*
@@ -516,7 +518,7 @@ class Mesh {
 
     size_t size_of_halfedges() {
         int count = 0;
-        for (Face* fit : faces) {
+        for (Facet* fit : faces) {
             for (Halfedge* hit : fit->halfedges) {
                 count++;
             }
@@ -536,7 +538,7 @@ class Mesh {
 
     Halfedge* erase_center_vertex(Halfedge* h);
 
-    void set_face_in_face_loop(Halfedge* h, Face* f) const;
+    void set_face_in_face_loop(Halfedge* h, Facet* f) const;
 
     inline void remove_tip(Halfedge* h) const;
 

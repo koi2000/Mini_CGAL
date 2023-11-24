@@ -21,7 +21,7 @@ void MyMesh::startNextDecompresssionOp() {
         return;
     }
     // 1. reset the states. note that the states of the vertices need not to be reset
-    for (MCGAL::Face* fit : faces) {
+    for (MCGAL::Facet* fit : faces) {
         fit->resetState();
         for (MCGAL::Halfedge* hit : fit->halfedges) {
             hit->resetState();
@@ -106,7 +106,7 @@ void MyMesh::buildFromBuffer(std::deque<MCGAL::Point>* p_pointDeque, std::deque<
             int vertex_index = ptr[j + 1];
             vts.push_back(vertices[vertex_index]);
         }
-        MCGAL::Face* face = allocateFaceFromPool(vts, this);
+        MCGAL::Facet* face = allocateFaceFromPool(vts, this);
         this->add_face(face);
         // this->faces
     }
@@ -121,7 +121,7 @@ void MyMesh::RemovedVerticesDecodingStep() {
         MCGAL::Halfedge* h = gateQueue.front();
         gateQueue.pop();
 
-        MCGAL::Face* f = h->face;
+        MCGAL::Facet* f = h->face;
 
         // If the face is already processed, pick the next halfedge:
         if (f->isConquered())
@@ -199,7 +199,7 @@ void MyMesh::insertRemovedVertices() {
         MCGAL::Halfedge* h = gateQueue.front();
         gateQueue.pop();
 
-        MCGAL::Face* f = h->face;
+        MCGAL::Facet* f = h->face;
 
         // If the face is already processed, pick the next halfedge:
         if (f->isProcessed())
@@ -280,7 +280,7 @@ void MyMesh::removeInsertedEdges() {
                 gateQueue.push(hOpp);
             hIt = hIt->next;
         } while (hIt != h);
-        
+
         if (hIt->isRemoved()) {
             hIt->setVisited();
             continue;
