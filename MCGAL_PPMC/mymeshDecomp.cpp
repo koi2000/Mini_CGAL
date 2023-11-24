@@ -21,10 +21,12 @@ void MyMesh::startNextDecompresssionOp() {
         return;
     }
     // 1. reset the states. note that the states of the vertices need not to be reset
-    for (MCGAL::Halfedge* hit : halfedges)
-        hit->resetState();
-    for (MCGAL::Face* fit : faces)
+    for (MCGAL::Face* fit : faces) {
         fit->resetState();
+        for (MCGAL::Halfedge* hit : fit->halfedges) {
+            hit->resetState();
+        }
+    }
 
     i_curDecimationId++;  // increment the current decimation operation id.
     // 2. decoding the removed vertices and add to target facets
@@ -81,7 +83,7 @@ void MyMesh::readBaseMesh() {
 
 void MyMesh::buildFromBuffer(std::deque<MCGAL::Point>* p_pointDeque, std::deque<uint32_t*>* p_faceDeque) {
     this->vertices.clear();
-    this->halfedges.clear();
+    // this->halfedges.clear();
     // 辅助数组，用于创建faces
     std::vector<MCGAL::Vertex*> vertices;
     // 读取顶点并添加到 Mesh
@@ -238,25 +240,55 @@ void MyMesh::insertRemovedVertices() {
  * Remove all the marked edges
  */
 void MyMesh::removeInsertedEdges() {
-    // for (MCGAL::Halfedge* hit : halfedges) {
-    //     if (hit->isAdded()) {
-    //         join_face(hit);
+    // for (auto hit = halfedges.begin(); hit != halfedges.end();) {
+    //     if ((*hit)->isRemoved()) {
+    //         // *hit = nullptr;
+    //         delete *hit;
+    //         hit = halfedges.erase(hit);
+    //         continue;
+    //     }
+    //     if ((*hit)->isAdded()) {
+    //         join_face(*hit);
+    //         delete *hit;
+    //         // *hit = nullptr;
+    //         hit = halfedges.erase(hit);
+    //     } else {
+    //         hit++;
     //     }
     // }
-    for (auto hit = halfedges.begin(); hit != halfedges.end();) {
-        if ((*hit)->isRemoved()) {
-            // *hit = nullptr;
-            delete *hit;
-            hit = halfedges.erase(hit);
+    pushHehInit();
+    while (!gateQueue.empty()) {
+        MCGAL::Halfedge* h = gateQueue.front();
+        gateQueue.pop();
+
+        if (h->isVisited())
+            continue;
+
+        if (h->isRemoved()) {
             continue;
         }
-        if ((*hit)->isAdded()) {
-            join_face(*hit);
-            delete *hit;
-            // *hit = nullptr;
-            hit = halfedges.erase(hit);
-        } else {
-            hit++;
+        // Mark the face as processed.
+        h->setVisited();
+
+        // Add the other halfedges to the queue
+        MCGAL::Halfedge* hIt = h;
+        do {
+            MCGAL::Halfedge* hOpp = hIt->opposite;
+            // TODO: wait
+            // assert(!hOpp->is_border());
+            if (!hOpp->isVisited())
+                gateQueue.push(hOpp);
+            hIt = hIt->next;
+        } while (hIt != h);
+        
+        if (hIt->isRemoved()) {
+            hIt->setVisited();
+            continue;
+        }
+        if (hIt->isAdded()) {
+            join_face(hIt);
+            hIt->setVisited();
         }
     }
+    return;
 }

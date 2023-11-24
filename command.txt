@@ -14,6 +14,7 @@ sudo perf record -e cpu-clock  ./MiniCGAL_Decompress /home/koi/mastercode/Mini_C
 gprof -b ./MiniCGAL_Decompress   gmon.out  > result.txt
 
 gprof -b ./MiniCGAL_Decompress  gmon.out | python ../tools/gprof2dot.py | dot -Tpng -o result3.png
+gprof -b ./PPMC_compress  gmon.out | python ../tools/gprof2dot.py | dot -Tpng -o result5.png
 
 unfinished problem
 

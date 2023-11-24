@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 project(Mini_CGAL)
 
 set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -g -Wno-unused-result")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -g -Wno-unused-result")
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pg")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pg")
@@ -17,8 +17,8 @@ include_directories(
     /usr/include
     /usr/local/include
     /usr/local/cgal/include
-    /usr/local/include/eigen3
-    # /usr/include/eigen3
+    # /usr/local/include/eigen3
+    /usr/include/eigen3
 )
 
 # Add library paths

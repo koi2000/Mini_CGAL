@@ -197,11 +197,13 @@ class Halfedge {
     enum Flag2 { Original, Added, New };
     enum ProcessedFlag { NotProcessed, Processed };
     enum RemovedFlag { NotRemoved, Removed };
+    enum BFSFlag { NotVisited, Visited };
 
     Flag flag = NotYetInQueue;
     Flag2 flag2 = Original;
     ProcessedFlag processedFlag = NotProcessed;
     RemovedFlag removedFlag = NotRemoved;
+    BFSFlag bfsFlag = NotVisited;
 
   public:
     Halfedge(){};
@@ -220,6 +222,7 @@ class Halfedge {
         flag2 = Original;
         processedFlag = NotProcessed;
         removedFlag = NotRemoved;
+        bfsFlag = NotVisited;
     }
 
     /* Flag 1 */
@@ -282,6 +285,15 @@ class Halfedge {
 
     inline bool isRemoved() {
         return removedFlag == Removed;
+    }
+
+    /* bfs Flag */
+    inline void setVisited() {
+        bfsFlag = Visited;
+    }
+
+    inline bool isVisited() {
+        return bfsFlag == Visited;
     }
 
     // Hash function for Point
@@ -414,7 +426,7 @@ class Mesh {
     // std::unordered_set<Vertex*, Vertex::Hash, Vertex::Equal> vertices;
     std::unordered_set<Vertex*> vertices;
     // std::unordered_set<Halfedge*, Halfedge::Hash, Halfedge::Equal> halfedges;
-    std::unordered_set<Halfedge*> halfedges;
+    // std::unordered_set<Halfedge*> halfedges;
     std::unordered_set<Face*> faces;
     int nb_vertices = 0;
     int nb_faces = 0;
@@ -503,7 +515,13 @@ class Mesh {
     }
 
     size_t size_of_halfedges() {
-        return halfedges.size();
+        int count = 0;
+        for (Face* fit : faces) {
+            for (Halfedge* hit : fit->halfedges) {
+                count++;
+            }
+        }
+        return count;
     }
 
     Halfedge* split_facet(Halfedge* h, Halfedge* g);

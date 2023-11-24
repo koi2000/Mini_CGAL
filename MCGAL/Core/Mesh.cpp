@@ -14,30 +14,30 @@ Mesh::~Mesh() {
         // assert(p->halfedges.size() == (int)0 && p->opposite_half_edges.size() == 0);
         delete p;
     }
-    for (Halfedge* e : halfedges) {
-        delete e;
-    }
+    // for (Halfedge* e : halfedges) {
+    //     delete e;
+    // }
     delete[] vpool;
     delete[] hpool;
     delete[] fpool;
     vertices.clear();
     faces.clear();
-    halfedges.clear();
+    // halfedges.clear();
 }
 
 Face* Mesh::add_face(std::vector<Vertex*>& vs) {
     Face* f = new Face(vs);
-    for (Halfedge* hit : f->halfedges) {
-        this->halfedges.insert(hit);
-    }
+    // for (Halfedge* hit : f->halfedges) {
+    //     this->halfedges.insert(hit);
+    // }
     faces.insert(f);
     return f;
 }
 
 Face* Mesh::add_face(Face* face) {
-    for (Halfedge* hit : face->halfedges) {
-        this->halfedges.insert(hit);
-    }
+    // for (Halfedge* hit : face->halfedges) {
+    //     this->halfedges.insert(hit);
+    // }
     faces.insert(face);
     return face;
 }
@@ -78,8 +78,8 @@ Halfedge* Mesh::split_facet(Halfedge* h, Halfedge* g) {
     origin->reset(origin_face);
     fnew->reset(new_face);
     // add halfedge and face to mesh
-    this->halfedges.insert(hnew);
-    this->halfedges.insert(oppo_hnew);
+    // this->halfedges.insert(hnew);
+    // this->halfedges.insert(oppo_hnew);
     this->faces.insert(fnew);
     return hnew;
 }
@@ -90,8 +90,8 @@ Halfedge* Mesh::create_center_vertex(Halfedge* h) {
     Halfedge* hnew = allocateHalfedgeFromPool(h->end_vertex, vnew);
     Halfedge* oppo_new = allocateHalfedgeFromPool(vnew, h->end_vertex);
     // add new halfedge to current mesh and set opposite
-    this->halfedges.insert(hnew);
-    this->halfedges.insert(oppo_new);
+    // this->halfedges.insert(hnew);
+    // this->halfedges.insert(oppo_new);
     // set the next element
     // now the next of hnew and prev of oppo_new is unknowen
     insert_tip(hnew->opposite, h);
@@ -102,8 +102,8 @@ Halfedge* Mesh::create_center_vertex(Halfedge* h) {
     while (g->next != hed) {
         Halfedge* gnew = allocateHalfedgeFromPool(g->end_vertex, vnew);
         Halfedge* oppo_gnew = allocateHalfedgeFromPool(vnew, g->end_vertex);
-        this->halfedges.insert(gnew);
-        this->halfedges.insert(oppo_gnew);
+        // this->halfedges.insert(gnew);
+        // this->halfedges.insert(oppo_gnew);
         origin_around_halfedge.push_back(g);
         gnew->next = hnew->opposite;
         insert_tip(gnew->opposite, g);
@@ -150,8 +150,8 @@ Halfedge* Mesh::erase_center_vertex(Halfedge* h) {
         faces.erase(g->face);
         // }
         Halfedge* gnext = g->next->opposite;
-        this->halfedges.erase(g);
-        this->halfedges.erase(g->opposite);
+        // this->halfedges.erase(g);
+        // this->halfedges.erase(g->opposite);
         g->vertex->halfedges.erase(g);
         g->opposite->vertex->halfedges.erase(g->opposite);
 
@@ -165,8 +165,8 @@ Halfedge* Mesh::erase_center_vertex(Halfedge* h) {
     }
     h->end_vertex->halfedges.clear();
 
-    this->halfedges.erase(h);
-    this->halfedges.erase(h->opposite);
+    // this->halfedges.erase(h);
+    // this->halfedges.erase(h->opposite);
     h->vertex->halfedges.erase(h);
     h->opposite->vertex->halfedges.erase(h->opposite);
     set_face_in_face_loop(hret, face);
@@ -199,7 +199,7 @@ Halfedge* Mesh::join_face(Halfedge* h) {
     h->vertex->halfedges.erase(h);
     h->opposite->vertex->halfedges.erase(h->opposite);
     this->faces.erase(gprev->face);
-    delete gprev->face;
+    // delete gprev->face;
     hprev->face->reset(hprev);
     return hprev;
 }
@@ -281,9 +281,9 @@ std::istream& operator>>(std::istream& input, Mesh& mesh) {
             vts.push_back(vertices[vertex_index]);
         }
         Face* face = mesh.add_face(vts);
-        for (Halfedge* halfedge : face->halfedges) {
-            mesh.halfedges.insert(halfedge);
-        }
+        // for (Halfedge* halfedge : face->halfedges) {
+        //     mesh.halfedges.insert(halfedge);
+        // }
     }
     // clear vector
     vertices.clear();

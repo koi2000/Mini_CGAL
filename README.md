@@ -25,6 +25,100 @@ using pool to replace new object
 the performance of MCGAL is poor. 
 
 possible reason: find_prev
+```
+10:28:35.0423 thread 14365:     1 RemovedVerticesDecodingStep takes 0.110000 ms
+10:28:35.0423 thread 14365:     1 InsertedEdgeDecodingStep takes 0.121000 ms
+10:28:35.0425 thread 14365:     1 insertRemovedVertices takes 1.849000 ms
+10:28:35.0426 thread 14365:     1 removeInsertedEdges takes 0.668000 ms
+10:28:35.0426 thread 14365:     2 RemovedVerticesDecodingStep takes 0.117000 ms
+10:28:35.0426 thread 14365:     2 InsertedEdgeDecodingStep takes 0.210000 ms
+10:28:35.0429 thread 14365:     2 insertRemovedVertices takes 2.683000 ms
+10:28:35.0430 thread 14365:     2 removeInsertedEdges takes 0.951000 ms
+10:28:35.0430 thread 14365:     decode to 20 takes 8.151000 ms
+10:28:35.0464 thread 14365:     3 RemovedVerticesDecodingStep takes 0.171000 ms
+10:28:35.0464 thread 14365:     3 InsertedEdgeDecodingStep takes 0.209000 ms
+10:28:35.0469 thread 14365:     3 insertRemovedVertices takes 4.530000 ms
+10:28:35.0470 thread 14365:     3 removeInsertedEdges takes 1.435000 ms
+10:28:35.0470 thread 14365:     4 RemovedVerticesDecodingStep takes 0.176000 ms
+10:28:35.0471 thread 14365:     4 InsertedEdgeDecodingStep takes 0.282000 ms
+10:28:35.0477 thread 14365:     4 insertRemovedVertices takes 6.600000 ms
+10:28:35.0479 thread 14365:     4 removeInsertedEdges takes 2.292000 ms
+10:28:35.0480 thread 14365:     decode to 40 takes 49.686000 ms
+10:28:35.0486 thread 14365:     5 RemovedVerticesDecodingStep takes 0.250000 ms
+10:28:35.0486 thread 14365:     5 InsertedEdgeDecodingStep takes 0.414000 ms
+10:28:35.0496 thread 14365:     5 insertRemovedVertices takes 10.196000 ms
+10:28:35.0501 thread 14365:     5 removeInsertedEdges takes 4.163000 ms
+10:28:35.0502 thread 14365:     6 RemovedVerticesDecodingStep takes 0.474000 ms
+10:28:35.0502 thread 14365:     6 InsertedEdgeDecodingStep takes 0.665000 ms
+10:28:35.0520 thread 14365:     6 insertRemovedVertices takes 18.003000 ms
+10:28:35.0529 thread 14365:     6 removeInsertedEdges takes 9.001000 ms
+10:28:35.0529 thread 14365:     decode to 60 takes 49.809000 ms
+10:28:35.0546 thread 14365:     7 RemovedVerticesDecodingStep takes 0.567000 ms
+10:28:35.0547 thread 14365:     7 InsertedEdgeDecodingStep takes 0.848000 ms
+10:28:35.0573 thread 14365:     7 insertRemovedVertices takes 26.329000 ms
+10:28:35.0590 thread 14365:     7 removeInsertedEdges takes 16.884000 ms
+10:28:35.0593 thread 14365:     8 RemovedVerticesDecodingStep takes 0.978000 ms
+10:28:35.0595 thread 14365:     8 InsertedEdgeDecodingStep takes 1.215000 ms
+10:28:35.0640 thread 14365:     8 insertRemovedVertices takes 45.319000 ms
+10:28:35.0662 thread 14365:     8 removeInsertedEdges takes 22.157000 ms
+10:28:35.0662 thread 14365:     decode to 80 takes 132.729000 ms
+10:28:35.0708 thread 14365:     9 RemovedVerticesDecodingStep takes 2.245000 ms
+10:28:35.0711 thread 14365:     9 InsertedEdgeDecodingStep takes 2.145000 ms
+10:28:35.0779 thread 14365:     9 insertRemovedVertices takes 68.941000 ms
+10:28:35.0825 thread 14365:     9 removeInsertedEdges takes 45.140000 ms
+10:28:35.0834 thread 14365:     10 RemovedVerticesDecodingStep takes 3.647000 ms
+10:28:35.0838 thread 14365:     10 InsertedEdgeDecodingStep takes 4.001000 ms
+10:28:35.0938 thread 14365:     10 insertRemovedVertices takes 99.443000 ms
+10:28:35.0945 thread 14365:     10 removeInsertedEdges takes 7.280000 ms
+10:28:35.0945 thread 14365:     decode to 100 takes 283.142000 ms
+koi@DESKTOP-RFUIFBN:~/mastercode/Mini_CGAL/build$ ./MiniCGAL_Decompress /home/koi/mastercode/Mini_CGAL/static/buffer
+10:29:11.0715 thread 14468:     1 RemovedVerticesDecodingStep takes 0.110000 ms
+10:29:11.0716 thread 14468:     1 InsertedEdgeDecodingStep takes 0.145000 ms
+10:29:11.0717 thread 14468:     1 insertRemovedVertices takes 1.530000 ms
+10:29:11.0718 thread 14468:     1 removeInsertedEdges takes 0.672000 ms
+10:29:11.0718 thread 14468:     2 RemovedVerticesDecodingStep takes 0.101000 ms
+10:29:11.0718 thread 14468:     2 InsertedEdgeDecodingStep takes 0.155000 ms
+10:29:11.0720 thread 14468:     2 insertRemovedVertices takes 2.189000 ms
+10:29:11.0721 thread 14468:     2 removeInsertedEdges takes 0.973000 ms
+10:29:11.0721 thread 14468:     decode to 20 takes 7.283000 ms
+10:29:11.0724 thread 14468:     3 RemovedVerticesDecodingStep takes 0.130000 ms
+10:29:11.0724 thread 14468:     3 InsertedEdgeDecodingStep takes 0.207000 ms
+10:29:11.0728 thread 14468:     3 insertRemovedVertices takes 3.354000 ms
+10:29:11.0729 thread 14468:     3 removeInsertedEdges takes 1.451000 ms
+10:29:11.0729 thread 14468:     4 RemovedVerticesDecodingStep takes 0.186000 ms
+10:29:11.0730 thread 14468:     4 InsertedEdgeDecodingStep takes 0.305000 ms
+10:29:11.0735 thread 14468:     4 insertRemovedVertices takes 5.165000 ms
+10:29:11.0737 thread 14468:     4 removeInsertedEdges takes 2.253000 ms
+10:29:11.0737 thread 14468:     decode to 40 takes 15.912000 ms
+10:29:11.0744 thread 14468:     5 RemovedVerticesDecodingStep takes 0.264000 ms
+10:29:11.0744 thread 14468:     5 InsertedEdgeDecodingStep takes 0.393000 ms
+10:29:11.0752 thread 14468:     5 insertRemovedVertices takes 8.209000 ms
+10:29:11.0757 thread 14468:     5 removeInsertedEdges takes 4.361000 ms
+10:29:11.0757 thread 14468:     6 RemovedVerticesDecodingStep takes 0.370000 ms
+10:29:11.0758 thread 14468:     6 InsertedEdgeDecodingStep takes 0.582000 ms
+10:29:11.0772 thread 14468:     6 insertRemovedVertices takes 14.370000 ms
+10:29:11.0781 thread 14468:     6 removeInsertedEdges takes 8.183000 ms
+10:29:11.0781 thread 14468:     decode to 60 takes 43.346000 ms
+10:29:11.0797 thread 14468:     7 RemovedVerticesDecodingStep takes 0.578000 ms
+10:29:11.0798 thread 14468:     7 InsertedEdgeDecodingStep takes 0.836000 ms
+10:29:11.0820 thread 14468:     7 insertRemovedVertices takes 21.966000 ms
+10:29:11.0834 thread 14468:     7 removeInsertedEdges takes 14.471000 ms
+10:29:11.0837 thread 14468:     8 RemovedVerticesDecodingStep takes 1.115000 ms
+10:29:11.0838 thread 14468:     8 InsertedEdgeDecodingStep takes 1.282000 ms
+10:29:11.0875 thread 14468:     8 insertRemovedVertices takes 36.893000 ms
+10:29:11.0897 thread 14468:     8 removeInsertedEdges takes 22.155000 ms
+10:29:11.0897 thread 14468:     decode to 80 takes 116.910000 ms
+10:29:11.0944 thread 14468:     9 RemovedVerticesDecodingStep takes 2.231000 ms
+10:29:11.0947 thread 14468:     9 InsertedEdgeDecodingStep takes 2.424000 ms
+10:29:12.0007 thread 14468:     9 insertRemovedVertices takes 60.093000 ms
+10:29:12.0052 thread 14468:     9 removeInsertedEdges takes 45.300000 ms
+10:29:12.0062 thread 14468:     10 RemovedVerticesDecodingStep takes 3.406000 ms
+10:29:12.0065 thread 14468:     10 InsertedEdgeDecodingStep takes 3.007000 ms
+10:29:12.0146 thread 14468:     10 insertRemovedVertices takes 81.634000 ms
+10:29:12.0153 thread 14468:     10 removeInsertedEdges takes 7.255000 ms
+10:29:12.0154 thread 14468:     decode to 100 takes 256.019000 ms
+```
+
 
 ```
 17:34:17.0382 thread 2824:      compress takes 0.055000 ms
