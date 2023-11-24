@@ -5,6 +5,10 @@
 #include <vector>
 namespace MCGAL {
 
+#define VERTEX_POOL_SIZE 500 * 1024
+#define HALFEDGE_POOL_SIZE 500 * 1024
+#define FACE_POOL_SIZE 500 * 1024
+
 inline bool compareFloat(float f1, float f2) {
     if (fabs(f1 - f2) < 1e-6) {
         return true;
@@ -200,6 +204,7 @@ class Halfedge {
     RemovedFlag removedFlag = NotRemoved;
 
   public:
+    Halfedge(){};
     Vertex* vertex = nullptr;
     Vertex* end_vertex = nullptr;
     Face* face = nullptr;
@@ -207,6 +212,8 @@ class Halfedge {
     Halfedge* opposite = nullptr;
     Halfedge(Vertex* v1, Vertex* v2);
     ~Halfedge();
+
+    void reset(Vertex* v1, Vertex* v2);
 
     inline void resetState() {
         flag = NotYetInQueue;
@@ -307,7 +314,7 @@ class Halfedge {
 };
 
 class replacing_group;
-
+class Mesh;
 class Face {
     typedef MCGAL::Point Point;
     enum Flag { Unknown = 0, Splittable = 1, Unsplittable = 2 };
@@ -332,11 +339,13 @@ class Face {
     Face(const Face& face);
     Face(Halfedge* hit);
     Face(std::vector<Vertex*>& vs);
+    Face(std::vector<Vertex*>& vs, Mesh* mesh);
 
     // utils
     Face* clone();
     void reset(Halfedge* h);
     void reset(std::vector<Halfedge*>& hs);
+    void reset(std::vector<Vertex*>& vs, Mesh* mesh);
     void remove(Halfedge* h);
     int facet_degree();
 
@@ -407,15 +416,66 @@ class Mesh {
     // std::unordered_set<Halfedge*, Halfedge::Hash, Halfedge::Equal> halfedges;
     std::unordered_set<Halfedge*> halfedges;
     std::unordered_set<Face*> faces;
-    // 用于dump OFF文件
-    std::vector<std::vector<int>> face_index;
     int nb_vertices = 0;
     int nb_faces = 0;
     int nb_edges = 0;
 
+    MCGAL::Vertex** vpool = nullptr;
+    MCGAL::Halfedge** hpool = nullptr;
+    MCGAL::Face** fpool = nullptr;
+    int vindex = 0;
+    int hindex = 0;
+    int findex = 0;
+
   public:
-    Mesh() {}
+    Mesh() {
+        vpool = new MCGAL::Vertex*[VERTEX_POOL_SIZE];
+        hpool = new MCGAL::Halfedge*[HALFEDGE_POOL_SIZE];
+        fpool = new MCGAL::Face*[FACE_POOL_SIZE];
+        for (int i = 0; i < VERTEX_POOL_SIZE; i++) {
+            vpool[i] = new MCGAL::Vertex();
+        }
+        for (int i = 0; i < HALFEDGE_POOL_SIZE; i++) {
+            hpool[i] = new MCGAL::Halfedge();
+        }
+        for (int i = 0; i < FACE_POOL_SIZE; i++) {
+            fpool[i] = new MCGAL::Face();
+        }
+    }
     ~Mesh();
+
+    // get from pool
+    inline MCGAL::Vertex* allocateVertexFromPool() {
+        return vpool[vindex++];
+    }
+
+    inline MCGAL::Vertex* allocateVertexFromPool(MCGAL::Point& p) {
+        vpool[vindex]->setPoint(p);
+        return vpool[vindex++];
+    }
+
+    inline MCGAL::Halfedge* allocateHalfedgeFromPool() {
+        return hpool[hindex++];
+    }
+
+    inline MCGAL::Halfedge* allocateHalfedgeFromPool(MCGAL::Vertex* v1, MCGAL::Vertex* v2) {
+        hpool[hindex]->reset(v1, v2);
+        return hpool[hindex++];
+    }
+
+    inline MCGAL::Face* allocateFaceFromPool() {
+        return fpool[findex++];
+    }
+
+    inline MCGAL::Face* allocateFaceFromPool(MCGAL::Halfedge* h) {
+        fpool[findex]->reset(h);
+        return fpool[findex++];
+    }
+
+    inline MCGAL::Face* allocateFaceFromPool(std::vector<MCGAL::Vertex*> vts, Mesh* mesh) {
+        fpool[findex]->reset(vts, mesh);
+        return fpool[findex++];
+    }
 
     // IOS
     bool loadOFF(std::string path);

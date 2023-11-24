@@ -18,7 +18,6 @@ const int DECOMPRESSION_MODE_ID = 1;
 class MyMesh : public MCGAL::Mesh {
     // Gate queues
     std::queue<MCGAL::Halfedge*> gateQueue;
-
     // Processing mode: 0 for compression and 1 for decompression.
     int i_mode;
     bool b_jobCompleted = false;  // True if the job has been completed.
@@ -71,6 +70,9 @@ class MyMesh : public MCGAL::Mesh {
 
     void encode(int lod = 0);
     void decode(int lod = 100);
+
+    // get from pool
+    MCGAL::Face* add_face_by_pool(std::vector<MCGAL::Vertex*>& vts);
 
     // Compression
     void startNextCompresssionOp();

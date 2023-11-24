@@ -9,15 +9,12 @@ MyMesh* read_mesh(char* path, bool complete_compression) {
 }
 
 void compress(int argc, char** argv) {
-    struct timeval start = get_cur_time();
-    // MyMesh* mesh = read_mesh(argv[1], true);
-
-    logt("compress", start);
     MyMesh* hm = new MyMesh(argv[1]);
     int lod = 100;
 
     char path[256];
     sprintf(path, "./gisdata/compressed_0.mesh.off");
+    struct timeval start = get_cur_time();
     hm->write_to_off(path);
     for (uint i = 20; i <= lod; i += 20) {
         hm->decode(i);

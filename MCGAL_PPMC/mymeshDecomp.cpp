@@ -88,27 +88,25 @@ void MyMesh::buildFromBuffer(std::deque<MCGAL::Point>* p_pointDeque, std::deque<
     for (std::size_t i = 0; i < p_pointDeque->size(); ++i) {
         float x, y, z;
         MCGAL::Point p = p_pointDeque->at(i);
-        MCGAL::Vertex* vt = new MCGAL::Vertex(p);
+        MCGAL::Vertex* vt = allocateVertexFromPool(p);
         vt->setId(i);
         this->vertices.insert(vt);
         vertices.push_back(vt);
     }
-    vh_departureConquest[0] = vertices[0];
-    vh_departureConquest[1] = vertices[1];
+    this->vh_departureConquest[0] = vertices[0];
+    this->vh_departureConquest[1] = vertices[1];
     // 读取面信息并添加到 Mesh
     for (int i = 0; i < p_faceDeque->size(); ++i) {
         uint32_t* ptr = p_faceDeque->at(i);
         int num_face_vertices = ptr[0];
-        // std::vector<Face*> faces;
         std::vector<MCGAL::Vertex*> vts;
-        std::vector<int> idxs;
         for (int j = 0; j < num_face_vertices; ++j) {
             int vertex_index = ptr[j + 1];
             vts.push_back(vertices[vertex_index]);
-            idxs.push_back(vertex_index);
         }
-        this->add_face(vts);
-        this->face_index.push_back(idxs);
+        MCGAL::Face* face = allocateFaceFromPool(vts, this);
+        this->add_face(face);
+        // this->faces
     }
     // 清空 vector
     vertices.clear();
