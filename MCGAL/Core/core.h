@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <math.h>
+#include <set>
 #include <string>
 #include <unordered_set>
 #include <vector>
@@ -9,7 +10,7 @@ namespace MCGAL {
 #define HALFEDGE_POOL_SIZE 500 * 1024
 #define FACET_POOL_SIZE 500 * 1024
 
-#define BUCKET_SIZE 2048
+#define BUCKET_SIZE 128
 
 inline bool compareFloat(float f1, float f2) {
     if (fabs(f1 - f2) < 1e-6) {
@@ -96,13 +97,21 @@ class Vertex : public Point {
     unsigned int id = 0;
 
   public:
-    Vertex() : Point() {}
-    Vertex(const Point& p) : Point(p) {}
-    Vertex(float v1, float v2, float v3) : Point(v1, v2, v3) {}
+    Vertex() : Point() {
+        // halfedges.reserve(BUCKET_SIZE);
+    }
+    Vertex(const Point& p) : Point(p) {
+        // halfedges.reserve(BUCKET_SIZE);
+    }
+    Vertex(float v1, float v2, float v3) : Point(v1, v2, v3) {
+        // halfedges.reserve(BUCKET_SIZE);
+    }
 
     int vid_ = 0;
-    std::unordered_set<Halfedge*> halfedges;
-    std::unordered_set<Halfedge*> opposite_half_edges;
+    std::set<Halfedge*> halfedges;
+    // std::set<Halfedge*> opposite_half_edges;
+    // std::unordered_set<Halfedge*> halfedges;
+    // std::unordered_set<Halfedge*> opposite_half_edges;
 
     int vertex_degree() {
         return halfedges.size();
@@ -340,16 +349,22 @@ class Facet {
     Point removedVertexPos;
 
   public:
-    std::unordered_set<Vertex*> vertices;
+    std::set<Vertex*> vertices;
+    std::set<Halfedge*> halfedges;
+    // std::unordered_set<Vertex*> vertices;
+    // std::unordered_set<Halfedge*> halfedges;
+
     // std::unordered_set<Vertex*, Vertex::Hash, Vertex::Equal> vertices;
-    std::unordered_set<Halfedge*> halfedges;
     // std::unordered_set<Halfedge*, Halfedge::Hash, Halfedge::Equal> halfedges;
 
   public:
     ~Facet();
 
     // constructor
-    Facet(){};
+    Facet() {
+        // vertices.reserve(BUCKET_SIZE);
+        // halfedges.reserve(BUCKET_SIZE);
+    };
     Facet(const Facet& face);
     Facet(Halfedge* hit);
     Facet(std::vector<Vertex*>& vs);
@@ -426,10 +441,12 @@ class Facet {
 class Mesh {
   public:
     // std::unordered_set<Vertex*, Vertex::Hash, Vertex::Equal> vertices;
-    std::unordered_set<Vertex*> vertices;
+    std::set<Vertex*> vertices;
+    // std::unordered_set<Vertex*> vertices;
     // std::unordered_set<Halfedge*, Halfedge::Hash, Halfedge::Equal> halfedges;
     // std::unordered_set<Halfedge*> halfedges;
-    std::unordered_set<Facet*> faces;
+    // std::unordered_set<Facet*> faces;
+    std::set<Facet*> faces;
     int nb_vertices = 0;
     int nb_faces = 0;
     int nb_edges = 0;
@@ -455,6 +472,8 @@ class Mesh {
         for (int i = 0; i < FACET_POOL_SIZE; i++) {
             fpool[i] = new MCGAL::Facet();
         }
+        // faces.reserve(BUCKET_SIZE);
+        // vertices.reserve(BUCKET_SIZE);
     }
     ~Mesh();
 

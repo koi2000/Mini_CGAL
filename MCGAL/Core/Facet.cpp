@@ -24,6 +24,8 @@ Facet::~Facet() {
 }
 
 Facet::Facet(Halfedge* hit) {
+    // vertices.reserve(BUCKET_SIZE);
+    // halfedges.reserve(BUCKET_SIZE);
     Halfedge* st(hit);
     Halfedge* ed(hit);
     std::vector<Halfedge*> edges;
@@ -39,6 +41,8 @@ Facet* Facet::clone() {
 }
 
 Facet::Facet(std::vector<Vertex*>& vs) {
+    // vertices.reserve(BUCKET_SIZE);
+    // halfedges.reserve(BUCKET_SIZE);
     Halfedge* prev = nullptr;
     Halfedge* head = nullptr;
     for (int i = 0; i < vs.size(); i++) {
@@ -61,6 +65,8 @@ Facet::Facet(std::vector<Vertex*>& vs) {
 }
 
 Facet::Facet(std::vector<Vertex*>& vs, Mesh* mesh) {
+    // vertices.reserve(BUCKET_SIZE);
+    // halfedges.reserve(BUCKET_SIZE);
     Halfedge* prev = nullptr;
     Halfedge* head = nullptr;
     for (int i = 0; i < vs.size(); i++) {

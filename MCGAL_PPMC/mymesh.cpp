@@ -93,8 +93,8 @@ MyMesh::MyMesh(char* path) : MCGAL::Mesh() {
 void MyMesh::pushHehInit() {
     MCGAL::Halfedge* hehBegin;
     // std::unordered_set<MCGAL::Halfedge*> hset = vh_departureConquest[0]->halfedges;
-    std::unordered_set<MCGAL::Halfedge*>::iterator hit = vh_departureConquest[1]->halfedges.begin();
-    std::unordered_set<MCGAL::Halfedge*>::iterator hed = vh_departureConquest[1]->halfedges.end();
+    auto hit = vh_departureConquest[1]->halfedges.begin();
+    auto hed = vh_departureConquest[1]->halfedges.end();
     for (; hit != hed; hit++) {
         hehBegin = (*hit)->opposite;
         if (hehBegin->vertex == vh_departureConquest[0])
