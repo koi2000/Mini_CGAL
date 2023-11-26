@@ -56,6 +56,8 @@ file(GLOB_RECURSE MINICGAL_PPMC_FILES
     "${MINICGAL_PPMC_SOURCE_DIR}/*.cpp"
 )
 
+add_subdirectory(CUDA_new)
+
 add_executable(Mini_CGAL main.cpp ${PPMC_FILES})
 set_target_properties(Mini_CGAL PROPERTIES COMPILE_FLAGS -frounding-math)
 target_link_libraries(Mini_CGAL ${CGAL_LIBRARIES} ${OPENGL_LIBRARY} ${GLUT_LIBRARY} m)
