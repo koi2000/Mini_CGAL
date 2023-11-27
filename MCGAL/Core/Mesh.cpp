@@ -30,7 +30,7 @@ Facet* Mesh::add_face(std::vector<Vertex*>& vs) {
     // for (Halfedge* hit : f->halfedges) {
     //     this->halfedges.insert(hit);
     // }
-    faces.insert(f);
+    faces.push_back(f);
     return f;
 }
 
@@ -38,7 +38,7 @@ Facet* Mesh::add_face(Facet* face) {
     // for (Halfedge* hit : face->halfedges) {
     //     this->halfedges.insert(hit);
     // }
-    faces.insert(face);
+    faces.push_back(face);
     return face;
 }
 
@@ -80,13 +80,13 @@ Halfedge* Mesh::split_facet(Halfedge* h, Halfedge* g) {
     // add halfedge and face to mesh
     // this->halfedges.insert(hnew);
     // this->halfedges.insert(oppo_hnew);
-    this->faces.insert(fnew);
+    this->faces.push_back(fnew);
     return hnew;
 }
 
 Halfedge* Mesh::create_center_vertex(Halfedge* h) {
     Vertex* vnew = new Vertex();
-    this->vertices.insert(vnew);
+    this->vertices.push_back(vnew);
     Halfedge* hnew = allocateHalfedgeFromPool(h->end_vertex, vnew);
     Halfedge* oppo_new = allocateHalfedgeFromPool(vnew, h->end_vertex);
     // add new halfedge to current mesh and set opposite
@@ -112,7 +112,7 @@ Halfedge* Mesh::create_center_vertex(Halfedge* h) {
     // collect all the halfedge
     for (Halfedge* hit : origin_around_halfedge) {
         Facet* face = allocateFaceFromPool(hit);
-        this->faces.insert(face);
+        this->faces.push_back(face);
     }
     return oppo_new;
 }
@@ -138,12 +138,12 @@ Halfedge* Mesh::erase_center_vertex(Halfedge* h) {
     Halfedge* g = h->next->opposite;
     Halfedge* hret = find_prev(h);
     Facet* face = new Facet();
-    faces.insert(face);
+    faces.push_back(face);
     while (g != h) {
         Halfedge* gprev = find_prev(g);
         remove_tip(gprev);
         // if (g->face != face) {
-        faces.erase(g->face);
+        // faces.erase(g->face);
         // }
         Halfedge* gnext = g->next->opposite;
         // this->halfedges.erase(g);
@@ -153,9 +153,9 @@ Halfedge* Mesh::erase_center_vertex(Halfedge* h) {
 
         g = gnext;
     }
-    faces.erase(h->face);
+    // faces.erase(h->face);
     remove_tip(hret);
-    vertices.erase(h->end_vertex);
+    // vertices.erase(h->end_vertex);
     for (Halfedge* hit : h->end_vertex->halfedges) {
         hit->end_vertex->halfedges.erase(hit->opposite);
     }
@@ -194,7 +194,8 @@ Halfedge* Mesh::join_face(Halfedge* h) {
 
     h->vertex->halfedges.erase(h);
     h->opposite->vertex->halfedges.erase(h->opposite);
-    this->faces.erase(gprev->face);
+    // this->faces.erase(gprev->face);
+    gprev->face->setRemoved();
     // delete gprev->face;
     hprev->face->reset(hprev);
     return hprev;
@@ -224,7 +225,7 @@ bool Mesh::loadOFF(std::string path) {
         file >> x >> y >> z;
         Vertex* vt = new Vertex(x, y, z);
         vt->setVid(i);
-        this->vertices.insert(vt);
+        this->vertices.push_back(vt);
         vertices.push_back(vt);
     }
 
@@ -260,7 +261,7 @@ std::istream& operator>>(std::istream& input, Mesh& mesh) {
         input >> x >> y >> z;
         Vertex* vt = new Vertex(x, y, z);
         vt->setVid(i);
-        mesh.vertices.insert(vt);
+        mesh.vertices.push_back(vt);
         vertices.push_back(vt);
     }
 
@@ -304,6 +305,8 @@ void Mesh::dumpto(std::string path) {
     }
 
     for (Facet* face : this->faces) {
+        if (face->isRemoved())
+            continue;
         offFile << face->vertices.size() << " ";
         Halfedge* hst = *face->halfedges.begin();
         Halfedge* hed = *face->halfedges.begin();

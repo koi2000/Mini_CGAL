@@ -342,10 +342,11 @@ class Facet {
     typedef MCGAL::Point Point;
     enum Flag { Unknown = 0, Splittable = 1, Unsplittable = 2 };
     enum ProcessedFlag { NotProcessed, Processed };
+    enum RemovedFlag { NotRemoved, Removed };
 
     Flag flag = Unknown;
     ProcessedFlag processedFlag = NotProcessed;
-
+    RemovedFlag removedFlag = NotRemoved;
     Point removedVertexPos;
 
   public:
@@ -390,6 +391,7 @@ class Facet {
     inline void resetState() {
         flag = Unknown;
         processedFlag = NotProcessed;
+        removedFlag = NotRemoved;
     }
 
     inline void resetProcessedFlag() {
@@ -434,6 +436,15 @@ class Facet {
         removedVertexPos = p;
     }
 
+    /* Flag 3*/
+    inline void setRemoved() {
+        removedFlag = Removed;
+    }
+
+    inline bool isRemoved() {
+        return removedFlag == Removed;
+    }
+
   public:
     replacing_group* rg = NULL;
 };
@@ -441,12 +452,12 @@ class Facet {
 class Mesh {
   public:
     // std::unordered_set<Vertex*, Vertex::Hash, Vertex::Equal> vertices;
-    std::set<Vertex*> vertices;
+    std::vector<Vertex*> vertices;
     // std::unordered_set<Vertex*> vertices;
     // std::unordered_set<Halfedge*, Halfedge::Hash, Halfedge::Equal> halfedges;
     // std::unordered_set<Halfedge*> halfedges;
     // std::unordered_set<Facet*> faces;
-    std::set<Facet*> faces;
+    std::vector<Facet*> faces;
     int nb_vertices = 0;
     int nb_faces = 0;
     int nb_edges = 0;
@@ -472,6 +483,8 @@ class Mesh {
         for (int i = 0; i < FACET_POOL_SIZE; i++) {
             fpool[i] = new MCGAL::Facet();
         }
+        vertices.reserve(FACET_POOL_SIZE);
+        faces.reserve(FACET_POOL_SIZE);
         // faces.reserve(BUCKET_SIZE);
         // vertices.reserve(BUCKET_SIZE);
     }

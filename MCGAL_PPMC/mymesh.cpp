@@ -110,7 +110,7 @@ MCGAL::Facet* MyMesh::add_face_by_pool(std::vector<MCGAL::Vertex*>& vs) {
     // for (MCGAL::Halfedge* hit : f->halfedges) {
     //     this->halfedges.insert(hit);
     // }
-    faces.insert(f);
+    faces.push_back(f);
     return f;
 }
 
@@ -197,7 +197,7 @@ std::istream& operator>>(std::istream& input, MyMesh& mesh) {
         input >> x >> y >> z;
         MCGAL::Vertex* vt = new MCGAL::Vertex(x, y, z);
         vt->setVid(i);
-        mesh.vertices.insert(vt);
+        mesh.vertices.push_back(vt);
         vertices.push_back(vt);
     }
 
