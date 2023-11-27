@@ -30,16 +30,16 @@ void MyMesh::startNextDecompresssionOp() {
     // 2. decoding the removed vertices and add to target facets
     struct timeval start = hispeed::get_cur_time();
     RemovedVerticesDecodingStep();
-    hispeed::logt("%d RemovedVerticesDecodingStep", start, i_curDecimationId);
+    // hispeed::logt("%d RemovedVerticesDecodingStep", start, i_curDecimationId);
     // 3. decoding the inserted edge and marking the ones added
     InsertedEdgeDecodingStep();
-    hispeed::logt("%d InsertedEdgeDecodingStep", start, i_curDecimationId);
+    // hispeed::logt("%d InsertedEdgeDecodingStep", start, i_curDecimationId);
     // 4. truly insert the removed vertices
     insertRemovedVertices();
-    hispeed::logt("%d insertRemovedVertices", start, i_curDecimationId);
+    // hispeed::logt("%d insertRemovedVertices", start, i_curDecimationId);
     // 5. truly remove the added edges
     removeInsertedEdges();
-    hispeed::logt("%d removeInsertedEdges", start, i_curDecimationId);
+    // hispeed::logt("%d removeInsertedEdges", start, i_curDecimationId);
 }
 
 void MyMesh::readBaseMesh() {
@@ -120,7 +120,7 @@ void MyMesh::RemovedVerticesDecodingStep() {
             f->setUnsplittable();
         }
     }
-    hispeed::log("%d RemovedVerticesDecodingStep count %d", this->i_curDecimationId, count);
+    // hispeed::log("%d RemovedVerticesDecodingStep count %d", this->i_curDecimationId, count);
 }
 
 /**
@@ -161,7 +161,7 @@ void MyMesh::InsertedEdgeDecodingStep() {
         }
         assert(!hIt->isNew());
     }
-    hispeed::log("%d InsertedEdgeDecodingStep count %d", this->i_curDecimationId, count);
+    // hispeed::log("%d InsertedEdgeDecodingStep count %d", this->i_curDecimationId, count);
 }
 
 /**
@@ -209,7 +209,7 @@ void MyMesh::insertRemovedVertices() {
             }
         }
     }
-    hispeed::log("%d insertRemovedVertices count %d", this->i_curDecimationId, count);
+    // hispeed::log("%d insertRemovedVertices count %d", this->i_curDecimationId, count);
 }
 
 /**

@@ -32,16 +32,16 @@ void MyMesh::startNextDecompresssionOp() {
     // 2. decoding the removed vertices and add to target facets
     struct timeval start = get_cur_time();
     RemovedVerticesDecodingStep();
-    // logt("%d RemovedVerticesDecodingStep", start, i_curDecimationId);
+    logt("%d RemovedVerticesDecodingStep", start, i_curDecimationId);
     // 3. decoding the inserted edge and marking the ones added
     InsertedEdgeDecodingStep();
-    // logt("%d InsertedEdgeDecodingStep", start, i_curDecimationId);
+    logt("%d InsertedEdgeDecodingStep", start, i_curDecimationId);
     // 4. truly insert the removed vertices
     insertRemovedVertices();
-    // logt("%d insertRemovedVertices", start, i_curDecimationId);
+    logt("%d insertRemovedVertices", start, i_curDecimationId);
     // 5. truly remove the added edges
     removeInsertedEdges();
-    // logt("%d removeInsertedEdges", start, i_curDecimationId);
+    logt("%d removeInsertedEdges", start, i_curDecimationId);
 }
 
 void MyMesh::readBaseMesh() {
@@ -83,10 +83,9 @@ void MyMesh::readBaseMesh() {
 
 void MyMesh::buildFromBuffer(std::deque<MCGAL::Point>* p_pointDeque, std::deque<uint32_t*>* p_faceDeque) {
     this->vertices.clear();
-    // this->halfedges.clear();
     // used to create faces
     std::vector<MCGAL::Vertex*> vertices;
-    // add vertex to Mesh
+    // add vertex to face
     for (std::size_t i = 0; i < p_pointDeque->size(); ++i) {
         float x, y, z;
         MCGAL::Point p = p_pointDeque->at(i);
@@ -115,7 +114,6 @@ void MyMesh::buildFromBuffer(std::deque<MCGAL::Point>* p_pointDeque, std::deque<
 }
 
 void MyMesh::RemovedVerticesDecodingStep() {
-    //
     pushHehInit();
     while (!gateQueue.empty()) {
         MCGAL::Halfedge* h = gateQueue.front();
@@ -187,6 +185,10 @@ void MyMesh::InsertedEdgeDecodingStep() {
         }
         assert(!hIt->isNew());
     }
+}
+
+void MyMesh::insertRemovedVertices(){
+    
 }
 
 /**

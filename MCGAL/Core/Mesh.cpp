@@ -90,8 +90,6 @@ Halfedge* Mesh::create_center_vertex(Halfedge* h) {
     Halfedge* hnew = allocateHalfedgeFromPool(h->end_vertex, vnew);
     Halfedge* oppo_new = allocateHalfedgeFromPool(vnew, h->end_vertex);
     // add new halfedge to current mesh and set opposite
-    // this->halfedges.insert(hnew);
-    // this->halfedges.insert(oppo_new);
     // set the next element
     // now the next of hnew and prev of oppo_new is unknowen
     insert_tip(hnew->opposite, h);
@@ -102,8 +100,6 @@ Halfedge* Mesh::create_center_vertex(Halfedge* h) {
     while (g->next != hed) {
         Halfedge* gnew = allocateHalfedgeFromPool(g->end_vertex, vnew);
         Halfedge* oppo_gnew = allocateHalfedgeFromPool(vnew, g->end_vertex);
-        // this->halfedges.insert(gnew);
-        // this->halfedges.insert(oppo_gnew);
         origin_around_halfedge.push_back(g);
         gnew->next = hnew->opposite;
         insert_tip(gnew->opposite, g);
