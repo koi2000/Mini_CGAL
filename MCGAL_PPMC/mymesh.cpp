@@ -182,16 +182,12 @@ void MyMesh::compute_mbb() {
 
 std::istream& operator>>(std::istream& input, MyMesh& mesh) {
     std::string format;
-    // 读取 OFF 文件格式信息
     input >> format >> mesh.nb_vertices >> mesh.nb_faces >> mesh.nb_edges;
 
     if (format != "OFF") {
         std::cerr << "Error: Invalid OFF file format" << std::endl;
     }
-
-    // 辅助数组，用于创建faces
     std::vector<MCGAL::Vertex*> vertices;
-    // 读取顶点并添加到 Mesh
     for (std::size_t i = 0; i < mesh.nb_vertices; ++i) {
         float x, y, z;
         input >> x >> y >> z;
@@ -200,8 +196,6 @@ std::istream& operator>>(std::istream& input, MyMesh& mesh) {
         mesh.vertices.push_back(vt);
         vertices.push_back(vt);
     }
-
-    // 读取面信息并添加到 Mesh
     for (int i = 0; i < mesh.nb_faces; ++i) {
         int num_face_vertices;
         input >> num_face_vertices;
@@ -217,7 +211,6 @@ std::istream& operator>>(std::istream& input, MyMesh& mesh) {
         //     mesh.halfedges.insert(halfedge);
         // }
     }
-    // 清空 vector
     vertices.clear();
     return input;
 }

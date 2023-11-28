@@ -483,8 +483,8 @@ class Mesh {
         for (int i = 0; i < FACET_POOL_SIZE; i++) {
             fpool[i] = new MCGAL::Facet();
         }
-        vertices.reserve(FACET_POOL_SIZE);
-        faces.reserve(FACET_POOL_SIZE);
+        // vertices.reserve(FACET_POOL_SIZE);
+        // faces.reserve(FACET_POOL_SIZE);
         // faces.reserve(BUCKET_SIZE);
         // vertices.reserve(BUCKET_SIZE);
     }
