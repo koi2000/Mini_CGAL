@@ -21,10 +21,21 @@ void MyMesh::startNextDecompresssionOp() {
         return;
     }
     // 1. reset the states. note that the states of the vertices need not to be reset
-    for (MCGAL::Facet* fit : faces) {
-        fit->resetState();
-        for (MCGAL::Halfedge* hit : fit->halfedges) {
-            hit->resetState();
+    // for (MCGAL::Facet* fit : faces) {
+    //     fit->resetState();
+    //     for (MCGAL::Halfedge* hit : fit->halfedges) {
+    //         hit->resetState();
+    //     }
+    // }
+    for (auto fit = faces.begin(); fit != faces.end();) {
+        if ((*fit)->isRemoved()) {
+            fit = faces.erase(fit);
+        } else {
+            (*fit)->resetState();
+            for (MCGAL::Halfedge* hit : (*fit)->halfedges) {
+                hit->resetState();
+            }
+            fit++;
         }
     }
 
@@ -92,7 +103,7 @@ void MyMesh::buildFromBuffer(std::deque<MCGAL::Point>* p_pointDeque, std::deque<
         MCGAL::Point p = p_pointDeque->at(i);
         MCGAL::Vertex* vt = allocateVertexFromPool(p);
         vt->setId(i);
-        this->vertices.insert(vt);
+        this->vertices.push_back(vt);
         vertices.push_back(vt);
     }
     this->vh_departureConquest[0] = vertices[0];
