@@ -175,8 +175,8 @@ void Mesh::set_face_in_face_loop(Halfedge* h, Facet* f) const {
     Halfedge* end = h;
     do {
         h->face = f;
-        f->halfedges.insert(h);
-        f->vertices.insert(h->vertex);
+        f->halfedges.push_back(h);
+        f->vertices.push_back(h->vertex);
         h = h->next;
     } while (h != end);
 }

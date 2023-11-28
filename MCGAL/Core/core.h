@@ -350,8 +350,8 @@ class Facet {
     Point removedVertexPos;
 
   public:
-    std::set<Vertex*> vertices;
-    std::set<Halfedge*> halfedges;
+    std::vector<Vertex*> vertices;
+    std::vector<Halfedge*> halfedges;
     // std::unordered_set<Vertex*> vertices;
     // std::unordered_set<Halfedge*> halfedges;
 
