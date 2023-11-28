@@ -288,6 +288,14 @@ std::istream& operator>>(std::istream& input, Mesh& mesh) {
 }
 
 void Mesh::dumpto(std::string path) {
+    for (auto fit = faces.begin(); fit != faces.end(); ) {
+        if ((*fit)->isRemoved()) {
+            fit = faces.erase(fit);
+        } else {
+            fit++;
+        }
+    }
+
     std::ofstream offFile(path);
     if (!offFile.is_open()) {
         std::cerr << "Error opening file: " << path << std::endl;

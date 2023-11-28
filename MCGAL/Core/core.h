@@ -10,7 +10,7 @@ namespace MCGAL {
 #define HALFEDGE_POOL_SIZE 500 * 1024
 #define FACET_POOL_SIZE 500 * 1024
 
-#define BUCKET_SIZE 128
+#define BUCKET_SIZE 4096
 
 inline bool compareFloat(float f1, float f2) {
     if (fabs(f1 - f2) < 1e-6) {
@@ -485,8 +485,8 @@ class Mesh {
         }
         // vertices.reserve(FACET_POOL_SIZE);
         // faces.reserve(FACET_POOL_SIZE);
-        // faces.reserve(BUCKET_SIZE);
-        // vertices.reserve(BUCKET_SIZE);
+        faces.reserve(BUCKET_SIZE);
+        vertices.reserve(BUCKET_SIZE);
     }
     ~Mesh();
 
