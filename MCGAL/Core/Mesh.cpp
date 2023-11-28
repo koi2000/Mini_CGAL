@@ -148,8 +148,8 @@ Halfedge* Mesh::erase_center_vertex(Halfedge* h) {
         Halfedge* gnext = g->next->opposite;
         // this->halfedges.erase(g);
         // this->halfedges.erase(g->opposite);
-        g->vertex->halfedges.erase(g);
-        g->opposite->vertex->halfedges.erase(g->opposite);
+        // g->vertex->halfedges.erase(g);
+        // g->opposite->vertex->halfedges.erase(g->opposite);
 
         g = gnext;
     }
@@ -157,14 +157,14 @@ Halfedge* Mesh::erase_center_vertex(Halfedge* h) {
     remove_tip(hret);
     // vertices.erase(h->end_vertex);
     for (Halfedge* hit : h->end_vertex->halfedges) {
-        hit->end_vertex->halfedges.erase(hit->opposite);
+        // hit->end_vertex->halfedges.erase(hit->opposite);
     }
     h->end_vertex->halfedges.clear();
 
     // this->halfedges.erase(h);
     // this->halfedges.erase(h->opposite);
-    h->vertex->halfedges.erase(h);
-    h->opposite->vertex->halfedges.erase(h->opposite);
+    // h->vertex->halfedges.erase(h);
+    // h->opposite->vertex->halfedges.erase(h->opposite);
     set_face_in_face_loop(hret, face);
     return hret;
 }
@@ -192,8 +192,21 @@ Halfedge* Mesh::join_face(Halfedge* h) {
     remove_tip(gprev);
     h->opposite->setRemoved();
 
-    h->vertex->halfedges.erase(h);
-    h->opposite->vertex->halfedges.erase(h->opposite);
+    //h->vertex->halfedges.erase(h);
+    for (auto it = h->vertex->halfedges.begin();it!=h->vertex->halfedges.end();it++){
+        if((*it)==h){
+            h->vertex->halfedges.erase(it);
+            break;
+        }
+    }
+    for (auto it = h->opposite->vertex->halfedges.begin();it!=h->opposite->vertex->halfedges.end();it++){
+        if((*it)==h){
+            h->opposite->vertex->halfedges.erase(it);
+            break;
+        }
+    }
+    
+    // h->opposite->vertex->halfedges.erase(h->opposite);
     // this->faces.erase(gprev->face);
     gprev->face->setRemoved();
     // delete gprev->face;
@@ -290,6 +303,7 @@ std::istream& operator>>(std::istream& input, Mesh& mesh) {
 void Mesh::dumpto(std::string path) {
     for (auto fit = faces.begin(); fit != faces.end(); ) {
         if ((*fit)->isRemoved()) {
+            delete *fit;
             fit = faces.erase(fit);
         } else {
             fit++;
