@@ -21,10 +21,21 @@ void MyMesh::startNextDecompresssionOp() {
         return;
     }
     // 1. reset the states. note that the states of the vertices need not to be reset
-    for (MCGAL::Facet* fit : faces) {
-        fit->resetState();
-        for (MCGAL::Halfedge* hit : fit->halfedges) {
-            hit->resetState();
+    // for (MCGAL::Facet* fit : faces) {
+    //     fit->resetState();
+    //     for (MCGAL::Halfedge* hit : fit->halfedges) {
+    //         hit->resetState();
+    //     }
+    // }
+    for (auto fit = faces.begin(); fit != faces.end();) {
+        if ((*fit)->isRemoved()) {
+            fit = faces.erase(fit);
+        } else {
+            (*fit)->resetState();
+            for (MCGAL::Halfedge* hit : (*fit)->halfedges) {
+                hit->resetState();
+            }
+            fit++;
         }
     }
 
@@ -83,15 +94,16 @@ void MyMesh::readBaseMesh() {
 
 void MyMesh::buildFromBuffer(std::deque<MCGAL::Point>* p_pointDeque, std::deque<uint32_t*>* p_faceDeque) {
     this->vertices.clear();
+    // this->halfedges.clear();
     // used to create faces
     std::vector<MCGAL::Vertex*> vertices;
-    // add vertex to face
+    // add vertex to Mesh
     for (std::size_t i = 0; i < p_pointDeque->size(); ++i) {
         float x, y, z;
         MCGAL::Point p = p_pointDeque->at(i);
         MCGAL::Vertex* vt = allocateVertexFromPool(p);
         vt->setId(i);
-        this->vertices.insert(vt);
+        this->vertices.push_back(vt);
         vertices.push_back(vt);
     }
     this->vh_departureConquest[0] = vertices[0];
@@ -114,6 +126,7 @@ void MyMesh::buildFromBuffer(std::deque<MCGAL::Point>* p_pointDeque, std::deque<
 }
 
 void MyMesh::RemovedVerticesDecodingStep() {
+    //
     pushHehInit();
     while (!gateQueue.empty()) {
         MCGAL::Halfedge* h = gateQueue.front();
@@ -185,10 +198,6 @@ void MyMesh::InsertedEdgeDecodingStep() {
         }
         assert(!hIt->isNew());
     }
-}
-
-void MyMesh::insertRemovedVertices(){
-    
 }
 
 /**
