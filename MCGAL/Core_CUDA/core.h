@@ -1,3 +1,5 @@
+#ifndef CORE_CUDA_H
+#define CORE_CUDA_H
 #include <assert.h>
 #include <math.h>
 #include <set>
@@ -8,7 +10,7 @@ namespace MCGAL {
 
 #define VERTEX_POOL_SIZE 500 * 1024
 #define HALFEDGE_POOL_SIZE 500 * 1024
-#define FACET_POOL_SIZE 500 * 1024
+#define FACET_POOL_SIZE 200 * 1024
 
 #define BUCKET_SIZE 4096
 #define SMALL_BUCKET_SIZE 32
@@ -110,7 +112,7 @@ class Vertex : public Point {
 
     int vid_ = 0;
     std::vector<Halfedge*> halfedges;
-    int* halfedges;
+    // * halfedges;
 
     int vertex_degree() {
         return halfedges.size();
@@ -351,30 +353,21 @@ class Facet {
   public:
     std::vector<Vertex*> vertices;
     std::vector<Halfedge*> halfedges;
-    // std::unordered_set<Vertex*> vertices;
-    // std::unordered_set<Halfedge*> halfedges;
-
-    // std::unordered_set<Vertex*, Vertex::Hash, Vertex::Equal> vertices;
-    // std::unordered_set<Halfedge*, Halfedge::Hash, Halfedge::Equal> halfedges;
 
   public:
     ~Facet();
 
     // constructor
-    Facet() {
-        // vertices.reserve(BUCKET_SIZE);
-        // halfedges.reserve(BUCKET_SIZE);
-    };
+    Facet(){};
     Facet(const Facet& face);
     Facet(Halfedge* hit);
     Facet(std::vector<Vertex*>& vs);
-    Facet(std::vector<Vertex*>& vs, Mesh* mesh);
 
     // utils
     Facet* clone();
     void reset(Halfedge* h);
     void reset(std::vector<Halfedge*>& hs);
-    void reset(std::vector<Vertex*>& vs, Mesh* mesh);
+    void reset(std::vector<Vertex*>& vs);
     void remove(Halfedge* h);
     int facet_degree();
 
@@ -448,48 +441,29 @@ class Facet {
     replacing_group* rg = NULL;
 };
 
-class Mesh {
-  public:
-    // std::unordered_set<Vertex*, Vertex::Hash, Vertex::Equal> vertices;
-    std::vector<Vertex*> vertices;
-    // std::unordered_set<Vertex*> vertices;
-    // std::unordered_set<Halfedge*, Halfedge::Hash, Halfedge::Equal> halfedges;
-    // std::unordered_set<Halfedge*> halfedges;
-    // std::unordered_set<Facet*> faces;
-    std::vector<Facet*> faces;
-    int nb_vertices = 0;
-    int nb_faces = 0;
-    int nb_edges = 0;
-
+class ContextPool {
+  private:
     MCGAL::Vertex** vpool = nullptr;
     MCGAL::Halfedge** hpool = nullptr;
     MCGAL::Facet** fpool = nullptr;
+
     int vindex = 0;
     int hindex = 0;
     int findex = 0;
+    ContextPool();
+    
 
   public:
-    Mesh() {
-        vpool = new MCGAL::Vertex*[VERTEX_POOL_SIZE];
-        hpool = new MCGAL::Halfedge*[HALFEDGE_POOL_SIZE];
-        fpool = new MCGAL::Facet*[FACET_POOL_SIZE];
-        for (int i = 0; i < VERTEX_POOL_SIZE; i++) {
-            vpool[i] = new MCGAL::Vertex();
-        }
-        for (int i = 0; i < HALFEDGE_POOL_SIZE; i++) {
-            hpool[i] = new MCGAL::Halfedge();
-        }
-        for (int i = 0; i < FACET_POOL_SIZE; i++) {
-            fpool[i] = new MCGAL::Facet();
-        }
-        // vertices.reserve(FACET_POOL_SIZE);
-        // faces.reserve(FACET_POOL_SIZE);
-        faces.reserve(BUCKET_SIZE);
-        vertices.reserve(BUCKET_SIZE);
-    }
-    ~Mesh();
+    ~ContextPool();
 
-    // get from pool
+    static ContextPool& getInstance() {
+        static ContextPool contextPool;
+        return contextPool;
+    }
+
+    ContextPool(const ContextPool&) = delete;
+    ContextPool& operator=(const ContextPool&) = delete;
+
     inline MCGAL::Vertex* allocateVertexFromPool() {
         return vpool[vindex++];
     }
@@ -517,10 +491,48 @@ class Mesh {
         return fpool[findex++];
     }
 
-    inline MCGAL::Facet* allocateFaceFromPool(std::vector<MCGAL::Vertex*> vts, Mesh* mesh) {
-        fpool[findex]->reset(vts, mesh);
+    inline MCGAL::Facet* allocateFaceFromPool(std::vector<MCGAL::Vertex*> vts) {
+        fpool[findex]->reset(vts);
         return fpool[findex++];
     }
+
+    inline int preAllocVertex(int size) {
+        int ret = vindex;
+        vindex += size;
+        return ret;
+    }
+
+    inline int preAllocHalfedge(int size) {
+        int ret = hindex;
+        hindex += size;
+        return ret;
+    }
+
+    inline int preAllocFace(int size) {
+        int ret = findex;
+        findex += size;
+        return ret;
+    }
+};
+
+class Mesh {
+  public:
+    std::vector<Vertex*> vertices;
+    std::vector<Facet*> faces;
+    int nb_vertices = 0;
+    int nb_faces = 0;
+    int nb_edges = 0;
+
+    int vindex = 0;
+    int hindex = 0;
+    int findex = 0;
+
+  public:
+    Mesh() {
+        faces.reserve(BUCKET_SIZE);
+        vertices.reserve(BUCKET_SIZE);
+    }
+    ~Mesh();
 
     // IOS
     bool loadOFF(std::string path);
@@ -602,3 +614,4 @@ class replacing_group {
 };
 
 }  // namespace MCGAL
+#endif

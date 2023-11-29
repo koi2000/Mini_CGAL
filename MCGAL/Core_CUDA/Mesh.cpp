@@ -1,4 +1,5 @@
 #include "core.h"
+#include "global.h"
 #include <assert.h>
 #include <fstream>
 #include <iostream>
@@ -6,20 +7,56 @@
 #include <string>
 namespace MCGAL {
 
+ContextPool::ContextPool() {
+    vpool = new MCGAL::Vertex*[VERTEX_POOL_SIZE];
+    hpool = new MCGAL::Halfedge*[HALFEDGE_POOL_SIZE];
+    fpool = new MCGAL::Facet*[FACET_POOL_SIZE];
+    for (int i = 0; i < VERTEX_POOL_SIZE; i++) {
+        vpool[i] = new MCGAL::Vertex();
+    }
+    for (int i = 0; i < HALFEDGE_POOL_SIZE; i++) {
+        hpool[i] = new MCGAL::Halfedge();
+    }
+    for (int i = 0; i < FACET_POOL_SIZE; i++) {
+        fpool[i] = new MCGAL::Facet();
+    }
+}
+
+ContextPool::~ContextPool() {
+    if (vpool != nullptr) {
+        for (int i = 0; i < VERTEX_POOL_SIZE; i++) {
+            delete vpool[i];
+            // vpool[i] = nullptr;
+        }
+        delete[] vpool;
+        vpool = nullptr;
+    }
+    if (hpool != nullptr) {
+        for (int i = 0; i < HALFEDGE_POOL_SIZE; i++) {
+            delete hpool[i];
+            // hpool[i] = nullptr;
+        }
+        delete[] hpool;
+        hpool = nullptr;
+    }
+    if (fpool != nullptr) {
+        for (int i = 0; i < FACET_POOL_SIZE; i++) {
+            delete fpool[i];
+            fpool[i] = nullptr;
+        }
+        delete[] fpool;
+        fpool = nullptr;
+    }
+}
+
 Mesh::~Mesh() {
-    for (Facet* f : faces) {
-        delete f;
-    }
-    for (Vertex* p : vertices) {
-        // assert(p->halfedges.size() == (int)0 && p->opposite_half_edges.size() == 0);
-        delete p;
-    }
-    // for (Halfedge* e : halfedges) {
-    //     delete e;
+    // for (Facet* f : faces) {
+    //     delete f;
     // }
-    delete[] vpool;
-    delete[] hpool;
-    delete[] fpool;
+    // for (Vertex* p : vertices) {
+    //     // assert(p->halfedges.size() == (int)0 && p->opposite_half_edges.size() == 0);
+    //     delete p;
+    // }
     vertices.clear();
     faces.clear();
     // halfedges.clear();
@@ -87,8 +124,8 @@ Halfedge* Mesh::split_facet(Halfedge* h, Halfedge* g) {
 Halfedge* Mesh::create_center_vertex(Halfedge* h) {
     Vertex* vnew = new Vertex();
     this->vertices.push_back(vnew);
-    Halfedge* hnew = allocateHalfedgeFromPool(h->end_vertex, vnew);
-    Halfedge* oppo_new = allocateHalfedgeFromPool(vnew, h->end_vertex);
+    Halfedge* hnew = contextPool.allocateHalfedgeFromPool(h->end_vertex, vnew);
+    Halfedge* oppo_new = contextPool.allocateHalfedgeFromPool(vnew, h->end_vertex);
     // add new halfedge to current mesh and set opposite
     // set the next element
     // now the next of hnew and prev of oppo_new is unknowen
@@ -98,8 +135,8 @@ Halfedge* Mesh::create_center_vertex(Halfedge* h) {
 
     Halfedge* hed = hnew;
     while (g->next != hed) {
-        Halfedge* gnew = allocateHalfedgeFromPool(g->end_vertex, vnew);
-        Halfedge* oppo_gnew = allocateHalfedgeFromPool(vnew, g->end_vertex);
+        Halfedge* gnew = contextPool.allocateHalfedgeFromPool(g->end_vertex, vnew);
+        Halfedge* oppo_gnew = contextPool.allocateHalfedgeFromPool(vnew, g->end_vertex);
         origin_around_halfedge.push_back(g);
         gnew->next = hnew->opposite;
         insert_tip(gnew->opposite, g);
@@ -111,7 +148,7 @@ Halfedge* Mesh::create_center_vertex(Halfedge* h) {
     h->face->reset(h);
     // collect all the halfedge
     for (Halfedge* hit : origin_around_halfedge) {
-        Facet* face = allocateFaceFromPool(hit);
+        Facet* face = contextPool.allocateFaceFromPool(hit);
         this->faces.push_back(face);
     }
     return oppo_new;
@@ -192,20 +229,20 @@ Halfedge* Mesh::join_face(Halfedge* h) {
     remove_tip(gprev);
     h->opposite->setRemoved();
 
-    //h->vertex->halfedges.erase(h);
-    for (auto it = h->vertex->halfedges.begin();it!=h->vertex->halfedges.end();it++){
-        if((*it)==h){
+    // h->vertex->halfedges.erase(h);
+    for (auto it = h->vertex->halfedges.begin(); it != h->vertex->halfedges.end(); it++) {
+        if ((*it) == h) {
             h->vertex->halfedges.erase(it);
             break;
         }
     }
-    for (auto it = h->opposite->vertex->halfedges.begin();it!=h->opposite->vertex->halfedges.end();it++){
-        if((*it)==h){
+    for (auto it = h->opposite->vertex->halfedges.begin(); it != h->opposite->vertex->halfedges.end(); it++) {
+        if ((*it) == h) {
             h->opposite->vertex->halfedges.erase(it);
             break;
         }
     }
-    
+
     // h->opposite->vertex->halfedges.erase(h->opposite);
     // this->faces.erase(gprev->face);
     gprev->face->setRemoved();
@@ -301,9 +338,9 @@ std::istream& operator>>(std::istream& input, Mesh& mesh) {
 }
 
 void Mesh::dumpto(std::string path) {
-    for (auto fit = faces.begin(); fit != faces.end(); ) {
+    for (auto fit = faces.begin(); fit != faces.end();) {
         if ((*fit)->isRemoved()) {
-            delete *fit;
+            // delete *fit;
             fit = faces.erase(fit);
         } else {
             fit++;

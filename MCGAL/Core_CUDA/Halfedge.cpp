@@ -52,16 +52,5 @@ Halfedge::~Halfedge() {
         assert(opposite->opposite = this);
         opposite->opposite = NULL;
     }
-
-    // detach from the vertices
-    assert(vertex && end_vertex);
-    // assert(vertex->halfedges.find(this) != vertex->halfedges.end());
-    // assert(end_vertex->opposite_half_edges.find(this) != end_vertex->opposite_half_edges.end());
-    // if (vertex->halfedges.find(this) != vertex->halfedges.end()) {
-    //     vertex->halfedges.erase(this);
-    // }
-    // if (end_vertex->opposite_half_edges.find(this) != end_vertex->opposite_half_edges.end()) {
-    //     end_vertex->opposite_half_edges.erase(this);
-    // }
 }
 }  // namespace MCGAL

@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 project(Mini_CGAL)
 
 set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -g -Wno-unused-result")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -g -Wno-unused-result")
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pg")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pg")
@@ -29,7 +29,9 @@ link_directories(
 
 set(PPMC_SOURCE_DIR "PPMC")
 set(MINICGAL_SOURCE_DIR "MCGAL/Core")
+set(MINICGAL_CUDA_SOURCE_DIR "MCGAL/Core_CUDA")
 set(MINICGAL_PPMC_SOURCE_DIR "MCGAL_PPMC")
+set(PPMC_CUDA_SOURCE_DIR "PPMC_CUDA")
 
 # set(RANGECODER_SOURCE_DIR "PPMC/rangeCoder")
 find_package(CGAL REQUIRED)
@@ -56,6 +58,13 @@ file(GLOB_RECURSE MINICGAL_PPMC_FILES
     "${MINICGAL_PPMC_SOURCE_DIR}/*.cpp"
 )
 
+file(GLOB_RECURSE MINICGAL_CUDA_PPMC_FILES
+    "${MINICGAL_CUDA_SOURCE_DIR}/*.h"
+    "${MINICGAL_CUDA_SOURCE_DIR}/*.cpp"
+    "${PPMC_CUDA_SOURCE_DIR}/*.h"
+    "${PPMC_CUDA_SOURCE_DIR}/*.cpp"
+)
+
 add_subdirectory(CUDA_new)
 
 add_executable(Mini_CGAL main.cpp ${PPMC_FILES})
@@ -75,5 +84,9 @@ set_target_properties(MiniCGAL_Compress PROPERTIES COMPILE_FLAGS -frounding-math
 target_link_libraries(MiniCGAL_Compress ${CGAL_LIBRARIES} ${OPENGL_LIBRARY} ${GLUT_LIBRARY} m)
 
 add_executable(MiniCGAL_Decompress tools/MDecompress_test.cpp ${MINICGAL_PPMC_FILES})
+set_target_properties(MiniCGAL_Decompress PROPERTIES COMPILE_FLAGS -frounding-math)
+target_link_libraries(MiniCGAL_Decompress ${CGAL_LIBRARIES} ${OPENGL_LIBRARY} ${GLUT_LIBRARY} m)
+
+add_executable(MiniCGAL_CudaDecompress tools/MCudaDecompress_test.cpp ${MINICGAL_CUDA_PPMC_FILES})
 set_target_properties(MiniCGAL_Decompress PROPERTIES COMPILE_FLAGS -frounding-math)
 target_link_libraries(MiniCGAL_Decompress ${CGAL_LIBRARIES} ${OPENGL_LIBRARY} ${GLUT_LIBRARY} m)

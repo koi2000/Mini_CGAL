@@ -3,7 +3,7 @@
 //
 #include "mymesh.h"
 #include "util.h"
-// #include "configuration.h"
+#include "../MCGAL/Core_CUDA/global.h"
 #include <algorithm>
 
 int MCGAL::replacing_group::counter = 0;
@@ -46,7 +46,7 @@ MyMesh::MyMesh(string& str, bool completeop) : MCGAL::Mesh() {
     // vh_departureConquest[1] = (*halfedges.begin())->opposite->vertex;
 
     if (completeop) {
-        encode(0);
+        // encode(0);
     }
 }
 
@@ -106,7 +106,7 @@ void MyMesh::pushHehInit() {
 }
 
 MCGAL::Facet* MyMesh::add_face_by_pool(std::vector<MCGAL::Vertex*>& vs) {
-    MCGAL::Facet* f = allocateFaceFromPool(vs, this);
+    MCGAL::Facet* f = MCGAL::contextPool.allocateFaceFromPool(vs);
     // for (MCGAL::Halfedge* hit : f->halfedges) {
     //     this->halfedges.insert(hit);
     // }

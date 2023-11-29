@@ -1,5 +1,7 @@
 #include "mymesh.h"
 #include "util.h"
+#include "../MCGAL/Core_CUDA/global.h"
+
 void MyMesh::decode(int lod) {
     assert(lod >= 0 && lod <= 100);
     // assert(!this->is_compression_mode());
@@ -101,7 +103,7 @@ void MyMesh::buildFromBuffer(std::deque<MCGAL::Point>* p_pointDeque, std::deque<
     for (std::size_t i = 0; i < p_pointDeque->size(); ++i) {
         float x, y, z;
         MCGAL::Point p = p_pointDeque->at(i);
-        MCGAL::Vertex* vt = allocateVertexFromPool(p);
+        MCGAL::Vertex* vt = MCGAL::contextPool.allocateVertexFromPool(p);
         vt->setId(i);
         this->vertices.push_back(vt);
         vertices.push_back(vt);
@@ -117,7 +119,7 @@ void MyMesh::buildFromBuffer(std::deque<MCGAL::Point>* p_pointDeque, std::deque<
             int vertex_index = ptr[j + 1];
             vts.push_back(vertices[vertex_index]);
         }
-        MCGAL::Facet* face = allocateFaceFromPool(vts, this);
+        MCGAL::Facet* face = MCGAL::contextPool.allocateFaceFromPool(vts);
         this->add_face(face);
         // this->faces
     }

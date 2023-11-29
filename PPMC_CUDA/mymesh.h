@@ -1,5 +1,6 @@
-#include "../MCGAL/Core/core.h"
-#include "aab.h"
+#ifndef CUDA_MYMESH
+#define CUDA_MYMESH
+#include "../MCGAL/Core_CUDA/core.h"
 #include <algorithm>
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/foreach.hpp>
@@ -14,7 +15,6 @@ const int DECOMPRESSION_MODE_ID = 1;
 #define INV_GAMMA 2
 
 #define PPMC_RANDOM_CONSTANT 0315
-
 class MyMesh : public MCGAL::Mesh {
     // Gate queues
     std::queue<MCGAL::Halfedge*> gateQueue;
@@ -46,8 +46,6 @@ class MyMesh : public MCGAL::Mesh {
     // The compressed data;
     char* p_data;
     size_t dataOffset = 0;  // the offset to read and write.
-
-    aab mbb;  // the bounding box
 
     // Store the maximum Hausdorf Distance
     std::vector<MCGAL::Point> removedPoints;
@@ -153,3 +151,4 @@ class MyMesh : public MCGAL::Mesh {
 
     MyMesh* clone_mesh();
 };
+#endif
