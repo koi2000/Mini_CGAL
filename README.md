@@ -72,6 +72,54 @@ vector version
 15:23:08.0195 thread 33504:     10 removeInsertedEdges takes 7.081000 ms
 15:23:08.0196 thread 33504:     decode to 100 takes 227.538000 ms
 ```
+set version
+```
+15:28:58.0719 thread 34792:     1 RemovedVerticesDecodingStep takes 0.110000 ms
+15:28:58.0719 thread 34792:     1 InsertedEdgeDecodingStep takes 0.096000 ms
+15:28:58.0720 thread 34792:     1 insertRemovedVertices takes 1.138000 ms
+15:28:58.0721 thread 34792:     1 removeInsertedEdges takes 0.786000 ms
+15:28:58.0721 thread 34792:     2 RemovedVerticesDecodingStep takes 0.096000 ms
+15:28:58.0721 thread 34792:     2 InsertedEdgeDecodingStep takes 0.162000 ms
+15:28:58.0723 thread 34792:     2 insertRemovedVertices takes 1.768000 ms
+15:28:58.0724 thread 34792:     2 removeInsertedEdges takes 1.115000 ms
+15:28:58.0724 thread 34792:     decode to 20 takes 6.717000 ms
+15:28:58.0727 thread 34792:     3 RemovedVerticesDecodingStep takes 0.157000 ms
+15:28:58.0727 thread 34792:     3 InsertedEdgeDecodingStep takes 0.259000 ms
+15:28:58.0730 thread 34792:     3 insertRemovedVertices takes 2.534000 ms
+15:28:58.0731 thread 34792:     3 removeInsertedEdges takes 1.661000 ms
+15:28:58.0732 thread 34792:     4 RemovedVerticesDecodingStep takes 0.173000 ms
+15:28:58.0732 thread 34792:     4 InsertedEdgeDecodingStep takes 0.283000 ms
+15:28:58.0736 thread 34792:     4 insertRemovedVertices takes 3.766000 ms
+15:28:58.0738 thread 34792:     4 removeInsertedEdges takes 2.544000 ms
+15:28:58.0738 thread 34792:     decode to 40 takes 14.404000 ms
+15:28:58.0745 thread 34792:     5 RemovedVerticesDecodingStep takes 0.278000 ms
+15:28:58.0745 thread 34792:     5 InsertedEdgeDecodingStep takes 0.401000 ms
+15:28:58.0751 thread 34792:     5 insertRemovedVertices takes 5.707000 ms
+15:28:58.0755 thread 34792:     5 removeInsertedEdges takes 3.743000 ms
+15:28:58.0755 thread 34792:     6 RemovedVerticesDecodingStep takes 0.373000 ms
+15:28:58.0756 thread 34792:     6 InsertedEdgeDecodingStep takes 0.563000 ms
+15:28:58.0765 thread 34792:     6 insertRemovedVertices takes 9.219000 ms
+15:28:58.0772 thread 34792:     6 removeInsertedEdges takes 7.130000 ms
+15:28:58.0772 thread 34792:     decode to 60 takes 33.940000 ms
+15:28:58.0788 thread 34792:     7 RemovedVerticesDecodingStep takes 0.598000 ms
+15:28:58.0789 thread 34792:     7 InsertedEdgeDecodingStep takes 0.835000 ms
+15:28:58.0804 thread 34792:     7 insertRemovedVertices takes 14.957000 ms
+15:28:58.0816 thread 34792:     7 removeInsertedEdges takes 12.816000 ms
+15:28:58.0820 thread 34792:     8 RemovedVerticesDecodingStep takes 1.200000 ms
+15:28:58.0821 thread 34792:     8 InsertedEdgeDecodingStep takes 1.522000 ms
+15:28:58.0846 thread 34792:     8 insertRemovedVertices takes 25.089000 ms
+15:28:58.0866 thread 34792:     8 removeInsertedEdges takes 19.869000 ms
+15:28:58.0866 thread 34792:     decode to 80 takes 93.985000 ms
+15:28:58.0912 thread 34792:     9 RemovedVerticesDecodingStep takes 2.777000 ms
+15:28:58.0915 thread 34792:     9 InsertedEdgeDecodingStep takes 2.355000 ms
+15:28:58.0954 thread 34792:     9 insertRemovedVertices takes 39.164000 ms
+15:28:58.0996 thread 34792:     9 removeInsertedEdges takes 41.897000 ms
+15:28:59.0007 thread 34792:     10 RemovedVerticesDecodingStep takes 3.894000 ms
+15:28:59.0010 thread 34792:     10 InsertedEdgeDecodingStep takes 3.166000 ms
+15:28:59.0070 thread 34792:     10 insertRemovedVertices takes 60.802000 ms
+15:28:59.0078 thread 34792:     10 removeInsertedEdges takes 7.587000 ms
+15:28:59.0078 thread 34792:     decode to 100 takes 211.848000 ms
+```
 
 CGAL
 ```
