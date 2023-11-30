@@ -7,48 +7,6 @@
 #include <string>
 namespace MCGAL {
 
-ContextPool::ContextPool() {
-    vpool = new MCGAL::Vertex*[VERTEX_POOL_SIZE];
-    hpool = new MCGAL::Halfedge*[HALFEDGE_POOL_SIZE];
-    fpool = new MCGAL::Facet*[FACET_POOL_SIZE];
-    for (int i = 0; i < VERTEX_POOL_SIZE; i++) {
-        vpool[i] = new MCGAL::Vertex();
-    }
-    for (int i = 0; i < HALFEDGE_POOL_SIZE; i++) {
-        hpool[i] = new MCGAL::Halfedge();
-    }
-    for (int i = 0; i < FACET_POOL_SIZE; i++) {
-        fpool[i] = new MCGAL::Facet();
-    }
-}
-
-ContextPool::~ContextPool() {
-    if (vpool != nullptr) {
-        for (int i = 0; i < VERTEX_POOL_SIZE; i++) {
-            delete vpool[i];
-            // vpool[i] = nullptr;
-        }
-        delete[] vpool;
-        vpool = nullptr;
-    }
-    if (hpool != nullptr) {
-        for (int i = 0; i < HALFEDGE_POOL_SIZE; i++) {
-            delete hpool[i];
-            // hpool[i] = nullptr;
-        }
-        delete[] hpool;
-        hpool = nullptr;
-    }
-    if (fpool != nullptr) {
-        for (int i = 0; i < FACET_POOL_SIZE; i++) {
-            delete fpool[i];
-            fpool[i] = nullptr;
-        }
-        delete[] fpool;
-        fpool = nullptr;
-    }
-}
-
 Mesh::~Mesh() {
     // for (Facet* f : faces) {
     //     delete f;

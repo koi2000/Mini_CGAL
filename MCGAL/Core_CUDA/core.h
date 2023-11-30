@@ -10,7 +10,7 @@
 #include <vector>
 namespace MCGAL {
 
-#define VERTEX_POOL_SIZE 500 * 1024
+#define VERTEX_POOL_SIZE 70 * 1024
 #define HALFEDGE_POOL_SIZE 500 * 1024
 #define FACET_POOL_SIZE 200 * 1024
 
@@ -467,44 +467,13 @@ class ContextPool {
         return contextPool;
     }
 
-    void copyToCUDA() {
-        cudaMalloc((void**)&dvpool, VERTEX_POOL_SIZE * sizeof(Vertex*));
-        for (int i = 0; i < VERTEX_POOL_SIZE; ++i) {
-            cudaMalloc((void**)&(dvpool[i]), sizeof(Vertex));
-            cudaMemcpy(dvpool[i], vpool[i], sizeof(Vertex), cudaMemcpyHostToDevice);
-        }
+    void copyToCuda();
+    void freeCuda();
+    void mallocOnUnifiedMemory();
+    void freeOnUnifiedMemory();
 
-        cudaMalloc((void**)&dhpool, HALFEDGE_POOL_SIZE * sizeof(Halfedge*));
-        for (int i = 0; i < HALFEDGE_POOL_SIZE; ++i) {
-            cudaMalloc((void**)&(dhpool[i]), sizeof(Halfedge));
-            cudaMemcpy(dhpool[i], hpool[i], sizeof(Halfedge), cudaMemcpyHostToDevice);
-        }
-
-        cudaMalloc((void**)&dfpool, FACET_POOL_SIZE * sizeof(Facet*));
-        for (int i = 0; i < FACET_POOL_SIZE; ++i) {
-            cudaMalloc((void**)&(dfpool[i]), sizeof(Facet));
-            cudaMemcpy(dfpool[i], fpool[i], sizeof(Facet), cudaMemcpyHostToDevice);
-        }
-    }
-
-    void freeCuda() {
-        for (int i = 0; i < VERTEX_POOL_SIZE; ++i) {
-            cudaFree(dvpool[i]);
-        }
-        cudaFree(dvpool);
-
-        for (int i = 0; i < HALFEDGE_POOL_SIZE; ++i) {
-            cudaFree(dhpool[i]);
-        }
-        cudaFree(dhpool);
-
-        for (int i = 0; i < FACET_POOL_SIZE; ++i) {
-            cudaFree(dfpool[i]);
-        }
-        cudaFree(dfpool);
-    }
-
-
+    void mallocOnCpu();
+    void freeOnCpu();
 
     ContextPool(const ContextPool&) = delete;
     ContextPool& operator=(const ContextPool&) = delete;

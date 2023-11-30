@@ -22,6 +22,8 @@ void compress(int argc, char** argv) {
         sprintf(path, "./gisdata/compressed_%d.mesh.off", i);
         hm->write_to_off(path);
     }
+    // while (true) {}
+
     delete hm;
 }
 

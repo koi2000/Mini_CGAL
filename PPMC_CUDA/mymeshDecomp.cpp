@@ -202,16 +202,10 @@ void MyMesh::InsertedEdgeDecodingStep() {
  */
 void MyMesh::insertRemovedVertices() {
     // Add the first halfedge to the queue.
-    // pushHehInit();
+    pushHehInit();
     // 需要交到cuda上的信息有，原来面的数据
     // pool全部要交上去
     // prealloc的信息
-
-    for (MCGAL::Facet* fit : faces) {
-        if(fit->isSplittable()){
-            
-        }
-    }
 
     while (!gateQueue.empty()) {
         MCGAL::Halfedge* h = gateQueue.front();
