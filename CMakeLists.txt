@@ -1,8 +1,10 @@
 cmake_minimum_required(VERSION 3.16)
-project(Mini_CGAL)
+project(Mini_CGAL CXX C CUDA)
+
+set(CMAKE_CUDA_FLAGS "-arch=compute_35 -g -G -O3")
 
 set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -g -Wno-unused-result")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -g -Wno-unused-result")
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pg")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pg")

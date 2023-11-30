@@ -1,1 +1,2 @@
 add_executable(test_struct_pointer test_struct_pointer.cu)
+add_executable(test_struct_pointer2 test_struct_pointer2.cu)

@@ -28,6 +28,8 @@ class MyMesh : public MCGAL::Mesh {
     // Number of vertices removed during current conquest.
     unsigned i_nbRemovedVertices;
 
+    int splitable_count = 0;
+
     // The vertices of the edge that is the departure of the coding and decoding conquests.
     MCGAL::Vertex* vh_departureConquest[2];
     // Geometry symbol list.

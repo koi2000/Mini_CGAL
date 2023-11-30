@@ -1,6 +1,8 @@
 #ifndef CORE_CUDA_H
 #define CORE_CUDA_H
+#include "cuda_util.h"
 #include <assert.h>
+#include <cuda_runtime.h>
 #include <math.h>
 #include <set>
 #include <string>
@@ -443,15 +445,19 @@ class Facet {
 
 class ContextPool {
   private:
+    // try to use cuda zero copy
     MCGAL::Vertex** vpool = nullptr;
     MCGAL::Halfedge** hpool = nullptr;
     MCGAL::Facet** fpool = nullptr;
+
+    MCGAL::Vertex** dvpool = nullptr;
+    MCGAL::Halfedge** dhpool = nullptr;
+    MCGAL::Facet** dfpool = nullptr;
 
     int vindex = 0;
     int hindex = 0;
     int findex = 0;
     ContextPool();
-    
 
   public:
     ~ContextPool();
@@ -460,6 +466,45 @@ class ContextPool {
         static ContextPool contextPool;
         return contextPool;
     }
+
+    void copyToCUDA() {
+        cudaMalloc((void**)&dvpool, VERTEX_POOL_SIZE * sizeof(Vertex*));
+        for (int i = 0; i < VERTEX_POOL_SIZE; ++i) {
+            cudaMalloc((void**)&(dvpool[i]), sizeof(Vertex));
+            cudaMemcpy(dvpool[i], vpool[i], sizeof(Vertex), cudaMemcpyHostToDevice);
+        }
+
+        cudaMalloc((void**)&dhpool, HALFEDGE_POOL_SIZE * sizeof(Halfedge*));
+        for (int i = 0; i < HALFEDGE_POOL_SIZE; ++i) {
+            cudaMalloc((void**)&(dhpool[i]), sizeof(Halfedge));
+            cudaMemcpy(dhpool[i], hpool[i], sizeof(Halfedge), cudaMemcpyHostToDevice);
+        }
+
+        cudaMalloc((void**)&dfpool, FACET_POOL_SIZE * sizeof(Facet*));
+        for (int i = 0; i < FACET_POOL_SIZE; ++i) {
+            cudaMalloc((void**)&(dfpool[i]), sizeof(Facet));
+            cudaMemcpy(dfpool[i], fpool[i], sizeof(Facet), cudaMemcpyHostToDevice);
+        }
+    }
+
+    void freeCuda() {
+        for (int i = 0; i < VERTEX_POOL_SIZE; ++i) {
+            cudaFree(dvpool[i]);
+        }
+        cudaFree(dvpool);
+
+        for (int i = 0; i < HALFEDGE_POOL_SIZE; ++i) {
+            cudaFree(dhpool[i]);
+        }
+        cudaFree(dhpool);
+
+        for (int i = 0; i < FACET_POOL_SIZE; ++i) {
+            cudaFree(dfpool[i]);
+        }
+        cudaFree(dfpool);
+    }
+
+
 
     ContextPool(const ContextPool&) = delete;
     ContextPool& operator=(const ContextPool&) = delete;

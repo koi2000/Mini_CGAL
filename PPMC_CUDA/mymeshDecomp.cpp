@@ -1,6 +1,6 @@
+#include "../MCGAL/Core_CUDA/global.h"
 #include "mymesh.h"
 #include "util.h"
-#include "../MCGAL/Core_CUDA/global.h"
 
 void MyMesh::decode(int lod) {
     assert(lod >= 0 && lod <= 100);
@@ -23,12 +23,6 @@ void MyMesh::startNextDecompresssionOp() {
         return;
     }
     // 1. reset the states. note that the states of the vertices need not to be reset
-    // for (MCGAL::Facet* fit : faces) {
-    //     fit->resetState();
-    //     for (MCGAL::Halfedge* hit : fit->halfedges) {
-    //         hit->resetState();
-    //     }
-    // }
     for (auto fit = faces.begin(); fit != faces.end();) {
         if ((*fit)->isRemoved()) {
             fit = faces.erase(fit);
@@ -40,7 +34,7 @@ void MyMesh::startNextDecompresssionOp() {
             fit++;
         }
     }
-
+    splitable_count = 0;
     i_curDecimationId++;  // increment the current decimation operation id.
     // 2. decoding the removed vertices and add to target facets
     struct timeval start = get_cur_time();
@@ -156,6 +150,7 @@ void MyMesh::RemovedVerticesDecodingStep() {
         if (sym == 1) {
             MCGAL::Point rmved = readPoint();
             f->setSplittable();
+            splitable_count++;
             f->setRemovedVertexPos(rmved);
         } else {
             f->setUnsplittable();
@@ -207,7 +202,17 @@ void MyMesh::InsertedEdgeDecodingStep() {
  */
 void MyMesh::insertRemovedVertices() {
     // Add the first halfedge to the queue.
-    pushHehInit();
+    // pushHehInit();
+    // 需要交到cuda上的信息有，原来面的数据
+    // pool全部要交上去
+    // prealloc的信息
+
+    for (MCGAL::Facet* fit : faces) {
+        if(fit->isSplittable()){
+            
+        }
+    }
+
     while (!gateQueue.empty()) {
         MCGAL::Halfedge* h = gateQueue.front();
         gateQueue.pop();
