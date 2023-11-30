@@ -11,8 +11,8 @@
 namespace MCGAL {
 
 #define VERTEX_POOL_SIZE 70 * 1024
-#define HALFEDGE_POOL_SIZE 500 * 1024
-#define FACET_POOL_SIZE 200 * 1024
+#define HALFEDGE_POOL_SIZE 100 * 1024
+#define FACET_POOL_SIZE 100 * 1024
 
 #define BUCKET_SIZE 4096
 #define SMALL_BUCKET_SIZE 32
@@ -446,13 +446,13 @@ class Facet {
 class ContextPool {
   private:
     // try to use cuda zero copy
-    MCGAL::Vertex** vpool = nullptr;
-    MCGAL::Halfedge** hpool = nullptr;
-    MCGAL::Facet** fpool = nullptr;
+    MCGAL::Vertex* vpool = nullptr;
+    MCGAL::Halfedge* hpool = nullptr;
+    MCGAL::Facet* fpool = nullptr;
 
-    MCGAL::Vertex** dvpool = nullptr;
-    MCGAL::Halfedge** dhpool = nullptr;
-    MCGAL::Facet** dfpool = nullptr;
+    MCGAL::Vertex* dvpool;
+    MCGAL::Halfedge* dhpool;
+    MCGAL::Facet* dfpool;
 
     int vindex = 0;
     int hindex = 0;
@@ -479,35 +479,35 @@ class ContextPool {
     ContextPool& operator=(const ContextPool&) = delete;
 
     inline MCGAL::Vertex* allocateVertexFromPool() {
-        return vpool[vindex++];
+        return &vpool[vindex++];
     }
 
     inline MCGAL::Vertex* allocateVertexFromPool(MCGAL::Point& p) {
-        vpool[vindex]->setPoint(p);
-        return vpool[vindex++];
+        vpool[vindex].setPoint(p);
+        return &vpool[vindex++];
     }
 
     inline MCGAL::Halfedge* allocateHalfedgeFromPool() {
-        return hpool[hindex++];
+        return &hpool[hindex++];
     }
 
     inline MCGAL::Halfedge* allocateHalfedgeFromPool(MCGAL::Vertex* v1, MCGAL::Vertex* v2) {
-        hpool[hindex]->reset(v1, v2);
-        return hpool[hindex++];
+        hpool[hindex].reset(v1, v2);
+        return &hpool[hindex++];
     }
 
     inline MCGAL::Facet* allocateFaceFromPool() {
-        return fpool[findex++];
+        return &fpool[findex++];
     }
 
     inline MCGAL::Facet* allocateFaceFromPool(MCGAL::Halfedge* h) {
-        fpool[findex]->reset(h);
-        return fpool[findex++];
+        fpool[findex].reset(h);
+        return &fpool[findex++];
     }
 
     inline MCGAL::Facet* allocateFaceFromPool(std::vector<MCGAL::Vertex*> vts) {
-        fpool[findex]->reset(vts);
-        return fpool[findex++];
+        fpool[findex].reset(vts);
+        return &fpool[findex++];
     }
 
     inline int preAllocVertex(int size) {
