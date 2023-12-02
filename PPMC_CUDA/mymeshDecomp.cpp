@@ -1,4 +1,4 @@
-#include "../MCGAL/Core_CUDA/global.h"
+// #include "../MCGAL/Core_CUDA/global.h"
 #include "mymesh.h"
 #include "util.h"
 

@@ -2,7 +2,7 @@
 // Created by DELL on 2023/11/9.
 //
 #include "mymesh.h"
-#include "../MCGAL/Core_CUDA/global.h"
+// #include "../MCGAL/Core_CUDA/global.h"
 #include "util.h"
 #include <algorithm>
 

@@ -16,7 +16,7 @@ void compress(int argc, char** argv) {
     sprintf(path, "./gisdata/compressed_0.mesh.off");
     struct timeval start = get_cur_time();
     hm->write_to_off(path);
-    for (uint i = 20; i <= lod; i += 20) {
+    for (uint i = 10; i <= lod; i += 10) {
         hm->decode(i);
         logt("decode to %d", start, i);
         sprintf(path, "./gisdata/compressed_%d.mesh.off", i);

@@ -1,10 +1,5 @@
-#include "core.h"
-#include "global.h"
-#include <assert.h>
-#include <fstream>
-#include <iostream>
-#include <sstream>
-#include <string>
+#include "include/Mesh.h"
+
 namespace MCGAL {
 
 Mesh::~Mesh() {

@@ -1,5 +1,5 @@
-#include "core.h"
-#include "global.h"
+#include "include/Halfedge.h"
+#include "include/global.h"
 namespace MCGAL {
 // create a new half edge, setup the opposite of this half edge if needed
 Halfedge::Halfedge(Vertex* v1, Vertex* v2) {

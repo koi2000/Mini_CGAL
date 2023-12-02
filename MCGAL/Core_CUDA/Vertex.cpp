@@ -1,5 +1,5 @@
-#include "core.h"
-#include "global.h"
+#include "include/Vertex.h"
+#include "include/global.h"
 #include <stdlib.h>
 namespace MCGAL {
 

@@ -1,5 +1,5 @@
-#include "core.h"
-#include "global.h"
+#include "include/Facet.h"
+#include "include/global.h"
 namespace MCGAL {
 
 // void Facet::remove(Halfedge* rh) {

@@ -1,4 +1,4 @@
-#include "core.h"
+#include "include/ContextPool.cuh"
 
 namespace MCGAL {
 

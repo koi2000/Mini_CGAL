@@ -1,6 +1,6 @@
 #ifndef CUDA_MYMESH
 #define CUDA_MYMESH
-#include "../MCGAL/Core_CUDA/core.h"
+#include "../MCGAL/Core_CUDA/include/core.h"
 #include <algorithm>
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/foreach.hpp>
