@@ -1,6 +1,0 @@
-23-11-30-17:18:30
-MemTotal:       105372468 kB
-MemFree:        99822644 kB
-Cached:          2613996 kB
-SwapCached:            0 kB
-

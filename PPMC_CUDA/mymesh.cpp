@@ -2,8 +2,8 @@
 // Created by DELL on 2023/11/9.
 //
 #include "mymesh.h"
-#include "util.h"
 #include "../MCGAL/Core_CUDA/global.h"
+#include "util.h"
 #include <algorithm>
 
 int MCGAL::replacing_group::counter = 0;
@@ -92,15 +92,13 @@ MyMesh::MyMesh(char* path) : MCGAL::Mesh() {
 
 void MyMesh::pushHehInit() {
     MCGAL::Halfedge* hehBegin;
-    // std::unordered_set<MCGAL::Halfedge*> hset = vh_departureConquest[0]->halfedges;
-    auto hit = vh_departureConquest[1]->halfedges.begin();
-    auto hed = vh_departureConquest[1]->halfedges.end();
-    for (; hit != hed; hit++) {
-        hehBegin = (*hit)->opposite;
-        if (hehBegin->vertex == vh_departureConquest[0])
-            break;
+    for (int i = 0; i < vh_departureConquest[1]->halfedges_size; i++) {
+        MCGAL::Halfedge* hit = vh_departureConquest[1]->getHalfedgeByIndex(i);
+        if (hit->opposite()->vertex()==vh_departureConquest[0]) {
+            hehBegin = hit->opposite();
+        }   
     }
-    assert(hehBegin->vertex == vh_departureConquest[0]);
+    assert(hehBegin->vertex() == vh_departureConquest[0]);
     // Push it to the queue.
     gateQueue.push(hehBegin);
 }
@@ -122,23 +120,41 @@ bool MyMesh::willViolateManifold(const std::vector<MCGAL::Halfedge*>& polygon) c
     // Test also that two vertices of the patch will not be doubly connected
     // after the vertex cut opeation.
     for (unsigned i = 0; i < i_degree; ++i) {
-        MCGAL::Halfedge* Hvc = *polygon[i]->vertex->halfedges.begin();
+        MCGAL::Halfedge* Hvc = polygon[i]->vertex()->getHalfedgeByIndex(0);
         MCGAL::Halfedge* Hvc_end = Hvc;
-        for (MCGAL::Halfedge* hvc : polygon[i]->vertex->halfedges) {
-            MCGAL::Vertex* vh = Hvc->opposite->vertex;
+        for (int k = 0; k < polygon[i]->vertex()->halfedges_size; k++) {
+            MCGAL::Halfedge* hvc = polygon[i]->vertex()->getHalfedgeByIndex(k);
             for (unsigned j = 0; j < i_degree; ++j) {
-                if (vh == polygon[j]->vertex) {
+                MCGAL::Vertex* vh = hvc->opposite()->vertex();
+                if (vh == polygon[j]->vertex()) {
                     unsigned i_prev = i == 0 ? i_degree - 1 : i - 1;
                     unsigned i_next = i == i_degree - 1 ? 0 : i + 1;
 
                     if ((j == i_prev &&
-                         polygon[i]->face->facet_degree() != 3)  // The vertex cut operation is forbidden.
-                        || (j == i_next &&
-                            polygon[i]->opposite->face->facet_degree() != 3))  // The vertex cut operation is forbidden.
+                         polygon[i]->facet()->facet_degree() != 3)  // The vertex cut operation is forbidden.
+                        || (j == i_next && polygon[i]->opposite()->facet()->facet_degree() !=
+                                               3))  // The vertex cut operation is forbidden.
                         return true;
                 }
             }
         }
+
+        // for (MCGAL::Halfedge* hvc : polygon[i]->vertex->halfedges) {
+        //     MCGAL::Vertex* vh = Hvc->opposite->vertex;
+        //     for (unsigned j = 0; j < i_degree; ++j) {
+        //         if (vh == polygon[j]->vertex) {
+        //             unsigned i_prev = i == 0 ? i_degree - 1 : i - 1;
+        //             unsigned i_next = i == i_degree - 1 ? 0 : i + 1;
+
+        //             if ((j == i_prev &&
+        //                  polygon[i]->face->facet_degree() != 3)  // The vertex cut operation is forbidden.
+        //                 || (j == i_next &&
+        //                     polygon[i]->opposite->face->facet_degree() != 3))  // The vertex cut operation is
+        //                     forbidden.
+        //                 return true;
+        //         }
+        //     }
+        // }
     }
 
     return false;
@@ -159,11 +175,16 @@ bool MyMesh::isRemovable(MCGAL::Vertex* v) const {
         // vh_oneRing.push_back(v);
         // MCGAL::Halfedge* hit(*v->halfedges.begin());
         // MCGAL::Halfedge* end(hit);
-        for (MCGAL::Halfedge* hit : v->halfedges) {
-            vh_oneRing.push_back(hit->opposite->vertex);
-            heh_oneRing.push_back(hit->opposite);
-        }  // while (hit != end);
-        //
+        for (int i = 0; i < v->halfedges_size; i++) {
+            MCGAL::Halfedge* hit = v->getHalfedgeByIndex(i);
+            vh_oneRing.push_back(hit->opposite()->vertex());
+            heh_oneRing.push_back(hit->opposite());
+        }
+
+        // for (MCGAL::Halfedge* hit : v->halfedges) {
+        //     vh_oneRing.push_back(hit->opposite()->vertex());
+        //     heh_oneRing.push_back(hit->opposite());
+        // }
         bool removable = !willViolateManifold(heh_oneRing);
         // && isProtruding(heh_oneRing);
         //&& isConvex(vh_oneRing)

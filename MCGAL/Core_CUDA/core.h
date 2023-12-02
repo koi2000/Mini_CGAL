@@ -10,12 +10,16 @@
 #include <vector>
 namespace MCGAL {
 
-#define VERTEX_POOL_SIZE 70 * 1024
-#define HALFEDGE_POOL_SIZE 100 * 1024
-#define FACET_POOL_SIZE 100 * 1024
+#define VERTEX_POOL_SIZE 170 * 1024
+#define HALFEDGE_POOL_SIZE 500 * 1024
+#define FACET_POOL_SIZE 200 * 1024
 
 #define BUCKET_SIZE 4096
 #define SMALL_BUCKET_SIZE 32
+
+#define HALFEDGE_IN_VERTEX 100
+#define HALFEDGE_IN_FACE 100
+#define VERTEX_IN_FACE 100
 
 inline bool compareFloat(float f1, float f2) {
     if (fabs(f1 - f2) < 1e-6) {
@@ -102,22 +106,24 @@ class Vertex : public Point {
     unsigned int id = 0;
 
   public:
-    Vertex() : Point() {
-        // halfedges.reserve(BUCKET_SIZE);
-    }
-    Vertex(const Point& p) : Point(p) {
-        // halfedges.reserve(BUCKET_SIZE);
-    }
-    Vertex(float v1, float v2, float v3) : Point(v1, v2, v3) {
-        // halfedges.reserve(BUCKET_SIZE);
-    }
+    Vertex() : Point() {}
+    Vertex(const Point& p) : Point(p) {}
+    Vertex(float v1, float v2, float v3) : Point(v1, v2, v3) {}
 
     int vid_ = 0;
-    std::vector<Halfedge*> halfedges;
-    // * halfedges;
+    int poolId;
+    int halfedges[HALFEDGE_IN_VERTEX];
+    int halfedges_size = 0;
+    // std::vector<Halfedge*> halfedges;
+
+    void addHalfedge(Halfedge* halfedge);
+    void addHalfedge(int halfedge);
+    Halfedge* getHalfedgeByIndex(int index);
+    void eraseHalfedgeByIndex(int index);
+    void eraseHalfedgeByPointer(Halfedge* halfedge);
 
     int vertex_degree() {
-        return halfedges.size();
+        return halfedges_size;
     }
 
     void print() {
@@ -152,31 +158,6 @@ class Vertex : public Point {
         this->v[0] = p.x();
         this->v[1] = p.y();
         this->v[2] = p.z();
-    }
-
-    // Hash function for Vertex
-    struct Hash {
-        size_t operator()(const Vertex* vertex) const {
-            // Use a combination of hash functions for each member
-            size_t hash = std::hash<float>{}(vertex->x());
-            hash_combine(hash, std::hash<float>{}(vertex->y()));
-            hash_combine(hash, std::hash<float>{}(vertex->z()));
-            hash_combine(hash, std::hash<int>{}(vertex->vid()));
-            return hash;
-        }
-    };
-
-    // Equality comparison for Vertex
-    struct Equal {
-        bool operator()(const Vertex* v1, const Vertex* v2) const {
-            // Compare each member for equality
-            return v1->x() == v2->x() && v1->y() == v2->y() && v1->z() == v2->z();
-            // Add other members if needed
-        }
-    };
-
-    static void hash_combine(size_t& seed, size_t hash) {
-        seed ^= hash + 0x9e3779b9 + (seed << 6) + (seed >> 2);
     }
 
     inline void resetState() {
@@ -220,14 +201,42 @@ class Halfedge {
     BFSFlag bfsFlag = NotVisited;
 
   public:
-    Halfedge(){};
-    Vertex* vertex = nullptr;
-    Vertex* end_vertex = nullptr;
-    Facet* face = nullptr;
-    Halfedge* next = nullptr;
-    Halfedge* opposite = nullptr;
+    int poolId;
+    int vertex_ = -1;
+    int end_vertex_ = -1;
+    int facet_ = -1;
+    int next_ = -1;
+    int opposite_ = -1;
+    Halfedge() {
+        vertex_ = -1;
+        end_vertex_ = -1;
+        facet_ = -1;
+        next_ = -1;
+        opposite_ = -1;
+    };
+    // Vertex* vertex = nullptr;
+    // Vertex* end_vertex = nullptr;
+    // Facet* face = nullptr;
+    // Halfedge* next = nullptr;
+    // Halfedge* opposite = nullptr;
     Halfedge(Vertex* v1, Vertex* v2);
+    Halfedge(int v1, int v2);
     ~Halfedge();
+
+    Vertex* vertex();
+    Vertex* end_vertex();
+    Facet* facet();
+    Halfedge* opposite();
+    Halfedge* next();
+
+    void setOpposite(Halfedge* opposite);
+    void setOpposite(int opposite);
+
+    void setNext(Halfedge* next);
+    void setNext(int next);
+
+    void setFacet(Facet* facet);
+    void setFacet(int facet);
 
     void reset(Vertex* v1, Vertex* v2);
 
@@ -309,34 +318,6 @@ class Halfedge {
     inline bool isVisited() {
         return bfsFlag == Visited;
     }
-
-    // Hash function for Point
-    struct Hash {
-        size_t operator()(Halfedge* halfedge) const {
-            // Use a combination of hash functions for each member
-            size_t hash = std::hash<float>{}(halfedge->vertex->x());
-            hash_combine(hash, std::hash<float>{}(halfedge->vertex->y()));
-            hash_combine(hash, std::hash<float>{}(halfedge->vertex->z()));
-            hash_combine(hash, std::hash<float>{}(halfedge->end_vertex->x()));
-            hash_combine(hash, std::hash<float>{}(halfedge->end_vertex->y()));
-            hash_combine(hash, std::hash<float>{}(halfedge->end_vertex->z()));
-            return hash;
-        }
-    };
-
-    // Equality comparison for Vertex
-    struct Equal {
-        bool operator()(Halfedge* h1, Halfedge* h2) const {
-            // Compare each member for equality
-            return h1->vertex->x() == h2->vertex->x() && h1->vertex->y() == h2->vertex->y() &&
-                   h1->vertex->z() == h2->vertex->z() && h1->end_vertex->x() == h2->end_vertex->x() &&
-                   h1->end_vertex->y() == h2->end_vertex->y() && h1->end_vertex->z() == h2->end_vertex->z();
-        }
-    };
-
-    static void hash_combine(size_t& seed, size_t hash) {
-        seed ^= hash + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-    }
 };
 
 class replacing_group;
@@ -353,8 +334,13 @@ class Facet {
     Point removedVertexPos;
 
   public:
-    std::vector<Vertex*> vertices;
-    std::vector<Halfedge*> halfedges;
+    // std::vector<Vertex*> vertices;
+    int vertices[VERTEX_IN_FACE];
+    int vertex_size = 0;
+    // std::vector<Halfedge*> halfedges;
+    int halfedges[HALFEDGE_IN_FACE];
+    int halfedge_size = 0;
+    int poolId;
 
   public:
     ~Facet();
@@ -364,6 +350,15 @@ class Facet {
     Facet(const Facet& face);
     Facet(Halfedge* hit);
     Facet(std::vector<Vertex*>& vs);
+
+    // pools
+    void addHalfedge(Halfedge* halfedge);
+    void addHalfedge(int halfedge);
+    void addVertex(Vertex* vertex);
+    void addVertex(int vertex);
+
+    Vertex* getVertexByIndex(int index);
+    Halfedge* getHalfedgeByIndex(int index);
 
     // utils
     Facet* clone();
@@ -478,6 +473,18 @@ class ContextPool {
     ContextPool(const ContextPool&) = delete;
     ContextPool& operator=(const ContextPool&) = delete;
 
+    MCGAL::Vertex* getVertexByIndex(int index) {
+        return &vpool[index];
+    }
+
+    MCGAL::Halfedge* getHalfedgeByIndex(int index) {
+        return &hpool[index];
+    }
+
+    MCGAL::Facet* getFacetByIndex(int index) {
+        return &fpool[index];
+    }
+
     inline MCGAL::Vertex* allocateVertexFromPool() {
         return &vpool[vindex++];
     }
@@ -576,9 +583,7 @@ class Mesh {
     size_t size_of_halfedges() {
         int count = 0;
         for (Facet* fit : faces) {
-            for (Halfedge* hit : fit->halfedges) {
-                count++;
-            }
+            count += fit->halfedge_size;
         }
         return count;
     }

@@ -15,29 +15,43 @@ ContextPool::~ContextPool() {
 }
 
 void ContextPool::mallocOnUnifiedMemory() {
-    vpool = new MCGAL::Vertex[VERTEX_POOL_SIZE];
+    dvpool = new MCGAL::Vertex[VERTEX_POOL_SIZE];
     CHECK(cudaMallocManaged(&vpool, VERTEX_POOL_SIZE * sizeof(Vertex)));
-    hpool = new MCGAL::Halfedge[HALFEDGE_POOL_SIZE];
+    for (int i = 0; i < VERTEX_POOL_SIZE; i++) {
+        dvpool[i].poolId = i;
+    }
+    CHECK(cudaMemcpy(vpool, dvpool, VERTEX_POOL_SIZE * sizeof(Vertex), cudaMemcpyHostToDevice));
+    
+    dhpool = new MCGAL::Halfedge[HALFEDGE_POOL_SIZE];
     CHECK(cudaMallocManaged(&hpool, HALFEDGE_POOL_SIZE * sizeof(Halfedge)));
-    fpool = new MCGAL::Facet[FACET_POOL_SIZE];
+    for (int i = 0; i < HALFEDGE_POOL_SIZE; i++) {
+        dhpool[i].poolId = i;
+    }
+    CHECK(cudaMemcpy(hpool, dhpool, HALFEDGE_POOL_SIZE * sizeof(Halfedge), cudaMemcpyHostToDevice));
+    
     CHECK(cudaMallocManaged(&fpool, FACET_POOL_SIZE * sizeof(Facet)));
+    dfpool = new MCGAL::Facet[FACET_POOL_SIZE];
+    for (int i = 0; i < FACET_POOL_SIZE; i++) {
+        dfpool[i].poolId = i;
+    }
+    CHECK(cudaMemcpy(fpool, dfpool, FACET_POOL_SIZE * sizeof(Facet), cudaMemcpyHostToDevice));
 }
 
 void ContextPool::freeOnUnifiedMemory() {
     if (vpool != nullptr) {
         cudaFree(vpool);
-        delete[] vpool;
-        vpool = nullptr;
+        delete[] dvpool;
+        dvpool = nullptr;
     }
     if (hpool != nullptr) {
         cudaFree(hpool);
-        delete[] hpool;
-        hpool = nullptr;
+        delete[] dhpool;
+        dhpool = nullptr;
     }
     if (fpool != nullptr) {
         cudaFree(fpool);
-        delete[] fpool;
-        fpool = nullptr;
+        delete[] dfpool;
+        dfpool = nullptr;
     }
 }
 

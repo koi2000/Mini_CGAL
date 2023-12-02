@@ -85,7 +85,8 @@ Halfedge* Mesh::split_facet(Halfedge* h, Halfedge* g) {
 }
 
 Halfedge* Mesh::create_center_vertex(Halfedge* h) {
-    Vertex* vnew = new Vertex();
+    // Vertex* vnew = new Vertex();
+    Vertex* vnew = allocateVertexFromPool();
     this->vertices.push_back(vnew);
     Halfedge* hnew = allocateHalfedgeFromPool(h->end_vertex, vnew);
     Halfedge* oppo_new = allocateHalfedgeFromPool(vnew, h->end_vertex);
@@ -200,7 +201,7 @@ Halfedge* Mesh::join_face(Halfedge* h) {
         }
     }
     for (auto it = h->opposite->vertex->halfedges.begin();it!=h->opposite->vertex->halfedges.end();it++){
-        if((*it)==h){
+        if((*it)==h->opposite){
             h->opposite->vertex->halfedges.erase(it);
             break;
         }
