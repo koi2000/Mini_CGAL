@@ -1,9 +1,9 @@
 #ifndef MESH_H
 #define MESH_H
 #include <vector>
-#include "Vertex.h"
-#include "Halfedge.h"
-#include "Facet.h"
+#include "Vertex.cuh"
+#include "Halfedge.cuh"
+#include "Facet.cuh"
 #include "global.h"
 #include <assert.h>
 #include <fstream>

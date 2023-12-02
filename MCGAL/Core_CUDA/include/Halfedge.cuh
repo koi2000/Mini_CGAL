@@ -1,6 +1,7 @@
 #ifndef HALFEDGE_H
 #define HALFEDGE_H
 #include <assert.h>
+#include <cuda_runtime.h>
 namespace MCGAL {
 class Vertex;
 class Facet;
@@ -46,6 +47,7 @@ class Halfedge {
     Halfedge* opposite();
     Halfedge* next();
 
+    // cpu
     void setOpposite(Halfedge* opposite);
     void setOpposite(int opposite);
 
@@ -56,6 +58,24 @@ class Halfedge {
     void setFacet(int facet);
 
     void reset(Vertex* v1, Vertex* v2);
+
+    // gpu
+    __device__ void setOppositeOnCuda(Halfedge* opposite);
+    __device__ void setOppositeOnCuda(int opposite);
+
+    __device__ void setNextOnCuda(Halfedge* next);
+    __device__ void setNextOnCuda(int next);
+
+    __device__ void setFacetOnCuda(Facet* facet);
+    __device__ void setFacetOnCuda(int facet);
+    // __device__ void resetOnCuda(Vertex* v1, Vertex* v2);
+
+    __device__ Vertex* dvertex(Vertex* vertices);
+    __device__ Vertex* dend_vertex(Vertex* vertices);
+    __device__ Facet* dfacet(Facet* facets);
+    __device__ Halfedge* dopposite(Halfedge* halfedges);
+    __device__ Halfedge* dnext(Halfedge* halfedges);
+    __device__ void resetOnCuda(Vertex* vertices, Halfedge* halfedges, Vertex* v1, Vertex* v2);
 
     inline void resetState() {
         flag = NotYetInQueue;

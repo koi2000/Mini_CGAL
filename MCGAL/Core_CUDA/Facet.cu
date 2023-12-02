@@ -1,4 +1,4 @@
-#include "include/Facet.h"
+#include "include/Facet.cuh"
 #include "include/global.h"
 namespace MCGAL {
 
@@ -140,6 +140,20 @@ void Facet::reset(Halfedge* h) {
     reset(edges);
 }
 
+__device__ void Facet::resetOnCuda(Vertex* vertices, Halfedge* halfedges, Halfedge* h) {
+    halfedge_size = 0;
+    vertex_size = 0;
+    Halfedge* st = h;
+    Halfedge* ed = h;
+    do {
+        addHalfedgeOnCuda(st);
+        // this->vertices.push_back(hs[i]->vertex);
+        addVertexOnCuda(st->dvertex(vertices));
+        st->setFacetOnCuda(this);
+        st = st->dnext(halfedges);
+    } while (st != ed);
+}
+
 void Facet::reset(std::vector<Halfedge*>& hs) {
     halfedge_size = 0;
     vertex_size = 0;
@@ -202,4 +216,35 @@ int Facet::facet_degree() {
     return vertex_size;
 }
 
+// cuda
+
+__device__ Vertex* Facet::getVertexByIndexOnCuda(Vertex* dvertices, int index) {
+    if (index == -1) {
+        return nullptr;
+    }
+    return &dvertices[vertices[index]];
+}
+
+__device__ Halfedge* Facet::getHalfedgeByIndexOnCuda(Halfedge* dhalfedges, int index) {
+    if (index == -1) {
+        return nullptr;
+    }
+    return &dhalfedges[halfedges[index]];
+}
+
+__device__ void Facet::addHalfedgeOnCuda(Halfedge* halfedge) {
+    halfedges[halfedge_size++] = halfedge->poolId;
+}
+
+__device__ void Facet::addHalfedgeOnCuda(int halfedge) {
+    halfedges[halfedge_size++] = halfedge;
+}
+
+__device__ void Facet::addVertexOnCuda(Vertex* vertex) {
+    vertices[vertex_size++] = vertex->poolId;
+}
+
+__device__ void Facet::addVertexOnCuda(int vertex) {
+    vertices[vertex_size++] = vertex;
+}
 }  // namespace MCGAL

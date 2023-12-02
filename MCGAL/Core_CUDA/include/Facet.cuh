@@ -1,8 +1,8 @@
 #ifndef FACET_H
 #define FACET_H
 #include "Configuration.h"
-#include "Halfedge.h"
-#include "Vertex.h"
+#include "Halfedge.cuh"
+#include "Vertex.cuh"
 #include <vector>
 
 namespace MCGAL {
@@ -20,7 +20,6 @@ class Facet {
     Point removedVertexPos;
 
   public:
-    // std::vector<Vertex*> vertices;
     int vertices[VERTEX_IN_FACE];
     int vertex_size = 0;
     // std::vector<Halfedge*> halfedges;
@@ -53,6 +52,16 @@ class Facet {
     void reset(std::vector<Vertex*>& vs);
     void remove(Halfedge* h);
     int facet_degree();
+
+    // cuda
+    __device__ Vertex* getVertexByIndexOnCuda(Vertex* vertices, int index);
+    __device__ Halfedge* getHalfedgeByIndexOnCuda(Halfedge* halfedges, int index);
+    __device__ void addHalfedgeOnCuda(Halfedge* halfedge);
+    __device__ void addHalfedgeOnCuda(int halfedge);
+    __device__ void addVertexOnCuda(Vertex* vertex);
+    __device__ void addVertexOnCuda(int vertex);
+
+    __device__ void resetOnCuda(Vertex* vertices,Halfedge* halfedges, Halfedge* h);
 
     // override
     bool equal(const Facet& rhs) const;
@@ -103,7 +112,7 @@ class Facet {
         return (processedFlag == Processed);
     }
 
-    inline Point getRemovedVertexPos() const {
+    inline MCGAL::Point getRemovedVertexPos() {
         return removedVertexPos;
     }
 

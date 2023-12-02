@@ -1,4 +1,4 @@
-#include "include/Vertex.h"
+#include "include/Vertex.cuh"
 #include "include/global.h"
 #include <stdlib.h>
 namespace MCGAL {
@@ -34,10 +34,16 @@ void Vertex::eraseHalfedgeByPointer(Halfedge* halfedge) {
             break;
         }
     }
-    if(flag==0){
-        int a = 9;
-    }
     eraseHalfedgeByIndex(index);
+}
+
+// cuda
+__device__ void Vertex::addHalfedgeOnCuda(Halfedge* halfedge) {
+    halfedges[halfedges_size++] = halfedge->poolId;
+}
+
+__device__ void Vertex::addHalfedgeOnCuda(int halfedge) {
+    halfedges[halfedges_size++] = halfedge;
 }
 
 }  // namespace MCGAL

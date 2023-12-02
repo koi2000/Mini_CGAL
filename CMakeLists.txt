@@ -64,8 +64,10 @@ file(GLOB_RECURSE MINICGAL_CUDA_PPMC_FILES
     "${MINICGAL_CUDA_SOURCE_DIR}/*.h"
     "${MINICGAL_CUDA_SOURCE_DIR}/*.cpp"
     "${MINICGAL_CUDA_SOURCE_DIR}/*.cu"
+    "${MINICGAL_CUDA_SOURCE_DIR}/*.cuh"
     "${PPMC_CUDA_SOURCE_DIR}/*.h"
     "${PPMC_CUDA_SOURCE_DIR}/*.cpp"
+    "${PPMC_CUDA_SOURCE_DIR}/*.cu"
 )
 
 add_subdirectory(CUDA_new)

@@ -47,7 +47,8 @@ void MyMesh::startNextDecompresssionOp() {
     InsertedEdgeDecodingStep();
     logt("%d InsertedEdgeDecodingStep", start, i_curDecimationId);
     // 4. truly insert the removed vertices
-    insertRemovedVertices();
+    // insertRemovedVertices();
+    insertRemovedVerticesOnCuda();
     logt("%d insertRemovedVertices", start, i_curDecimationId);
     // 5. truly remove the added edges
     removeInsertedEdges();
@@ -98,7 +99,6 @@ void MyMesh::buildFromBuffer(std::deque<MCGAL::Point>* p_pointDeque, std::deque<
     std::vector<MCGAL::Vertex*> vertices;
     // add vertex to Mesh
     for (std::size_t i = 0; i < p_pointDeque->size(); ++i) {
-        float x, y, z;
         MCGAL::Point p = p_pointDeque->at(i);
         MCGAL::Vertex* vt = MCGAL::contextPool.allocateVertexFromPool(p);
         vt->setId(i);
@@ -199,18 +199,114 @@ void MyMesh::InsertedEdgeDecodingStep() {
     }
 }
 
+__device__ void insert_tip_cuda(MCGAL::Halfedge* hs, MCGAL::Halfedge* h, MCGAL::Halfedge* v) {
+    h->setNextOnCuda(v->dnext(hs));
+    v->setNextOnCuda(h->dopposite(hs));
+}
+
+// kernel function
+__global__ void createCenterVertexOnCuda(MCGAL::Vertex* vertices,
+                                         MCGAL::Halfedge* halfedges,
+                                         MCGAL::Facet* facets,
+                                         int* faceIndexes,
+                                         int* vertexIndexes,
+                                         int* stHalfedgeIndexes,
+                                         int* stFacetIndexes,
+                                         int num) {
+    int tid = blockIdx.x * (blockDim.x * blockDim.y) + blockDim.x * threadIdx.y + threadIdx.x;
+    if (tid < num) {
+        int faceId = faceIndexes[tid];
+        MCGAL::Facet* facet = &facets[faceId];
+        int vertexId = vertexIndexes[tid];
+        MCGAL::Vertex* vnew = &vertices[vertexId];
+        int stHalfedgeIndex = stHalfedgeIndexes[tid];
+        int stFacetIndex = stFacetIndexes[tid];
+
+        MCGAL::Halfedge* h = facet->getHalfedgeByIndexOnCuda(halfedges, 0);
+        MCGAL::Halfedge* hnew = &halfedges[stHalfedgeIndex++];
+
+        hnew->resetOnCuda(vertices, halfedges, h->dend_vertex(vertices), vnew);
+        MCGAL::Halfedge* oppo_new = &halfedges[stHalfedgeIndex++];
+        oppo_new->resetOnCuda(vertices, halfedges, vnew, h->dend_vertex(vertices));
+
+        insert_tip_cuda(halfedges, hnew->dopposite(halfedges), h);
+        MCGAL::Halfedge* g = hnew->dopposite(halfedges)->dnext(halfedges);
+
+        MCGAL::Halfedge* hed = hnew;
+        while (g->dnext(halfedges) != hed) {
+            MCGAL::Halfedge* gnew = &halfedges[stHalfedgeIndex++];
+            gnew->resetOnCuda(vertices, halfedges, g->dend_vertex(vertices), vnew);
+            MCGAL::Halfedge* oppo_gnew = &halfedges[stHalfedgeIndex++];
+            oppo_gnew->resetOnCuda(vertices, halfedges, vnew, g->dend_vertex(vertices));
+            gnew->setNextOnCuda(hnew->dopposite(halfedges));
+            insert_tip_cuda(halfedges, gnew->dopposite(halfedges), g);
+
+            g = gnew->dopposite(halfedges)->dnext(halfedges);
+            hnew = gnew;
+        }
+        hed->setNextOnCuda(hnew->dopposite(halfedges));
+        h->dfacet(facets)->resetOnCuda(vertices, halfedges, h);
+        for (int i = 0; i < h->dfacet(facets)->halfedge_size; i++) {
+            MCGAL::Halfedge* hit = &halfedges[h->dfacet(facets)->halfedges[i]];
+            if (hit != h) {
+                facets[stFacetIndex++].resetOnCuda(vertices, halfedges, h);
+            }
+        }
+    }
+}
+
+void MyMesh::insertRemovedVerticesOnCuda() {
+    dim3 grid(128, 1, 1), block(64, 64, 1);
+    // first: pre alloc all the face and halfedge
+    // transfer face , halfedge[st,ed] vertex, face[st,ed] to cuda
+    // cuda set the relationship
+    std::vector<int> faceIndexes;
+    std::vector<int> vertexIndexes;
+    std::vector<int> stHalfedgeIndexes;
+    std::vector<int> stFacetIndexes;
+    for (MCGAL::Facet* fit : faces) {
+        if (fit->isSplittable()) {
+            faceIndexes.push_back(fit->poolId);
+            int hcount = fit->halfedge_size * 2;
+            int fcount = fit->halfedge_size - 1;
+            int findex = MCGAL::contextPool.preAllocFace(fcount);
+            for (int i = 0; i < fcount; i++) {
+                this->faces.push_back(MCGAL::contextPool.getFacetByIndex(findex + i));
+            }
+            stFacetIndexes.push_back(findex);
+            int hindex = MCGAL::contextPool.preAllocHalfedge(hcount);
+            stHalfedgeIndexes.push_back(hindex);
+            vertexIndexes.push_back(MCGAL::contextPool.getVindex());
+            MCGAL::Vertex* vnew = MCGAL::contextPool.allocateVertexFromPool(fit->getRemovedVertexPos());
+            this->vertices.push_back(vnew);
+        }
+    }
+    // add it to mesh
+    int num = faceIndexes.size();
+    int* dfaceIndexes;
+    int* dvertexIndexes;
+    int* dstHalfedgeIndexes;
+    int* dstFacetIndexes;
+    CHECK(cudaMalloc(&dfaceIndexes, num * sizeof(int)));
+    CHECK(cudaMalloc(&dvertexIndexes, num * sizeof(int)));
+    CHECK(cudaMalloc(&dstFacetIndexes, num * sizeof(int)));
+    CHECK(cudaMalloc(&dstHalfedgeIndexes, num * sizeof(int)));
+    CHECK(cudaMemcpy(dfaceIndexes, faceIndexes.data(), num * sizeof(int), cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpy(dvertexIndexes, vertexIndexes.data(), num * sizeof(int), cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpy(dstHalfedgeIndexes, stHalfedgeIndexes.data(), num * sizeof(int), cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpy(dstFacetIndexes, stFacetIndexes.data(), num * sizeof(int), cudaMemcpyHostToDevice));
+    createCenterVertexOnCuda<<<grid, block>>>(MCGAL::contextPool.vpool, MCGAL::contextPool.hpool,
+                                              MCGAL::contextPool.fpool, faceIndexes.data(), vertexIndexes.data(),
+                                              stHalfedgeIndexes.data(), stFacetIndexes.data(), num);
+    cudaDeviceSynchronize();
+}
+
 /**
  * Insert center vertices.
  */
 void MyMesh::insertRemovedVertices() {
     // Add the first halfedge to the queue.
     pushHehInit();
-    // 需要交到cuda上的信息有，原来面的数据
-    // pool全部要交上去
-    // prealloc的信息
-    // for (MCGAL::Facet* fit : faces) {
-    //     fit->isSplittable();
-    // }
 
     while (!gateQueue.empty()) {
         MCGAL::Halfedge* h = gateQueue.front();
@@ -244,11 +340,6 @@ void MyMesh::insertRemovedVertices() {
 
             // Mark all the created edges as new.
             MCGAL::Vertex* Hvc = hehNewVertex->vertex();
-            // for (MCGAL::Halfedge* hit : Hvc->halfedges) {
-            //     hit->setNew();
-            //     hit->opposite->setNew();
-            //     hit->face->setProcessedFlag();
-            // }
             for (int i = 0; i < Hvc->halfedges_size; i++) {
                 MCGAL::Halfedge* hit = Hvc->getHalfedgeByIndex(i);
                 hit->setNew();

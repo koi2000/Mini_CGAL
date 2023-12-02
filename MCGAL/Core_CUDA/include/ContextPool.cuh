@@ -1,15 +1,15 @@
 #ifndef CONTEXTPOOL_H
 #define CONTEXTPOOL_H
-#include <vector>
 #include "Configuration.h"
-#include "Vertex.h"
-#include "Halfedge.h"
-#include "Facet.h"
+#include "Facet.cuh"
+#include "Halfedge.cuh"
+#include "Vertex.cuh"
 #include "cuda_util.h"
+#include <vector>
 namespace MCGAL {
 
 class ContextPool {
-  private:
+  public:
     // try to use cuda zero copy
     MCGAL::Vertex* vpool = nullptr;
     MCGAL::Halfedge* hpool = nullptr;
@@ -43,6 +43,18 @@ class ContextPool {
     ContextPool(const ContextPool&) = delete;
     ContextPool& operator=(const ContextPool&) = delete;
 
+    int getFindex() {
+        return findex;
+    }
+
+    int getHindex() {
+        return hindex;
+    }
+
+    int getVindex() {
+        return vindex;
+    }
+
     MCGAL::Vertex* getVertexByIndex(int index) {
         return &vpool[index];
     }
@@ -55,11 +67,23 @@ class ContextPool {
         return &fpool[index];
     }
 
+    __device__ MCGAL::Vertex* getVertexByIndexOnCuda(int index) {
+        return &vpool[index];
+    }
+
+    __device__ MCGAL::Halfedge* getHalfedgeByIndexOnCuda(int index) {
+        return &hpool[index];
+    }
+
+    __device__ MCGAL::Facet* getFacetByIndexOnCuda(int index) {
+        return &fpool[index];
+    }
+
     inline MCGAL::Vertex* allocateVertexFromPool() {
         return &vpool[vindex++];
     }
 
-    inline MCGAL::Vertex* allocateVertexFromPool(MCGAL::Point& p) {
+    inline MCGAL::Vertex* allocateVertexFromPool(MCGAL::Point p) {
         vpool[vindex].setPoint(p);
         return &vpool[vindex++];
     }

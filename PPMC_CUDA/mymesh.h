@@ -105,6 +105,9 @@ class MyMesh : public MCGAL::Mesh {
 
     void alphaFolding();
 
+    // cuda
+    void insertRemovedVerticesOnCuda();
+
     // IOs
     void writeFloat(float f);
     float readFloat();

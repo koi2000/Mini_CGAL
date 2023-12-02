@@ -3,6 +3,7 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include <cuda_runtime.h>
 #include <unordered_set>
 #include "Configuration.h"
 namespace MCGAL {
@@ -100,6 +101,10 @@ class Vertex : public Point {
     Halfedge* getHalfedgeByIndex(int index);
     void eraseHalfedgeByIndex(int index);
     void eraseHalfedgeByPointer(Halfedge* halfedge);
+
+    // cuda
+    __device__ void addHalfedgeOnCuda(Halfedge* halfedge);
+    __device__ void addHalfedgeOnCuda(int halfedge);
 
     int vertex_degree() {
         return halfedges_size;
