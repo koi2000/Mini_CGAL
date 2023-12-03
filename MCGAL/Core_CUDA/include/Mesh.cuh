@@ -4,7 +4,7 @@
 #include "Vertex.cuh"
 #include "Halfedge.cuh"
 #include "Facet.cuh"
-#include "global.h"
+#include "global.cuh"
 #include <assert.h>
 #include <fstream>
 #include <iostream>

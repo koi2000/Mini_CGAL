@@ -1,4 +1,4 @@
-#include "../PPMC_CUDA/mymesh.h"
+#include "../PPMC_CUDA/mymesh.cuh"
 #include "../PPMC_CUDA/util.h"
 
 using namespace std;
@@ -6,6 +6,10 @@ MyMesh* read_mesh(char* path, bool complete_compression) {
     string mesh_str = read_file(path);
     MyMesh* mesh = new MyMesh(mesh_str, complete_compression);
     return mesh;
+}
+
+__global__ void kernel() {
+    printf("hello world");
 }
 
 void compress(int argc, char** argv) {
@@ -28,6 +32,7 @@ void compress(int argc, char** argv) {
 }
 
 int main(int argc, char** argv) {
+    // kernel<<<1, 1>>>();
     compress(argc, argv);
     return 0;
 }

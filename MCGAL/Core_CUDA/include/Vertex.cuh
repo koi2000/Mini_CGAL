@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <cuda_runtime.h>
 #include <unordered_set>
-#include "Configuration.h"
+#include "Configuration.cuh"
 namespace MCGAL {
 
 class Point {

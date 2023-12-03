@@ -1,6 +1,6 @@
 #ifndef CUDA_MYMESH
 #define CUDA_MYMESH
-#include "../MCGAL/Core_CUDA/include/core.h"
+#include "../MCGAL/Core_CUDA/include/core.cuh"
 #include <algorithm>
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/foreach.hpp>
@@ -15,6 +15,8 @@ const int DECOMPRESSION_MODE_ID = 1;
 #define INV_GAMMA 2
 
 #define PPMC_RANDOM_CONSTANT 0315
+
+
 class MyMesh : public MCGAL::Mesh {
     // Gate queues
     std::queue<MCGAL::Halfedge*> gateQueue;

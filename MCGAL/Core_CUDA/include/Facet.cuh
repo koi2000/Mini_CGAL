@@ -1,6 +1,6 @@
 #ifndef FACET_H
 #define FACET_H
-#include "Configuration.h"
+#include "Configuration.cuh"
 #include "Halfedge.cuh"
 #include "Vertex.cuh"
 #include <vector>

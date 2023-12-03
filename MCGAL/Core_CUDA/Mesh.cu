@@ -1,4 +1,4 @@
-#include "include/Mesh.h"
+#include "include/Mesh.cuh"
 
 namespace MCGAL {
 

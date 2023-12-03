@@ -1,13 +1,10 @@
 //
 // Created by DELL on 2023/11/9.
 //
-#include "mymesh.h"
-// #include "../MCGAL/Core_CUDA/global.h"
+#include "mymesh.cuh"
+// #include "../MCGAL/Core_CUDA/global.cuh"
 #include "util.h"
 #include <algorithm>
-
-int MCGAL::replacing_group::counter = 0;
-int MCGAL::replacing_group::alive = 0;
 
 MyMesh::MyMesh(string& str, bool completeop) : MCGAL::Mesh() {
     boost::replace_all(str, "|", "\n");
@@ -74,10 +71,6 @@ MyMesh::~MyMesh() {
     }
     // TODO:
     // clear_aabb_tree();
-    for (MCGAL::replacing_group* rg : map_group) {
-        delete rg;
-    }
-    map_group.clear();
 }
 
 MyMesh::MyMesh(char* path) : MCGAL::Mesh() {

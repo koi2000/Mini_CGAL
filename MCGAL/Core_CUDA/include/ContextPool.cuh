@@ -1,10 +1,10 @@
 #ifndef CONTEXTPOOL_H
 #define CONTEXTPOOL_H
-#include "Configuration.h"
+#include "Configuration.cuh"
 #include "Facet.cuh"
 #include "Halfedge.cuh"
 #include "Vertex.cuh"
-#include "cuda_util.h"
+#include "cuda_util.cuh"
 #include <vector>
 namespace MCGAL {
 

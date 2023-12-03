@@ -1,5 +1,5 @@
 
-#include "include/global.h"
+#include "include/global.cuh"
 
 namespace MCGAL {
 ContextPool& contextPool = ContextPool::getInstance();

@@ -1,5 +1,5 @@
 #include "include/Vertex.cuh"
-#include "include/global.h"
+#include "include/global.cuh"
 #include <stdlib.h>
 namespace MCGAL {
 

@@ -1,5 +1,5 @@
-// #include "../MCGAL/Core_CUDA/global.h"
-#include "mymesh.h"
+// #include "../MCGAL/Core_CUDA/global.cuh"
+#include "mymesh.cuh"
 #include "util.h"
 
 void MyMesh::decode(int lod) {
@@ -255,8 +255,12 @@ __global__ void createCenterVertexOnCuda(MCGAL::Vertex* vertices,
     }
 }
 
+__global__ void cudaKernel() {
+    printf("hello world");
+}
+
 void MyMesh::insertRemovedVerticesOnCuda() {
-    dim3 grid(128, 1, 1), block(64, 64, 1);
+    // dim3 grid(32, 1, 1), block(32, 32, 1);
     // first: pre alloc all the face and halfedge
     // transfer face , halfedge[st,ed] vertex, face[st,ed] to cuda
     // cuda set the relationship
@@ -283,6 +287,9 @@ void MyMesh::insertRemovedVerticesOnCuda() {
     }
     // add it to mesh
     int num = faceIndexes.size();
+    dim3 block(256, 1, 1);
+    dim3 grid((num + block.x - 1) / block.x, 1, 1);
+
     int* dfaceIndexes;
     int* dvertexIndexes;
     int* dstHalfedgeIndexes;
@@ -291,13 +298,40 @@ void MyMesh::insertRemovedVerticesOnCuda() {
     CHECK(cudaMalloc(&dvertexIndexes, num * sizeof(int)));
     CHECK(cudaMalloc(&dstFacetIndexes, num * sizeof(int)));
     CHECK(cudaMalloc(&dstHalfedgeIndexes, num * sizeof(int)));
+
+    CHECK(cudaMemcpy(MCGAL::contextPool.dvpool, MCGAL::contextPool.vpool, VERTEX_POOL_SIZE * sizeof(MCGAL::Vertex),
+                     cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpy(MCGAL::contextPool.dhpool, MCGAL::contextPool.hpool, HALFEDGE_POOL_SIZE * sizeof(MCGAL::Halfedge),
+                     cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpy(MCGAL::contextPool.dfpool, MCGAL::contextPool.fpool, FACET_POOL_SIZE * sizeof(MCGAL::Facet),
+                     cudaMemcpyHostToDevice));
+    cudaError_t error = cudaGetLastError();
+    if (error != cudaSuccess) {
+        printf("ERROR: %s:%d,", __FILE__, __LINE__);
+        printf("code:%d,reason:%s\n", error, cudaGetErrorString(error));
+        exit(1);
+    }
     CHECK(cudaMemcpy(dfaceIndexes, faceIndexes.data(), num * sizeof(int), cudaMemcpyHostToDevice));
     CHECK(cudaMemcpy(dvertexIndexes, vertexIndexes.data(), num * sizeof(int), cudaMemcpyHostToDevice));
     CHECK(cudaMemcpy(dstHalfedgeIndexes, stHalfedgeIndexes.data(), num * sizeof(int), cudaMemcpyHostToDevice));
     CHECK(cudaMemcpy(dstFacetIndexes, stFacetIndexes.data(), num * sizeof(int), cudaMemcpyHostToDevice));
-    createCenterVertexOnCuda<<<grid, block>>>(MCGAL::contextPool.vpool, MCGAL::contextPool.hpool,
-                                              MCGAL::contextPool.fpool, faceIndexes.data(), vertexIndexes.data(),
-                                              stHalfedgeIndexes.data(), stFacetIndexes.data(), num);
+    createCenterVertexOnCuda<<<grid, block>>>(MCGAL::contextPool.dvpool, MCGAL::contextPool.dhpool,
+                                              MCGAL::contextPool.dfpool, dfaceIndexes, dvertexIndexes,
+                                              dstHalfedgeIndexes, dstFacetIndexes, num);
+    // cudaKernel<<<gridSize, blockSize>>>();
+    error = cudaGetLastError();
+    if (error != cudaSuccess) {
+        printf("ERROR: %s:%d,", __FILE__, __LINE__);
+        printf("code:%d,reason:%s\n", error, cudaGetErrorString(error));
+        exit(1);
+    }
+
+    CHECK(cudaMemcpy(MCGAL::contextPool.vpool, MCGAL::contextPool.dvpool, VERTEX_POOL_SIZE * sizeof(MCGAL::Vertex),
+                     cudaMemcpyDeviceToHost));
+    CHECK(cudaMemcpy(MCGAL::contextPool.hpool, MCGAL::contextPool.dhpool, HALFEDGE_POOL_SIZE * sizeof(MCGAL::Halfedge),
+                     cudaMemcpyDeviceToHost));
+    CHECK(cudaMemcpy(MCGAL::contextPool.fpool, MCGAL::contextPool.dfpool, FACET_POOL_SIZE * sizeof(MCGAL::Facet),
+                     cudaMemcpyDeviceToHost));
     cudaDeviceSynchronize();
 }
 
@@ -307,7 +341,6 @@ void MyMesh::insertRemovedVerticesOnCuda() {
 void MyMesh::insertRemovedVertices() {
     // Add the first halfedge to the queue.
     pushHehInit();
-
     while (!gateQueue.empty()) {
         MCGAL::Halfedge* h = gateQueue.front();
         gateQueue.pop();

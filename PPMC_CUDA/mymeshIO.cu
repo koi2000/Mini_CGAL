@@ -1,4 +1,4 @@
-#include "mymesh.h"
+#include "mymesh.cuh"
 #include <fstream>
 #include <unistd.h>
 

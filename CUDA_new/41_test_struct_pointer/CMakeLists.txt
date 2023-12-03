@@ -1,3 +1,4 @@
 add_executable(test_struct_pointer test_struct_pointer.cu)
 add_executable(test_struct_pointer2 test_struct_pointer2.cu)
 add_executable(test_struct_pointer3 test_struct_pointer3.cu)
+add_executable(test_struct_pointer4 test_struct_pointer4.cu)
