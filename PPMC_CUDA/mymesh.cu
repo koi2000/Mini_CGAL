@@ -85,6 +85,7 @@ MyMesh::MyMesh(char* path) : MCGAL::Mesh() {
 
 void MyMesh::pushHehInit() {
     MCGAL::Halfedge* hehBegin;
+    // MCGAL::Vertex* st = MCGAL::contextPool.getVertexByIndex(vh_departureConquest[1]->poolId);
     for (int i = 0; i < vh_departureConquest[1]->halfedges_size; i++) {
         MCGAL::Halfedge* hit = vh_departureConquest[1]->getHalfedgeByIndex(i);
         if (hit->opposite()->vertex()==vh_departureConquest[0]) {

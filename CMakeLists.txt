@@ -21,6 +21,8 @@ set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -pg")
 
 
 set(CMAKE_BUILD_TYPE "Debug")
+set(CUDA_DEBUG ON)
+set(CMAKE_CUDA_FLAGS_DEBUG "-G -O0")
 
 include_directories(
     ./include

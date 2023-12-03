@@ -119,7 +119,7 @@ class ContextPool {
 
     inline int preAllocHalfedge(int size) {
         int ret = hindex;
-        hindex += size;
+         hindex += size;
         return ret;
     }
 

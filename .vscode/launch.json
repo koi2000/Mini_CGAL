@@ -5,6 +5,14 @@
 	"version": "0.2.0",
 	"configurations": [
 		{
+			"name": "CUDA_Test_Debug",
+			"type": "cuda-gdb",
+			"request": "launch",
+			"preLaunchTask": "CMake Build",
+			"program": "/home/koi/mastercode/Mini_CGAL/build/CUDA_new/3_sum_arrays/sum_arrays",
+			// "args": "/home/koi/mastercode/Mini_CGAL/static/buffer",
+		},
+		{
 			"name": "CUDA_MiniCGAL_CudaDecompress",
 			"type": "cuda-gdb",
 			"request": "launch",
