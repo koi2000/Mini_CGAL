@@ -207,7 +207,6 @@ std::istream& operator>>(std::istream& input, MyMesh& mesh) {
         float x, y, z;
         input >> x >> y >> z;
         MCGAL::Vertex* vt = new MCGAL::Vertex(x, y, z);
-        vt->setVid(i);
         mesh.vertices.push_back(vt);
         vertices.push_back(vt);
     }

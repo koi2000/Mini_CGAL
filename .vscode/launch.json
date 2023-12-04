@@ -9,6 +9,7 @@
 			"type": "cuda-gdb",
 			"request": "launch",
 			"preLaunchTask": "CMake Build",
+			"debuggerPath":"/usr/local/cuda-12/bin/cuda-gdb",
 			"program": "/home/koi/mastercode/Mini_CGAL/build/CUDA_new/3_sum_arrays/sum_arrays",
 			// "args": "/home/koi/mastercode/Mini_CGAL/static/buffer",
 		},

@@ -86,11 +86,17 @@ class Vertex : public Point {
     unsigned int id = 0;
 
   public:
-    Vertex() : Point() {}
-    Vertex(const Point& p) : Point(p) {}
-    Vertex(float v1, float v2, float v3) : Point(v1, v2, v3) {}
+    Vertex() : Point() {
+        // *lock = 1;
+    }
+    Vertex(const Point& p) : Point(p) {
+        // *lock = 1;
+    }
+    Vertex(float v1, float v2, float v3) : Point(v1, v2, v3) {
+        // *lock = 1;
+    }
 
-    int vid_ = 0;
+    int lock = 1;
     int poolId;
     int halfedges[HALFEDGE_IN_VERTEX];
     int halfedges_size = 0;
@@ -114,9 +120,6 @@ class Vertex : public Point {
         printf("%f %f %f\n", v[0], v[1], v[2]);
     }
 
-    void setVid(int id) {
-        this->vid_ = id;
-    }
 
     float x() const {
         return v[0];
@@ -128,10 +131,6 @@ class Vertex : public Point {
 
     float z() const {
         return v[2];
-    }
-
-    int vid() const {
-        return vid_;
     }
 
     Point point() {

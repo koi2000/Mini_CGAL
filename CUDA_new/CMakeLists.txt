@@ -1,6 +1,13 @@
 cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
-Project(CUDA_Freshman CXX C CUDA)
-set(CMAKE_CUDA_FLAGS "-arch=compute_89 -g -G -O3")
+# Project(CUDA_Freshman CXX C CUDA)
+
+set(CMAKE_CUDA_COMPILER "/usr/local/cuda-12/bin/nvcc")
+
+set(CMAKE_CUDA_FLAGS "-arch=compute_75 -code=sm_75 -g -G -O0")
+set(CMAKE_BUILD_TYPE "Debug")
+set(CUDA_DEBUG ON)
+set(CMAKE_CUDA_FLAGS_DEBUG "-G -O0")
+
 include_directories(./include)
 add_subdirectory(0_hello_world)
 add_subdirectory(3_sum_arrays)

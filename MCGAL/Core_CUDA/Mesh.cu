@@ -221,7 +221,6 @@ bool Mesh::loadOFF(std::string path) {
         float x, y, z;
         file >> x >> y >> z;
         Vertex* vt = new Vertex(x, y, z);
-        vt->setVid(i);
         this->vertices.push_back(vt);
         vertices.push_back(vt);
     }
@@ -257,7 +256,6 @@ std::istream& operator>>(std::istream& input, Mesh& mesh) {
         float x, y, z;
         input >> x >> y >> z;
         Vertex* vt = new Vertex(x, y, z);
-        vt->setVid(i);
         mesh.vertices.push_back(vt);
         vertices.push_back(vt);
     }

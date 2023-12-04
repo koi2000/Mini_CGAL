@@ -177,22 +177,19 @@ __device__ void Halfedge::resetOnCuda(Vertex* vertices, Halfedge* halfedges, Ver
     vertex_ = v1->poolId;
     end_vertex_ = v2->poolId;
     dvertex(vertices)->addHalfedgeOnCuda(this);
-    for (int i = 0; i < v2->halfedges_size; i++) {
-        Halfedge* h = &halfedges[v2->halfedges[i]];
-        if (h->dend_vertex(vertices) == v1) {
-            if (h->dopposite(halfedges)) {
-                printf("create half edge:\n");
-                // v1->print();
-                // v2->print();
-                // h->opposite()->facet()->print_off();
-            }
-            assert(h->dopposite(halfedges) == NULL);
-            // h->opposite = this;
-            // this->opposite = h;
-            h->setOppositeOnCuda(this);
-            this->setOppositeOnCuda(h);
-            break;
-        }
-    }
+    // for (int i = 0; i < v2->halfedges_size; i++) {
+    //     Halfedge* h = &halfedges[v2->halfedges[i]];
+    //     if (h->dend_vertex(vertices)->poolId == v1->poolId) {
+    //         if (h->dopposite(halfedges)) {
+    //             printf("create half edge:\n");
+    //         }
+    //         assert(h->dopposite(halfedges) == NULL);
+    //         // h->opposite = this;
+    //         // this->opposite = h;
+    //         h->setOppositeOnCuda(this);
+    //         this->setOppositeOnCuda(h);
+    //         break;
+    //     }
+    // }
 }
 }  // namespace MCGAL

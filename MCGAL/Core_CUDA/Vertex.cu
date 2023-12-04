@@ -39,11 +39,37 @@ void Vertex::eraseHalfedgeByPointer(Halfedge* halfedge) {
 
 // cuda
 __device__ void Vertex::addHalfedgeOnCuda(Halfedge* halfedge) {
-    halfedges[halfedges_size++] = halfedge->poolId;
+    auto ti = blockDim.x * blockIdx.x + threadIdx.x;
+    // For each thread in a wrap
+    for (int i = 0; i < 32; i++) {
+        // Check if it is this thread's turn
+        if (ti % 32 != i)
+            continue;
+
+        // Lock
+        while (atomicExch(&lock, 0) == 0);
+        // Work
+        halfedges[halfedges_size++] = halfedge->poolId;
+        // Unlock
+        lock = 1;
+    }
 }
 
 __device__ void Vertex::addHalfedgeOnCuda(int halfedge) {
-    halfedges[halfedges_size++] = halfedge;
+    auto ti = blockDim.x * blockIdx.x + threadIdx.x;
+    // For each thread in a wrap
+    for (int i = 0; i < 32; i++) {
+        // Check if it is this thread's turn
+        if (ti % 32 != i)
+            continue;
+
+        // Lock
+        while (atomicExch(&lock, 0) == 0);
+        // Work
+        halfedges[halfedges_size++] = halfedge;
+        // Unlock
+        lock = 1;
+    }
 }
 
 }  // namespace MCGAL
