@@ -38,6 +38,7 @@ void Vertex::eraseHalfedgeByPointer(Halfedge* halfedge) {
 
 // cuda
 __device__ void Vertex::addHalfedgeOnCuda(Halfedge* halfedge) {
+    // halfedges[halfedges_size++] = halfedge->poolId;
     auto ti = blockDim.x * blockIdx.x + threadIdx.x;
     // For each thread in a wrap
     for (int i = 0; i < 32; i++) {
@@ -46,7 +47,8 @@ __device__ void Vertex::addHalfedgeOnCuda(Halfedge* halfedge) {
             continue;
 
         // Lock
-        while (atomicExch(&lock, 0) == 0);
+        while (atomicExch(&lock, 0) == 0)
+            ;
         // Work
         halfedges[halfedges_size++] = halfedge->poolId;
         // Unlock
@@ -55,6 +57,7 @@ __device__ void Vertex::addHalfedgeOnCuda(Halfedge* halfedge) {
 }
 
 __device__ void Vertex::addHalfedgeOnCuda(int halfedge) {
+    // halfedges[halfedges_size++] = halfedge;
     auto ti = blockDim.x * blockIdx.x + threadIdx.x;
     // For each thread in a wrap
     for (int i = 0; i < 32; i++) {
@@ -63,9 +66,11 @@ __device__ void Vertex::addHalfedgeOnCuda(int halfedge) {
             continue;
 
         // Lock
-        while (atomicExch(&lock, 0) == 0);
+        while (atomicExch(&lock, 0) == 0)
+            ;
         // Work
-        halfedges[halfedges_size++] = halfedge;
+        halfedges[halfedges_size] = halfedge;
+        atomicAdd(&halfedges_size, 1);
         // Unlock
         lock = 1;
     }

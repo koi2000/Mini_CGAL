@@ -176,7 +176,7 @@ __device__ Halfedge* Halfedge::dnext(Halfedge* halfedges) {
 __device__ void Halfedge::resetOnCuda(Vertex* vertices, Halfedge* halfedges, Vertex* v1, Vertex* v2) {
     vertex_ = v1->poolId;
     end_vertex_ = v2->poolId;
-    dvertex(vertices)->addHalfedgeOnCuda(this);
+    // vertices[vertex_].addHalfedgeOnCuda(this->poolId);
     // for (int i = 0; i < v2->halfedges_size; i++) {
     //     Halfedge* h = &halfedges[v2->halfedges[i]];
     //     if (h->dend_vertex(vertices)->poolId == v1->poolId) {
