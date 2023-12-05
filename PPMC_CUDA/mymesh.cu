@@ -78,9 +78,11 @@ MyMesh::MyMesh(char* path) : MCGAL::Mesh() {
     // assert(dsize > 0);
     srand(PPMC_RANDOM_CONSTANT);
     readBaseMesh();
+    CHECK(cudaMalloc(&dfaceIndexes, SPLITABLE_SIZE * sizeof(int)));
+    CHECK(cudaMalloc(&dvertexIndexes, SPLITABLE_SIZE * sizeof(int)));
+    CHECK(cudaMalloc(&dstFacetIndexes, SPLITABLE_SIZE * sizeof(int)));
+    CHECK(cudaMalloc(&dstHalfedgeIndexes, SPLITABLE_SIZE * sizeof(int)));
     // Set the vertices of the edge that is the departure of the coding and decoding conquests.
-    // vh_departureConquest[0] = vertices.;
-    // vh_departureConquest[1] = (*halfedges.begin())->end_vertex;
 }
 
 void MyMesh::pushHehInit() {

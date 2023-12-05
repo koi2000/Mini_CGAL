@@ -7,6 +7,7 @@
 #include "Facet.cuh"
 #include "global.cuh"
 #include "Mesh.cuh"
+#include "cuda_util.cuh"
 #include <cuda_runtime.h>
 
 #endif

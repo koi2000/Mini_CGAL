@@ -2,11 +2,11 @@ cmake_minimum_required(VERSION 3.16)
 set(CMAKE_CUDA_COMPILER "/usr/local/cuda-12/bin/nvcc")
 project(Mini_CGAL LANGUAGES  CXX C CUDA)
 
-set(CMAKE_CUDA_ARCHITECTURES 89) 
+set(CMAKE_CUDA_ARCHITECTURES 75) 
 
 # set(CMAKE_CUDA_FLAGS "-arch=compute_89 -code=sm_89 -g -G -O0")
 # set(CMAKE_CUDA_FLAGS "ARCH= -gencode arch=compute_89,code=[sm_89,compute_89]")
-set(CMAKE_CUDA_FLAGS "-arch=compute_89 -code=sm_89 -rdc=true -g -G -O3")
+set(CMAKE_CUDA_FLAGS "-arch=compute_75 -code=sm_75 -rdc=true -g -G -O3")
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xcompiler -std=c++14")
 
 # set(CMAKE_CUDA_FLAGS "-arch=compute_89 -g -G -O0 -keep")
@@ -20,9 +20,9 @@ set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pg")
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -pg")
 
 
-set(CMAKE_BUILD_TYPE "Debug")
-set(CUDA_DEBUG ON)
-set(CMAKE_CUDA_FLAGS_DEBUG "-G -O0")
+# set(CMAKE_BUILD_TYPE "Debug")
+# set(CUDA_DEBUG ON)
+# set(CMAKE_CUDA_FLAGS_DEBUG "-G -O0")
 
 include_directories(
     ./include
@@ -111,9 +111,9 @@ add_subdirectory(CUDA_new)
 # set_target_properties(MiniCGAL_Compress PROPERTIES COMPILE_FLAGS -frounding-math)
 # target_link_libraries(MiniCGAL_Compress ${CGAL_LIBRARIES} ${OPENGL_LIBRARY} ${GLUT_LIBRARY} m)
 
-# add_executable(MiniCGAL_Decompress tools/MDecompress_test.cpp ${MINICGAL_PPMC_FILES})
-# set_target_properties(MiniCGAL_Decompress PROPERTIES COMPILE_FLAGS -frounding-math)
-# target_link_libraries(MiniCGAL_Decompress ${CGAL_LIBRARIES} ${OPENGL_LIBRARY} ${GLUT_LIBRARY} m)
+add_executable(MiniCGAL_Decompress tools/MDecompress_test.cpp ${MINICGAL_PPMC_FILES})
+set_target_properties(MiniCGAL_Decompress PROPERTIES COMPILE_FLAGS -frounding-math)
+target_link_libraries(MiniCGAL_Decompress ${CGAL_LIBRARIES} ${OPENGL_LIBRARY} ${GLUT_LIBRARY} m)
 
 # add_executable(MiniCGAL_CudaDecompress tools/MCudaDecompress_test.cu ${MINICGAL_CUDA_PPMC_FILES})
 add_executable(MiniCGAL_CudaDecompress tools/MCudaDecompress_test.cu  
@@ -145,21 +145,7 @@ target_link_libraries(MiniCGAL_CudaDecompress ${CUDA_LIBRARIES})
 
 message(STATUS "mylist = ${MINICGAL_CUDA_PPMC_FILES}" )
 
-add_executable(CudaTest tools/test.cu 
-                                    # /home/koi/mastercode/Mini_CGAL/MCGAL/Core_CUDA/include/Mesh.h 
-                                    # /home/koi/mastercode/Mini_CGAL/MCGAL/Core_CUDA/Mesh.cu 
-                                    # /home/koi/mastercode/Mini_CGAL/MCGAL/Core_CUDA/include/Vertex.cuh 
-                                    # /home/koi/mastercode/Mini_CGAL/MCGAL/Core_CUDA/include/Halfedge.cuh
-                                    # /home/koi/mastercode/Mini_CGAL/MCGAL/Core_CUDA/include/Facet.cuh 
-                                    # /home/koi/mastercode/Mini_CGAL/MCGAL/Core_CUDA/Vertex.cu 
-                                    # /home/koi/mastercode/Mini_CGAL/MCGAL/Core_CUDA/Facet.cu 
-                                    # /home/koi/mastercode/Mini_CGAL/MCGAL/Core_CUDA/Halfedge.cu
-                                    # /home/koi/mastercode/Mini_CGAL/MCGAL/Core_CUDA/include/ContextPool.cuh 
-                                    # /home/koi/mastercode/Mini_CGAL/MCGAL/Core_CUDA/ContextPool.cu 
-                                    # /home/koi/mastercode/Mini_CGAL/MCGAL/Core_CUDA/include/global.cuh 
-                                    # /home/koi/mastercode/Mini_CGAL/MCGAL/Core_CUDA/global.cu
-                                    # /home/koi/mastercode/Mini_CGAL/MCGAL/Core_CUDA/include/cuda_util.cuh 
-                                    
+add_executable(CudaTest tools/test.cu   
                                     /home/koi/mastercode/Mini_CGAL/PPMC_CUDA/mymesh.cuh 
                                     /home/koi/mastercode/Mini_CGAL/PPMC_CUDA/mymesh.cu 
                                     /home/koi/mastercode/Mini_CGAL/PPMC_CUDA/mymeshDecomp.cu 
@@ -181,9 +167,7 @@ add_executable(CudaTest tools/test.cu
                                     /home/koi/mastercode/Mini_CGAL/MCGAL/Core_CUDA/Facet.cu 
                                     /home/koi/mastercode/Mini_CGAL/MCGAL/Core_CUDA/Halfedge.cu 
                                     /home/koi/mastercode/Mini_CGAL/MCGAL/Core_CUDA/Vertex.cu 
-                                    /home/koi/mastercode/Mini_CGAL/MCGAL/Core_CUDA/global.cu 
-                                    
-                                    
+                                    /home/koi/mastercode/Mini_CGAL/MCGAL/Core_CUDA/global.cu  
                                     )
 set_target_properties(CudaTest PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON)
 target_link_libraries(CudaTest ${CUDA_LIBRARIES})

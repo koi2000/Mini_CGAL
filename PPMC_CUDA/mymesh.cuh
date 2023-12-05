@@ -7,6 +7,7 @@
 #include <deque>
 #include <queue>
 #define BUFFER_SIZE 10 * 1024 * 1024
+#define SPLITABLE_SIZE 10 * 1024
 
 const int COMPRESSION_MODE_ID = 0;
 const int DECOMPRESSION_MODE_ID = 1;
@@ -58,6 +59,10 @@ class MyMesh : public MCGAL::Mesh {
     std::unordered_set<MCGAL::replacing_group*> map_group;
 
     bool own_data = true;
+    int* dfaceIndexes;
+    int* dvertexIndexes;
+    int* dstHalfedgeIndexes;
+    int* dstFacetIndexes;
 
   public:
     int id = 0;

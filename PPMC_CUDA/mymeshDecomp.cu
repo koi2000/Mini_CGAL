@@ -265,27 +265,28 @@ __global__ void cudaKernel() {
 }
 
 void MyMesh::insertRemovedVerticesOnCuda() {
-    std::vector<int> faceIndexes;
-    std::vector<int> vertexIndexes;
-    std::vector<int> stHalfedgeIndexes;
-    std::vector<int> stFacetIndexes;
-    // for (MCGAL::Facet* fit : faces) {
+    std::vector<int> faceIndexes(splitable_count);
+    std::vector<int> vertexIndexes(splitable_count);
+    std::vector<int> stHalfedgeIndexes(splitable_count);
+    std::vector<int> stFacetIndexes(splitable_count);
+    int index = 0;
     for (int i = 0; i < faces.size(); i++) {
         MCGAL::Facet* fit = faces[i];
         if (fit->isSplittable()) {
-            faceIndexes.push_back(fit->poolId);
+            faceIndexes[index] = fit->poolId;
             int hcount = fit->halfedge_size * 2;
             int fcount = fit->halfedge_size - 1;
             int findex = MCGAL::contextPool.preAllocFace(fcount);
             for (int i = 0; i < fcount; i++) {
                 this->faces.push_back(MCGAL::contextPool.getFacetByIndex(findex + i));
             }
-            stFacetIndexes.push_back(findex);
+            stFacetIndexes[index] = findex;
             int hindex = MCGAL::contextPool.preAllocHalfedge(hcount);
-            stHalfedgeIndexes.push_back(hindex);
-            vertexIndexes.push_back(MCGAL::contextPool.getVindex());
+            stHalfedgeIndexes[index] = hindex;
+            vertexIndexes[index] = (MCGAL::contextPool.getVindex());
             MCGAL::Vertex* vnew = MCGAL::contextPool.allocateVertexFromPool(fit->getRemovedVertexPos());
             this->vertices.push_back(vnew);
+            index++;
         }
     }
     // add it to mesh
@@ -293,14 +294,6 @@ void MyMesh::insertRemovedVerticesOnCuda() {
     dim3 block(32, 1, 1);
     dim3 grid((num + block.x - 1) / block.x, 1, 1);
 
-    int* dfaceIndexes;
-    int* dvertexIndexes;
-    int* dstHalfedgeIndexes;
-    int* dstFacetIndexes;
-    CHECK(cudaMalloc(&dfaceIndexes, num * sizeof(int)));
-    CHECK(cudaMalloc(&dvertexIndexes, num * sizeof(int)));
-    CHECK(cudaMalloc(&dstFacetIndexes, num * sizeof(int)));
-    CHECK(cudaMalloc(&dstHalfedgeIndexes, num * sizeof(int)));
     CHECK(cudaMemcpy(dfaceIndexes, faceIndexes.data(), num * sizeof(int), cudaMemcpyHostToDevice));
     CHECK(cudaMemcpy(dvertexIndexes, vertexIndexes.data(), num * sizeof(int), cudaMemcpyHostToDevice));
     CHECK(cudaMemcpy(dstHalfedgeIndexes, stHalfedgeIndexes.data(), num * sizeof(int), cudaMemcpyHostToDevice));
