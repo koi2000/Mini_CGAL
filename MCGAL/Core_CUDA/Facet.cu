@@ -147,15 +147,33 @@ __device__ void Facet::resetOnCuda(Vertex* vertices, Halfedge* halfedges, Halfed
     halfedge_size = 0;
     vertex_size = 0;
     Halfedge* st = h;
-    Halfedge* ed = h;
-    do {
-        addHalfedgeOnCuda(st);
-        // this->vertices.push_back(hs[i]->vertex);
-        addVertexOnCuda(st->dvertex(vertices));
-        st->setFacetOnCuda(this);
-        st = st->dnext(halfedges);
-    } while (st != ed);
+    addHalfedgeOnCuda(st);
+    addVertexOnCuda(st->dvertex(vertices));
+    st->setFacetOnCuda(this);
+    st = st->dnext(halfedges);
+    addHalfedgeOnCuda(st);
+    addVertexOnCuda(st->dvertex(vertices));
+    st->setFacetOnCuda(this);
+    st = st->dnext(halfedges);
+    addHalfedgeOnCuda(st);
+    addVertexOnCuda(st->dvertex(vertices));
+    st->setFacetOnCuda(this);
+    st = st->dnext(halfedges);
 }
+
+// __device__ void Facet::resetOnCuda(Vertex* vertices, Halfedge* halfedges, Halfedge* h) {
+//     halfedge_size = 0;
+//     vertex_size = 0;
+//     Halfedge* st = h;
+//     Halfedge* ed = h;
+//     do {
+//         addHalfedgeOnCuda(st);
+//         // this->vertices.push_back(hs[i]->vertex);
+//         addVertexOnCuda(st->dvertex(vertices));
+//         st->setFacetOnCuda(this);
+//         st = st->dnext(halfedges);
+//     } while (st != ed);
+// }
 
 void Facet::reset(std::vector<Halfedge*>& hs) {
     halfedge_size = 0;

@@ -225,6 +225,12 @@ __global__ void createCenterVertexOnCuda(MCGAL::Vertex* vpool,
         int stHalfedgeIndex = stHalfedgeIndexes[tid];
         int stFacetIndex = stFacetIndexes[tid];
 
+        if (tid == 300) {
+            unsigned int endTime = clock64();
+            float elapsedTime = (endTime - startTime) / clockRate;
+            printf("get from pool execution time: %.6f ms\n", elapsedTime);
+        }
+
         MCGAL::Halfedge* h = facet->getHalfedgeByIndexOnCuda(hpool, 0);
         MCGAL::Halfedge* hnew = &hpool[stHalfedgeIndex++];
         hnew->resetOnCuda(vpool, hpool, h->dend_vertex(vpool), vnew);
@@ -234,15 +240,14 @@ __global__ void createCenterVertexOnCuda(MCGAL::Vertex* vpool,
         hnew->setOppositeOnCuda(oppo_new);
         oppo_new->setOppositeOnCuda(hnew);
         insert_tip_cuda(hpool, hnew->dopposite(hpool), h);
-        MCGAL::Halfedge* g = hnew->dopposite(hpool)->dnext(hpool);
-
-        MCGAL::Halfedge* hed = hnew;
         if (tid == 300) {
             unsigned int endTime = clock64();
             float elapsedTime = (endTime - startTime) / clockRate;
-            printf("2Execution time: %.6f milliseconds\n", elapsedTime);
+            printf("first execution time: %.6f ms\n", elapsedTime);
         }
 
+        MCGAL::Halfedge* g = hnew->dopposite(hpool)->dnext(hpool);
+        MCGAL::Halfedge* hed = hnew;
         while (g->dnext(hpool)->poolId != hed->poolId) {
             MCGAL::Halfedge* gnew = &hpool[stHalfedgeIndex++];
             gnew->resetOnCuda(vpool, hpool, g->dend_vertex(vpool), vnew);
@@ -252,30 +257,45 @@ __global__ void createCenterVertexOnCuda(MCGAL::Vertex* vpool,
 
             gnew->setOppositeOnCuda(oppo_gnew);
             oppo_gnew->setOppositeOnCuda(gnew);
-
             gnew->setNextOnCuda(hnew->dopposite(hpool));
             insert_tip_cuda(hpool, gnew->dopposite(hpool), g);
             g = gnew->dopposite(hpool)->dnext(hpool);
             hnew = gnew;
         }
-        // if (tid == 300) {
-        //     unsigned int endTime = clock64();
-        //     float elapsedTime = (endTime - startTime) / clockRate;
-        //     printf("3Execution time: %.6f milliseconds\n", elapsedTime);
-        // }
+        if (tid == 300) {
+            unsigned int endTime = clock64();
+            float elapsedTime = (endTime - startTime) / clockRate;
+            printf("main loop execution time: %.6f ms\n", elapsedTime);
+        }
         hed->setNextOnCuda(hnew->dopposite(hpool));
-        // for (int i = 1; i < h->dfacet(fpool)->halfedge_size; i++) {
-        //     MCGAL::Halfedge* hit = &hpool[h->dfacet(fpool)->halfedges[i]];
-        //     fpool[stFacetIndex++].resetOnCuda(vpool, hpool, hit);
-        // }
-        // if (tid == 300) {
-        //     unsigned int endTime = clock64();
-        //     float elapsedTime = (endTime - startTime) / clockRate;
-        //     printf("4Execution time: %.6f milliseconds\n", elapsedTime);
-        // }
-        h->dfacet(fpool)->resetOnCuda(vpool, hpool, h);
+        // #pragma unroll 2
+        for (int i = 1; i < h->dfacet(fpool)->halfedge_size; i += 1) {
+            MCGAL::Halfedge* hit = &hpool[h->dfacet(fpool)->halfedges[i]];
+            // fpool[stFacetIndex++].resetOnCuda(vpool, hpool, hit);
+            MCGAL::Facet* fit = &fpool[stFacetIndex++];
+            fit->halfedge_size = 0;
+            fit->vertex_size = 0;
+            fit->addHalfedgeOnCuda(hit);
+            fit->addVertexOnCuda(hit->dvertex(vpool));
+            hit->setFacetOnCuda(fit);
+            hit = hit->dnext(hpool);
 
-        // printf("%d\n", tid);
+            fit->addHalfedgeOnCuda(hit);
+            fit->addVertexOnCuda(hit->dvertex(vpool));
+            hit->setFacetOnCuda(fit);
+            hit = hit->dnext(hpool);
+            
+            fit->addHalfedgeOnCuda(hit);
+            fit->addVertexOnCuda(hit->dvertex(vpool));
+            hit->setFacetOnCuda(fit);
+            hit = hit->dnext(hpool);
+        }
+        if (tid == 300) {
+            unsigned int endTime = clock64();
+            float elapsedTime = (endTime - startTime) / clockRate;
+            printf("facet reset execution time: %.6f ms\n", elapsedTime);
+        }
+        h->dfacet(fpool)->resetOnCuda(vpool, hpool, h);
     }
 }
 
@@ -317,21 +337,24 @@ void MyMesh::insertRemovedVerticesOnCuda() {
                 vnew->addHalfedge(hindex + i * 2 + 1);
             }
             // pre add all the halfedge and vertex
-            hindex++;
-            for (int i = 1; i < fit->halfedge_size; i++) {
-                MCGAL::Halfedge* hit = fit->getHalfedgeByIndex(i);
-                int fc = (findex + i - 1);
-                MCGAL::Facet* f = MCGAL::contextPool.getFacetByIndex(fc);
-                f->addHalfedge(hit);
-                hit->setFacet(f);
-                MCGAL::contextPool.getHalfedgeByIndex(hindex)->setFacet(f);
-                f->addHalfedge(hindex++);
-                MCGAL::contextPool.getHalfedgeByIndex(hindex)->setFacet(f);
-                f->addHalfedge(hindex++);
-                f->addVertex(hit->end_vertex());
-                f->addVertex(hit->vertex());
-                f->addVertex(vnew);
-            }
+            // hindex++;
+            // for (int i = 1; i < fit->halfedge_size; i++) {
+            //     MCGAL::Halfedge* hit = fit->getHalfedgeByIndex(i);
+            //     int fc = (findex + i - 1);
+            //     MCGAL::Facet* f = MCGAL::contextPool.getFacetByIndex(fc);
+            //     f->halfedge_size = 0;
+            //     f->vertex_size = 0;
+            //     f->addHalfedge(hit);
+            //     hit->setFacet(f);
+            //     MCGAL::contextPool.getHalfedgeByIndex(hindex)->setFacet(f);
+            //     f->addHalfedge(hindex++);
+            //     MCGAL::contextPool.getHalfedgeByIndex(hindex)->setFacet(f);
+            //     f->addHalfedge(hindex++);
+
+            //     f->addVertex(hit->end_vertex());
+            //     f->addVertex(hit->vertex());
+            //     f->addVertex(vnew);
+            // }
         }
     }
     logt("%d collect face information", start, i_curDecimationId);
