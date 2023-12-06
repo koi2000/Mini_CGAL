@@ -43,9 +43,12 @@ Facet::Facet(Halfedge* hit) {
 }
 
 void Facet::addHalfedge(Halfedge* halfedge) {
+    // halfedge->setFacet(this);
     halfedges[halfedge_size++] = halfedge->poolId;
 };
+
 void Facet::addHalfedge(int halfedge) {
+    // MCGAL::contextPool.getHalfedgeByIndex(halfedge)->setFacet(this);
     halfedges[halfedge_size++] = halfedge;
 };
 
