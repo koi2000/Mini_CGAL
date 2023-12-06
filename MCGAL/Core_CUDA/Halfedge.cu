@@ -154,6 +154,7 @@ __device__ Vertex* Halfedge::dend_vertex(Vertex* vertices) {
 
 __device__ Facet* Halfedge::dfacet(Facet* facets) {
     if (facet_ == -1) {
+        printf("facet is null\n");
         return nullptr;
     }
     return &facets[facet_];
@@ -161,6 +162,7 @@ __device__ Facet* Halfedge::dfacet(Facet* facets) {
 
 __device__ Halfedge* Halfedge::dopposite(Halfedge* halfedges) {
     if (opposite_ == -1) {
+        printf("opposite is null\n");
         return nullptr;
     }
     return &halfedges[opposite_];
@@ -168,6 +170,7 @@ __device__ Halfedge* Halfedge::dopposite(Halfedge* halfedges) {
 
 __device__ Halfedge* Halfedge::dnext(Halfedge* halfedges) {
     if (next_ == -1) {
+        printf("next is null\n");
         return nullptr;
     }
     return &halfedges[next_];
