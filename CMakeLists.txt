@@ -49,7 +49,7 @@ set(PPMC_CUDA_SOURCE_DIR "PPMC_CUDA")
 
 include(${CGAL_USE_FILE})
 
-# 获取源文件列表
+# get file list
 file(GLOB_RECURSE PPMC_FILES
     "${PPMC_SOURCE_DIR}/*.h"
     "${PPMC_SOURCE_DIR}/*.cpp"
@@ -80,13 +80,16 @@ file(GLOB_RECURSE MINICGAL_PPMC_FILES
 #     "${PPMC_CUDA_SOURCE_DIR}/*.cuh"
 # )
 
-file(GLOB_RECURSE MINICGAL_CUDA_PPMC_FILES
+file(GLOB_RECURSE CUDA_PPMC
+    "${PPMC_CUDA_SOURCE_DIR}/*.cu"
+    "${PPMC_CUDA_SOURCE_DIR}/*.cuh"
+)
+
+file(GLOB_RECURSE MINICGAL_CUDA
     "${MINICGAL_CUDA_SOURCE_DIR}/include/*.cu"
     "${MINICGAL_CUDA_SOURCE_DIR}/include/*.cuh"
     "${MINICGAL_CUDA_SOURCE_DIR}/*.cu"
     "${MINICGAL_CUDA_SOURCE_DIR}/*.cuh"
-    "${PPMC_CUDA_SOURCE_DIR}/*.cu"
-    "${PPMC_CUDA_SOURCE_DIR}/*.cuh"
 )
 
 add_subdirectory(CUDA_new)
@@ -112,58 +115,8 @@ set_target_properties(MiniCGAL_Decompress PROPERTIES COMPILE_FLAGS -frounding-ma
 target_link_libraries(MiniCGAL_Decompress ${CGAL_LIBRARIES} ${OPENGL_LIBRARY} ${GLUT_LIBRARY} m)
 
 # add_executable(MiniCGAL_CudaDecompress tools/MCudaDecompress_test.cu ${MINICGAL_CUDA_PPMC_FILES})
-add_executable(MiniCGAL_CudaDecompress tools/MCudaDecompress_test.cu  
-                                        /home/koi/mastercode/Mini_CGAL/PPMC_CUDA/mymesh.cuh 
-                                        /home/koi/mastercode/Mini_CGAL/PPMC_CUDA/mymesh.cu 
-                                        /home/koi/mastercode/Mini_CGAL/PPMC_CUDA/mymeshDecomp.cu 
-                                        /home/koi/mastercode/Mini_CGAL/PPMC_CUDA/mymeshIO.cu
-
-                                        /home/koi/mastercode/Mini_CGAL/MCGAL/Core_CUDA/include/Mesh.cuh
-                                        /home/koi/mastercode/Mini_CGAL/MCGAL/Core_CUDA/Mesh.cu 
-                                        /home/koi/mastercode/Mini_CGAL/MCGAL/Core_CUDA/include/Facet.cuh 
-                                        /home/koi/mastercode/Mini_CGAL/MCGAL/Core_CUDA/include/Halfedge.cuh 
-                                        /home/koi/mastercode/Mini_CGAL/MCGAL/Core_CUDA/include/Vertex.cuh 
-
-                                        /home/koi/mastercode/Mini_CGAL/MCGAL/Core_CUDA/include/Configuration.cuh 
-                                        /home/koi/mastercode/Mini_CGAL/MCGAL/Core_CUDA/include/ContextPool.cuh 
-
-                                        /home/koi/mastercode/Mini_CGAL/MCGAL/Core_CUDA/include/core.cuh 
-                                        /home/koi/mastercode/Mini_CGAL/MCGAL/Core_CUDA/include/cuda_util.cuh 
-                                        /home/koi/mastercode/Mini_CGAL/MCGAL/Core_CUDA/include/global.cuh 
-                                        /home/koi/mastercode/Mini_CGAL/MCGAL/Core_CUDA/ContextPool.cu 
-                                        /home/koi/mastercode/Mini_CGAL/MCGAL/Core_CUDA/Facet.cu 
-                                        /home/koi/mastercode/Mini_CGAL/MCGAL/Core_CUDA/Halfedge.cu 
-                                        /home/koi/mastercode/Mini_CGAL/MCGAL/Core_CUDA/Vertex.cu 
-                                        /home/koi/mastercode/Mini_CGAL/MCGAL/Core_CUDA/global.cu )
-
+add_executable(MiniCGAL_CudaDecompress tools/MCudaDecompress_test.cu  ${CUDA_PPMC} ${MINICGAL_CUDA})
 set_target_properties(MiniCGAL_CudaDecompress PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON)
 target_link_libraries(MiniCGAL_CudaDecompress ${CUDA_LIBRARIES})
 
-message(STATUS "mylist = ${MINICGAL_CUDA_PPMC_FILES}" )
-
-add_executable(CudaTest tools/test.cu   
-                                    /home/koi/mastercode/Mini_CGAL/PPMC_CUDA/mymesh.cuh 
-                                    /home/koi/mastercode/Mini_CGAL/PPMC_CUDA/mymesh.cu 
-                                    /home/koi/mastercode/Mini_CGAL/PPMC_CUDA/mymeshDecomp.cu 
-                                    /home/koi/mastercode/Mini_CGAL/PPMC_CUDA/mymeshIO.cu
-                                    
-                                    /home/koi/mastercode/Mini_CGAL/MCGAL/Core_CUDA/include/Mesh.cuh
-                                    /home/koi/mastercode/Mini_CGAL/MCGAL/Core_CUDA/Mesh.cu 
-                                    /home/koi/mastercode/Mini_CGAL/MCGAL/Core_CUDA/include/Facet.cuh 
-                                    /home/koi/mastercode/Mini_CGAL/MCGAL/Core_CUDA/include/Halfedge.cuh 
-                                    /home/koi/mastercode/Mini_CGAL/MCGAL/Core_CUDA/include/Vertex.cuh 
-
-                                    /home/koi/mastercode/Mini_CGAL/MCGAL/Core_CUDA/include/Configuration.cuh 
-                                    /home/koi/mastercode/Mini_CGAL/MCGAL/Core_CUDA/include/ContextPool.cuh 
-                                    
-                                    /home/koi/mastercode/Mini_CGAL/MCGAL/Core_CUDA/include/core.cuh 
-                                    /home/koi/mastercode/Mini_CGAL/MCGAL/Core_CUDA/include/cuda_util.cuh 
-                                    /home/koi/mastercode/Mini_CGAL/MCGAL/Core_CUDA/include/global.cuh 
-                                    /home/koi/mastercode/Mini_CGAL/MCGAL/Core_CUDA/ContextPool.cu 
-                                    /home/koi/mastercode/Mini_CGAL/MCGAL/Core_CUDA/Facet.cu 
-                                    /home/koi/mastercode/Mini_CGAL/MCGAL/Core_CUDA/Halfedge.cu 
-                                    /home/koi/mastercode/Mini_CGAL/MCGAL/Core_CUDA/Vertex.cu 
-                                    /home/koi/mastercode/Mini_CGAL/MCGAL/Core_CUDA/global.cu  
-                                    )
-set_target_properties(CudaTest PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON)
-target_link_libraries(CudaTest ${CUDA_LIBRARIES})
+message(STATUS "list = ${CUDA_PPMC}" )
