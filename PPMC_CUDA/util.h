@@ -87,16 +87,18 @@ inline double logt(const char* format, struct timeval& start, ...) {
     char sprint_buf[200];
     int n = vsprintf(sprint_buf, format, args);
     va_end(args);
+#ifndef PROHIBIT_LOG
     fprintf(stderr, "%s thread %ld:\t%s", time_string().c_str(), syscall(__NR_gettid), sprint_buf);
-
+#endif
     double mstime = get_time_elapsed(start, true);
+#ifndef PROHIBIT_LOG
     if (mstime > 1000) {
         fprintf(stderr, " takes %f s\n", mstime / 1000);
     } else {
         fprintf(stderr, " takes %f ms\n", mstime);
     }
     fflush(stderr);
-
+#endif
     pthread_mutex_unlock(&print_lock);
     return mstime;
 }
@@ -108,8 +110,10 @@ inline void log(const char* format, ...) {
     char sprint_buf[200];
     int n = vsprintf(sprint_buf, format, args);
     va_end(args);
+#ifndef PROHIBIT_LOG
     fprintf(stderr, "%s thread %ld:\t%s\n", time_string().c_str(), syscall(__NR_gettid), sprint_buf);
     fflush(stderr);
+#endif
     pthread_mutex_unlock(&print_lock);
 }
 

@@ -228,11 +228,11 @@ __global__ void createCenterVertexOnCuda(MCGAL::Vertex* vpool,
         int stHalfedgeIndex = stHalfedgeIndexes[tid];
         int stFacetIndex = stFacetIndexes[tid];
         // nvtxRangePop();
-        if (tid == 300) {
-            unsigned int endTime = clock64();
-            float elapsedTime = (endTime - startTime) / clockRate;
-            printf("get from pool execution time: %.6f ms\n", elapsedTime);
-        }
+        // if (tid == 300) {
+        //     unsigned int endTime = clock64();
+        //     float elapsedTime = (endTime - startTime) / clockRate;
+        //     printf("get from pool execution time: %.6f ms\n", elapsedTime);
+        // }
 
         MCGAL::Halfedge* h = facet->getHalfedgeByIndexOnCuda(hpool, 0);
         MCGAL::Halfedge* hnew = &hpool[stHalfedgeIndex++];
@@ -243,11 +243,11 @@ __global__ void createCenterVertexOnCuda(MCGAL::Vertex* vpool,
         hnew->setOppositeOnCuda(oppo_new);
         oppo_new->setOppositeOnCuda(hnew);
         insert_tip_cuda(hpool, hnew->dopposite(hpool), h);
-        if (tid == 300) {
-            unsigned int endTime = clock64();
-            float elapsedTime = (endTime - startTime) / clockRate;
-            printf("first execution time: %.6f ms\n", elapsedTime);
-        }
+        // if (tid == 300) {
+        //     unsigned int endTime = clock64();
+        //     float elapsedTime = (endTime - startTime) / clockRate;
+        //     printf("first execution time: %.6f ms\n", elapsedTime);
+        // }
 
         MCGAL::Halfedge* g = hnew->dopposite(hpool)->dnext(hpool);
         MCGAL::Halfedge* hed = hnew;
@@ -265,11 +265,11 @@ __global__ void createCenterVertexOnCuda(MCGAL::Vertex* vpool,
             g = gnew->dopposite(hpool)->dnext(hpool);
             hnew = gnew;
         }
-        if (tid == 300) {
-            unsigned int endTime = clock64();
-            float elapsedTime = (endTime - startTime) / clockRate;
-            printf("main loop execution time: %.6f ms\n", elapsedTime);
-        }
+        // if (tid == 300) {
+        //     unsigned int endTime = clock64();
+        //     float elapsedTime = (endTime - startTime) / clockRate;
+        //     printf("main loop execution time: %.6f ms\n", elapsedTime);
+        // }
 
         hed->setNextOnCuda(hnew->dopposite(hpool));
         // #pragma unroll 2
@@ -277,11 +277,11 @@ __global__ void createCenterVertexOnCuda(MCGAL::Vertex* vpool,
             MCGAL::Halfedge* hit = &hpool[h->dfacet(fpool)->halfedges[i]];
             fpool[stFacetIndex++].resetOnCuda(vpool, hpool, hit);
         }
-        if (tid == 300) {
-            unsigned int endTime = clock64();
-            float elapsedTime = (endTime - startTime) / clockRate;
-            printf("facet reset execution time: %.6f ms\n", elapsedTime);
-        }
+        // if (tid == 300) {
+        //     unsigned int endTime = clock64();
+        //     float elapsedTime = (endTime - startTime) / clockRate;
+        //     printf("facet reset execution time: %.6f ms\n", elapsedTime);
+        // }
 
         h->dfacet(fpool)->resetOnCuda(vpool, hpool, h);
     }
@@ -375,8 +375,108 @@ __global__ void createCenterVertexOnCuda10(MCGAL::Vertex* vpool,
     }
 }
 
-__global__ void cudaKernel() {
-    printf("hello world");
+void MyMesh::insertRemovedVerticesOnCuda() {
+    struct timeval start = get_cur_time();
+    std::vector<int> faceIndexes(splitable_count);
+    std::vector<int> vertexIndexes(splitable_count);
+    std::vector<int> stHalfedgeIndexes(splitable_count);
+    std::vector<int> stFacetIndexes(splitable_count);
+    int index = 0;
+    cudaDeviceProp prop;
+    cudaGetDeviceProperties(&prop, 0);
+    double clockRate = prop.clockRate;
+    for (int i = 0; i < faces.size(); i++) {
+        MCGAL::Facet* fit = faces[i];
+        if (fit->isSplittable()) {
+            faceIndexes[index] = fit->poolId;
+            int hcount = fit->halfedge_size * 2;
+            int fcount = fit->halfedge_size - 1;
+            int findex = MCGAL::contextPool.preAllocFace(fcount);
+            for (int i = 0; i < fcount; i++) {
+                this->faces.push_back(MCGAL::contextPool.getFacetByIndex(findex + i));
+            }
+            stFacetIndexes[index] = findex;
+
+            int hindex = MCGAL::contextPool.preAllocHalfedge(hcount);
+            stHalfedgeIndexes[index] = hindex;
+            vertexIndexes[index] = (MCGAL::contextPool.getVindex());
+            MCGAL::Vertex* vnew = MCGAL::contextPool.allocateVertexFromPool(fit->getRemovedVertexPos());
+            this->vertices.push_back(vnew);
+            index++;
+            for (int i = 0; i < fit->halfedge_size; i++) {
+                MCGAL::Halfedge* h = fit->getHalfedgeByIndex(i);
+                h->end_vertex()->addHalfedge(hindex + i * 2);
+                vnew->addHalfedge(hindex + i * 2 + 1);
+            }
+        }
+    }
+    logt("%d collect face information", start, i_curDecimationId);
+    // add it to mesh
+    int num = faceIndexes.size();
+    dim3 block(256, 1, 1);
+    dim3 grid((num + block.x - 1) / block.x, 1, 1);
+
+    CHECK(cudaMemcpy(dfaceIndexes, faceIndexes.data(), num * sizeof(int), cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpy(dvertexIndexes, vertexIndexes.data(), num * sizeof(int), cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpy(dstHalfedgeIndexes, stHalfedgeIndexes.data(), num * sizeof(int), cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpy(dstFacetIndexes, stFacetIndexes.data(), num * sizeof(int), cudaMemcpyHostToDevice));
+    int vsize = MCGAL::contextPool.vindex;
+    int hsize = MCGAL::contextPool.hindex;
+    int fsize = MCGAL::contextPool.findex;
+    log("size is %d %d %d", vsize, hsize, fsize);
+    CHECK(cudaMemcpyAsync(MCGAL::contextPool.dvpool, MCGAL::contextPool.vpool, vsize * sizeof(MCGAL::Vertex),
+                          cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpyAsync(MCGAL::contextPool.dhpool, MCGAL::contextPool.hpool, hsize * sizeof(MCGAL::Halfedge),
+                          cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpyAsync(MCGAL::contextPool.dfpool, MCGAL::contextPool.fpool, fsize * sizeof(MCGAL::Facet),
+                          cudaMemcpyHostToDevice));
+
+    logt("%d cuda memory copy", start, i_curDecimationId);
+
+    if (i_curDecimationId == 2) {
+        grid.x = 19;
+#ifdef GRID_SIZE
+        grid.x = GRID_SIZE;
+#endif
+                     block.x = 512;
+#ifdef BLOCK_SIZE
+        block.x = BLOCK_SIZE;
+#endif
+                      block.y = 1;
+    }
+    // if (i_curDecimationId == 2) {
+    //     log("%d %d", grid.x, block.x);
+    //     createCenterVertexOnCuda<<<grid, block>>>(
+    //         MCGAL::contextPool.vpool, MCGAL::contextPool.hpool, MCGAL::contextPool.fpool, dvertexIndexes, dfaceIndexes,
+    //         dstHalfedgeIndexes, dstFacetIndexes, num, clockRate, i_curDecimationId);
+    //     cudaDeviceSynchronize();
+    //     logt("%d kernel function", start, i_curDecimationId);
+    //     exit(0);
+    // }
+    createCenterVertexOnCuda<<<grid, block>>>(MCGAL::contextPool.dvpool, MCGAL::contextPool.dhpool,
+                                              MCGAL::contextPool.dfpool, dvertexIndexes, dfaceIndexes,
+                                              dstHalfedgeIndexes, dstFacetIndexes, num, clockRate, i_curDecimationId);
+    cudaDeviceSynchronize();
+    double t = logt("%d kernel function", start, i_curDecimationId);
+    if (i_curDecimationId == 2) {
+#if defined(GRID_SIZE) && defined(BLOCK_SIZE)
+    printf("%d %d %lf \n", GRID_SIZE, BLOCK_SIZE, t);
+#endif
+    exit(0);
+    }
+    CHECK(cudaMemcpyAsync(MCGAL::contextPool.vpool, MCGAL::contextPool.dvpool, vsize * sizeof(MCGAL::Vertex),
+                          cudaMemcpyDeviceToHost));
+    CHECK(cudaMemcpyAsync(MCGAL::contextPool.hpool, MCGAL::contextPool.dhpool, hsize * sizeof(MCGAL::Halfedge),
+                          cudaMemcpyDeviceToHost));
+    CHECK(cudaMemcpyAsync(MCGAL::contextPool.fpool, MCGAL::contextPool.dfpool, fsize * sizeof(MCGAL::Facet),
+                          cudaMemcpyDeviceToHost));
+    logt("%d cuda memory copy back", start, i_curDecimationId);
+    cudaError_t error = cudaGetLastError();
+    if (error != cudaSuccess) {
+        printf("ERROR: %s:%d,", __FILE__, __LINE__);
+        printf("code:%d,reason:%s\n", error, cudaGetErrorString(error));
+        exit(1);
+    }
 }
 
 // void MyMesh::insertRemovedVerticesOnCuda() {
@@ -562,95 +662,4 @@ void MyMesh::removeInsertedEdges() {
         }
     }
     return;
-}
-
-void MyMesh::insertRemovedVerticesOnCuda() {
-    struct timeval start = get_cur_time();
-    std::vector<int> faceIndexes(splitable_count);
-    std::vector<int> vertexIndexes(splitable_count);
-    std::vector<int> stHalfedgeIndexes(splitable_count);
-    std::vector<int> stFacetIndexes(splitable_count);
-    int index = 0;
-    cudaDeviceProp prop;
-    cudaGetDeviceProperties(&prop, 0);
-    double clockRate = prop.clockRate;
-    for (int i = 0; i < faces.size(); i++) {
-        MCGAL::Facet* fit = faces[i];
-        if (fit->isSplittable()) {
-            faceIndexes[index] = fit->poolId;
-            int hcount = fit->halfedge_size * 2;
-            int fcount = fit->halfedge_size - 1;
-            int findex = MCGAL::contextPool.preAllocFace(fcount);
-            for (int i = 0; i < fcount; i++) {
-                this->faces.push_back(MCGAL::contextPool.getFacetByIndex(findex + i));
-            }
-            stFacetIndexes[index] = findex;
-
-            int hindex = MCGAL::contextPool.preAllocHalfedge(hcount);
-            stHalfedgeIndexes[index] = hindex;
-            vertexIndexes[index] = (MCGAL::contextPool.getVindex());
-            MCGAL::Vertex* vnew = MCGAL::contextPool.allocateVertexFromPool(fit->getRemovedVertexPos());
-            this->vertices.push_back(vnew);
-            index++;
-            for (int i = 0; i < fit->halfedge_size; i++) {
-                MCGAL::Halfedge* h = fit->getHalfedgeByIndex(i);
-                h->end_vertex()->addHalfedge(hindex + i * 2);
-                vnew->addHalfedge(hindex + i * 2 + 1);
-            }
-        }
-    }
-    logt("%d collect face information", start, i_curDecimationId);
-    // add it to mesh
-    int num = faceIndexes.size();
-    dim3 block(256, 1, 1);
-    dim3 grid((num + block.x - 1) / block.x, 1, 1);
-
-    CHECK(cudaMemcpy(dfaceIndexes, faceIndexes.data(), num * sizeof(int), cudaMemcpyHostToDevice));
-    CHECK(cudaMemcpy(dvertexIndexes, vertexIndexes.data(), num * sizeof(int), cudaMemcpyHostToDevice));
-    CHECK(cudaMemcpy(dstHalfedgeIndexes, stHalfedgeIndexes.data(), num * sizeof(int), cudaMemcpyHostToDevice));
-    CHECK(cudaMemcpy(dstFacetIndexes, stFacetIndexes.data(), num * sizeof(int), cudaMemcpyHostToDevice));
-    int vsize = MCGAL::contextPool.vindex;
-    int hsize = MCGAL::contextPool.hindex;
-    int fsize = MCGAL::contextPool.findex;
-    log("size is %d %d %d", vsize, hsize, fsize);
-    CHECK(cudaMemcpyAsync(MCGAL::contextPool.dvpool, MCGAL::contextPool.vpool, vsize * sizeof(MCGAL::Vertex),
-                     cudaMemcpyHostToDevice));
-    CHECK(cudaMemcpyAsync(MCGAL::contextPool.dhpool, MCGAL::contextPool.hpool, hsize * sizeof(MCGAL::Halfedge),
-                     cudaMemcpyHostToDevice));
-    CHECK(cudaMemcpyAsync(MCGAL::contextPool.dfpool, MCGAL::contextPool.fpool, fsize * sizeof(MCGAL::Facet),
-                     cudaMemcpyHostToDevice));
-
-    logt("%d cuda memory copy", start, i_curDecimationId);
-    // if (i_curDecimationId == 2) {
-    //     grid.x = 19;
-    //     block.x = 512;
-    //     block.y = 1;
-    // }
-    // if (i_curDecimationId == 2) {
-    //     log("%d %d", grid.x, block.x);
-    //     createCenterVertexOnCuda10<<<grid, block>>>(
-    //         MCGAL::contextPool.vpool, MCGAL::contextPool.hpool, MCGAL::contextPool.fpool, dvertexIndexes,
-    //         dfaceIndexes, dstHalfedgeIndexes, dstFacetIndexes, num, clockRate, i_curDecimationId);
-    //     logt("%d kernel function", start, i_curDecimationId);
-    //     cudaDeviceSynchronize();
-    //     exit(0);
-    // }
-    createCenterVertexOnCuda<<<grid, block>>>(MCGAL::contextPool.dvpool, MCGAL::contextPool.dhpool,
-                                              MCGAL::contextPool.dfpool, dvertexIndexes, dfaceIndexes,
-                                              dstHalfedgeIndexes, dstFacetIndexes, num, clockRate, i_curDecimationId);
-    cudaDeviceSynchronize();
-    logt("%d kernel function", start, i_curDecimationId);
-    CHECK(cudaMemcpyAsync(MCGAL::contextPool.vpool, MCGAL::contextPool.dvpool, vsize * sizeof(MCGAL::Vertex),
-                     cudaMemcpyDeviceToHost));
-    CHECK(cudaMemcpyAsync(MCGAL::contextPool.hpool, MCGAL::contextPool.dhpool, hsize * sizeof(MCGAL::Halfedge),
-                     cudaMemcpyDeviceToHost));
-    CHECK(cudaMemcpyAsync(MCGAL::contextPool.fpool, MCGAL::contextPool.dfpool, fsize * sizeof(MCGAL::Facet),
-                     cudaMemcpyDeviceToHost));
-
-    cudaError_t error = cudaGetLastError();
-    if (error != cudaSuccess) {
-        printf("ERROR: %s:%d,", __FILE__, __LINE__);
-        printf("code:%d,reason:%s\n", error, cudaGetErrorString(error));
-        exit(1);
-    }
 }
