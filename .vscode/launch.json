@@ -36,7 +36,7 @@
 			"program": "/home/koi/mastercode/Mini_CGAL/build/PPMC_compress",
 			"args": [
 				"/home/koi/mastercode/Mini_CGAL/static/fixed.OFF",
-				"/home/koi/mastercode/Mini_CGAL/static/buffer"
+				"/home/koi/mastercode/Mini_CGAL/static/buffer2"
 			],
 			"stopAtEntry": false,
 			"cwd": "${fileDirname}",

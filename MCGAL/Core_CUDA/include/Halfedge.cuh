@@ -75,7 +75,8 @@ class Halfedge {
     __device__ Facet* dfacet(Facet* facets);
     __device__ Halfedge* dopposite(Halfedge* halfedges);
     __device__ Halfedge* dnext(Halfedge* halfedges);
-    __device__ void resetOnCuda(Vertex* vertices, Halfedge* halfedges, Vertex* v1, Vertex* v2);
+    __device__ void resetOnCuda(Vertex* v1, Vertex* v2);
+    __device__ void resetOnCuda(int v1, int v2);
 
     inline void resetState() {
         flag = NotYetInQueue;
