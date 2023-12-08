@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.16)
-set(CMAKE_CUDA_COMPILER "/usr/local/cuda-12/bin/nvcc")
-project(Mini_CGAL LANGUAGES  CXX C CUDA)
-
+# set(CMAKE_CUDA_COMPILER "/usr/local/cuda-12/bin/nvcc")
 set(CMAKE_CUDA_ARCHITECTURES 89) 
+set(CMAKE_CUDA_COMPILER "/usr/local/cuda-12.2/bin/nvcc")
+project(Mini_CGAL LANGUAGES  CXX C CUDA)
 
 set(CMAKE_CUDA_FLAGS "-arch=compute_89 -code=sm_89 -rdc=true -g -G -O3")
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xcompiler -std=c++14")
@@ -21,6 +21,7 @@ set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -pg")
 # set(CMAKE_BUILD_TYPE "Debug")
 # set(CUDA_DEBUG ON)
 # set(CMAKE_CUDA_FLAGS_DEBUG "-G -O0")
+option(TEST "Description" OFF)
 option(GRID "Description" 1)
 option(BLOCK "Description" 512)
 
@@ -34,8 +35,8 @@ include_directories(
     ${CUDA_INCLUDE_DIRS}
 )
 find_package(CGAL REQUIRED)
-find_package(OpenGL REQUIRED)
-find_package(GLUT REQUIRED)
+# find_package(OpenGL REQUIRED)
+# find_package(GLUT REQUIRED)
 find_package(CUDA REQUIRED)
 
 # Add library paths
@@ -123,8 +124,10 @@ add_executable(MiniCGAL_CudaDecompress tools/MCudaDecompress_test.cu  ${CUDA_PPM
 set_target_properties(MiniCGAL_CudaDecompress PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON)
 # target_compile_definitions(MiniCGAL_CudaDecompress PUBLIC BLOCK_SIZE=${BLOCK} GRID_SIZE=${GRID} PROHIBIT_LOG)
 target_compile_definitions(MiniCGAL_CudaDecompress PRIVATE PROHIBIT_LOG)
-target_compile_definitions(MiniCGAL_CudaDecompress PRIVATE BLOCK_SIZE=${BLOCK})
-target_compile_definitions(MiniCGAL_CudaDecompress PRIVATE GRID_SIZE=${GRID})
+IF(TEST)
+    target_compile_definitions(MiniCGAL_CudaDecompress PRIVATE BLOCK_SIZE=${BLOCK})
+    target_compile_definitions(MiniCGAL_CudaDecompress PRIVATE GRID_SIZE=${GRID})
+ENDIF(TEST)
 target_link_libraries(MiniCGAL_CudaDecompress ${CUDA_LIBRARIES})
 
 message(STATUS "list = ${CUDA_PPMC}" )

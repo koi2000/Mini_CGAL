@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <cuda_runtime.h>
 #include <unordered_set>
+#include <stdexcept>
 #include "Configuration.cuh"
 namespace MCGAL {
 
