@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
 # Project(CUDA_Freshman CXX C CUDA)
 
-# set(CMAKE_CUDA_COMPILER "/usr/local/cuda-12/bin/nvcc")
-set(CMAKE_CUDA_COMPILER "/usr/local/cuda-12.2/bin/nvcc")
+set(CMAKE_CUDA_COMPILER "/usr/local/cuda-12/bin/nvcc")
+# set(CMAKE_CUDA_COMPILER "/usr/local/cuda-12.2/bin/nvcc")
 
 set(CMAKE_CUDA_FLAGS "-arch=compute_75 -code=sm_75 -g -G -O0")
 set(CMAKE_BUILD_TYPE "Debug")

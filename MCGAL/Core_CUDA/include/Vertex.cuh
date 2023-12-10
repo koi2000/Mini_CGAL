@@ -113,6 +113,9 @@ class Vertex : public Point {
     __device__ void addHalfedgeOnCuda(Halfedge* halfedge);
     __device__ void addHalfedgeOnCuda(int halfedge);
 
+    __device__ void eraseHalfedgeByIndexOnCuda(int index);
+    // __device__ void eraseHalfedgeByPointerOnCuda(Halfedge* halfedge);
+
     int vertex_degree() {
         return halfedges_size;
     }

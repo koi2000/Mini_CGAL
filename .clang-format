@@ -10,6 +10,7 @@ AlignAfterOpenBracket:	Align
 AlignConsecutiveAssignments:	false
 # 连续声明时，对齐所有声明的变量名
 AlignConsecutiveDeclarations:	false
+SpacesBeforeHash: 0
 
 AlignEscapedNewlines: Right
 

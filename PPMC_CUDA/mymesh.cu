@@ -69,6 +69,11 @@ MyMesh::~MyMesh() {
     if (own_data && p_data != NULL) {
         delete[] p_data;
     }
+    cudaFree(dfaceIndexes);
+    cudaFree(dvertexIndexes);
+    cudaFree(dstHalfedgeIndexes);
+    cudaFree(dstFacetIndexes);
+    cudaFree(dedgeIndexes);
     // TODO:
     // clear_aabb_tree();
 }
@@ -82,6 +87,7 @@ MyMesh::MyMesh(char* path) : MCGAL::Mesh() {
     CHECK(cudaMalloc(&dvertexIndexes, SPLITABLE_SIZE * sizeof(int)));
     CHECK(cudaMalloc(&dstFacetIndexes, SPLITABLE_SIZE * sizeof(int)));
     CHECK(cudaMalloc(&dstHalfedgeIndexes, SPLITABLE_SIZE * sizeof(int)));
+    CHECK(cudaMalloc(&dedgeIndexes, REMOVEDEDGE_SIZE * sizeof(int)));
     // Set the vertices of the edge that is the departure of the coding and decoding conquests.
 }
 
@@ -92,6 +98,7 @@ void MyMesh::pushHehInit() {
         MCGAL::Halfedge* hit = vh_departureConquest[1]->getHalfedgeByIndex(i);
         if (hit->opposite()->vertex()==vh_departureConquest[0]) {
             hehBegin = hit->opposite();
+            break;
         }   
     }
     assert(hehBegin->vertex() == vh_departureConquest[0]);

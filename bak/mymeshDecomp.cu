@@ -1,7 +1,6 @@
 // #include "../MCGAL/Core_CUDA/global.cuh"
 #include "mymesh.cuh"
 #include "util.h"
-#include <map>
 #include <nvToolsExt.h>
 
 void MyMesh::decode(int lod) {
@@ -187,10 +186,9 @@ void MyMesh::InsertedEdgeDecodingStep() {
             unsigned sym = readChar();
             // Determine if the edge is original or not.
             // Mark the edge to be removed.
-            if (sym != 0) {
+            if (sym != 0)
                 h->setAdded();
-                inserted_edgecount++;
-            }
+            inserted_edgecount++;
         }
 
         // Add the other halfedges to the queue
@@ -222,6 +220,7 @@ __global__ void createCenterVertexOnCuda(MCGAL::Vertex* vpool,
                                          int id) {
     int tid = blockIdx.x * (blockDim.x * blockDim.y) + blockDim.x * threadIdx.y + threadIdx.x;
     if (tid < num) {
+        // nvtxRangePush("Your Kernel");
         unsigned int startTime = clock64();
 
         int faceId = faceIndexes[tid];
@@ -230,6 +229,7 @@ __global__ void createCenterVertexOnCuda(MCGAL::Vertex* vpool,
         MCGAL::Vertex* vnew = &vpool[vertexId];
         int stHalfedgeIndex = stHalfedgeIndexes[tid];
         int stFacetIndex = stFacetIndexes[tid];
+        // nvtxRangePop();
         // if (tid == 300) {
         //     unsigned int endTime = clock64();
         //     float elapsedTime = (endTime - startTime) / clockRate;
@@ -274,6 +274,7 @@ __global__ void createCenterVertexOnCuda(MCGAL::Vertex* vpool,
         // }
 
         hed->setNextOnCuda(hnew->dopposite(hpool));
+        // #pragma unroll 2
         for (int i = 1; i < h->dfacet(fpool)->halfedge_size; i += 1) {
             MCGAL::Halfedge* hit = &hpool[h->dfacet(fpool)->halfedges[i]];
             fpool[stFacetIndex++].resetOnCuda(vpool, hpool, hit);
@@ -283,10 +284,98 @@ __global__ void createCenterVertexOnCuda(MCGAL::Vertex* vpool,
         //     float elapsedTime = (endTime - startTime) / clockRate;
         //     printf("facet reset execution time: %.6f ms\n", elapsedTime);
         // }
+
         h->dfacet(fpool)->resetOnCuda(vpool, hpool, h);
     }
 }
 
+__global__ void createCenterVertexOnCuda10(MCGAL::Vertex* vpool,
+                                           MCGAL::Halfedge* hpool,
+                                           MCGAL::Facet* fpool,
+                                           int* vertexIndexes,
+                                           int* faceIndexes,
+                                           int* stHalfedgeIndexes,
+                                           int* stFacetIndexes,
+                                           int num,
+                                           double clockRate,
+                                           int id) {
+    int tid = blockIdx.x * (blockDim.x * blockDim.y) + blockDim.x * threadIdx.y + threadIdx.x;
+    if (tid < num) {
+        unsigned int startTime = clock64();
+
+        int faceId = faceIndexes[tid];
+        MCGAL::Facet* facet = &fpool[faceId];
+        int vertexId = vertexIndexes[tid];
+        MCGAL::Vertex* vnew = &vpool[vertexId];
+        int stHalfedgeIndex = stHalfedgeIndexes[tid];
+        int stFacetIndex = stFacetIndexes[tid];
+
+        MCGAL::Halfedge* h = facet->getHalfedgeByIndexOnCuda(hpool, 0);
+        int hnewId = stHalfedgeIndex++;
+        int oppoId = stHalfedgeIndex++;
+        MCGAL::Halfedge* hnew = &hpool[hnewId];
+        // hnew->resetOnCuda(h->dend_vertex(vpool), vnew);
+        hnew->vertex_ = h->end_vertex_;
+        hnew->end_vertex_ = vertexId;
+
+        MCGAL::Halfedge* oppo_new = &hpool[oppoId];
+        // oppo_new->resetOnCuda(vnew, h->dend_vertex(vpool));
+        oppo_new->end_vertex_ = h->end_vertex_;
+        oppo_new->vertex_ = vertexId;
+
+        hnew->setOppositeOnCuda(oppo_new);
+        hnew->opposite_ = oppoId;
+        oppo_new->opposite_ = hnewId;
+        // oppo_new->setOppositeOnCuda(hnew);
+        // insert_tip_cuda(hpool, hnew->dopposite(hpool), h);
+        oppo_new->next_ = h->next_;
+        h->next_ = oppoId;
+
+        MCGAL::Halfedge* g = hnew->dopposite(hpool)->dnext(hpool);
+        MCGAL::Halfedge* hed = hnew;
+        while (g->dnext(hpool)->poolId != hed->poolId) {
+            int gId = stHalfedgeIndex++;
+            int oppogId = stHalfedgeIndex++;
+            MCGAL::Halfedge* gnew = &hpool[gId];
+            gnew->vertex_ = g->end_vertex_;
+            gnew->end_vertex_ = vertexId;
+
+            MCGAL::Halfedge* oppo_gnew = &hpool[oppogId];
+            gnew->end_vertex_ = g->end_vertex_;
+            gnew->vertex_ = vertexId;
+
+            gnew->opposite_ = oppogId;
+            oppo_gnew->opposite_ = gId;
+            gnew->next_ = hnew->opposite_;
+            // gnew->setNextOnCuda(hnew->dopposite(hpool));
+            // insert_tip_cuda(hpool, gnew->dopposite(hpool), g);
+            oppo_gnew->next_ = g->next_;
+            g->next_ = gId;
+            g = oppo_gnew->dnext(hpool);
+            hnew = gnew;
+        }
+
+        hed->next_ = hnew->opposite_;
+        if (tid == 300) {
+            unsigned int endTime = clock64();
+            float elapsedTime = (endTime - startTime) / clockRate;
+            printf("main loop execution time: %.6f ms\n", elapsedTime);
+        }
+        // hed->setNextOnCuda(hnew->dopposite(hpool));
+        // // #pragma unroll 2
+        for (int i = 1; i < h->dfacet(fpool)->halfedge_size; i += 1) {
+            MCGAL::Halfedge* hit = &hpool[h->dfacet(fpool)->halfedges[i]];
+            fpool[stFacetIndex++].resetOnCuda(vpool, hpool, hit);
+        }
+        if (tid == 300) {
+            unsigned int endTime = clock64();
+            float elapsedTime = (endTime - startTime) / clockRate;
+            printf("facet reset execution time: %.6f ms\n", elapsedTime);
+        }
+
+        h->dfacet(fpool)->resetOnCuda(vpool, hpool, h);
+    }
+}
 #ifndef UNIFIED
 void MyMesh::insertRemovedVerticesOnCuda() {
     struct timeval start = get_cur_time();
@@ -323,7 +412,7 @@ void MyMesh::insertRemovedVerticesOnCuda() {
             }
         }
     }
-    // logt("%d collect face information", start, i_curDecimationId);
+    logt("%d collect face information", start, i_curDecimationId);
     // add it to mesh
     int num = faceIndexes.size();
     dim3 block(256, 1, 1);
@@ -336,15 +425,15 @@ void MyMesh::insertRemovedVerticesOnCuda() {
     int vsize = MCGAL::contextPool.vindex;
     int hsize = MCGAL::contextPool.hindex;
     int fsize = MCGAL::contextPool.findex;
-    // log("size is %d %d %d", vsize, hsize, fsize);
-    CHECK(cudaMemcpy(MCGAL::contextPool.dvpool, MCGAL::contextPool.vpool, vsize * sizeof(MCGAL::Vertex),
-                     cudaMemcpyHostToDevice));
-    CHECK(cudaMemcpy(MCGAL::contextPool.dhpool, MCGAL::contextPool.hpool, hsize * sizeof(MCGAL::Halfedge),
-                     cudaMemcpyHostToDevice));
-    CHECK(cudaMemcpy(MCGAL::contextPool.dfpool, MCGAL::contextPool.fpool, fsize * sizeof(MCGAL::Facet),
-                     cudaMemcpyHostToDevice));
+    log("size is %d %d %d", vsize, hsize, fsize);
+    CHECK(cudaMemcpyAsync(MCGAL::contextPool.dvpool, MCGAL::contextPool.vpool, vsize * sizeof(MCGAL::Vertex),
+                          cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpyAsync(MCGAL::contextPool.dhpool, MCGAL::contextPool.hpool, hsize * sizeof(MCGAL::Halfedge),
+                          cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpyAsync(MCGAL::contextPool.dfpool, MCGAL::contextPool.fpool, fsize * sizeof(MCGAL::Facet),
+                          cudaMemcpyHostToDevice));
 
-    // logt("%d cuda memory copy", start, i_curDecimationId);
+    logt("%d cuda memory copy", start, i_curDecimationId);
 
 #    ifdef TEST
     if (i_curDecimationId == 2) {
@@ -363,7 +452,7 @@ void MyMesh::insertRemovedVerticesOnCuda() {
                                               MCGAL::contextPool.dfpool, dvertexIndexes, dfaceIndexes,
                                               dstHalfedgeIndexes, dstFacetIndexes, num, clockRate, i_curDecimationId);
     cudaDeviceSynchronize();
-    // double t = logt("%d kernel function", start, i_curDecimationId);
+    double t = logt("%d kernel function", start, i_curDecimationId);
 #    ifdef TEST
     if (i_curDecimationId == 2) {
 #        if defined(GRID_SIZE) && defined(BLOCK_SIZE)
@@ -372,13 +461,13 @@ void MyMesh::insertRemovedVerticesOnCuda() {
         exit(0);
     }
 #    endif
-    CHECK(cudaMemcpy(MCGAL::contextPool.vpool, MCGAL::contextPool.dvpool, vsize * sizeof(MCGAL::Vertex),
-                     cudaMemcpyDeviceToHost));
-    CHECK(cudaMemcpy(MCGAL::contextPool.hpool, MCGAL::contextPool.dhpool, hsize * sizeof(MCGAL::Halfedge),
-                     cudaMemcpyDeviceToHost));
-    CHECK(cudaMemcpy(MCGAL::contextPool.fpool, MCGAL::contextPool.dfpool, fsize * sizeof(MCGAL::Facet),
-                     cudaMemcpyDeviceToHost));
-    // logt("%d cuda memory copy back", start, i_curDecimationId);
+    CHECK(cudaMemcpyAsync(MCGAL::contextPool.vpool, MCGAL::contextPool.dvpool, vsize * sizeof(MCGAL::Vertex),
+                          cudaMemcpyDeviceToHost));
+    CHECK(cudaMemcpyAsync(MCGAL::contextPool.hpool, MCGAL::contextPool.dhpool, hsize * sizeof(MCGAL::Halfedge),
+                          cudaMemcpyDeviceToHost));
+    CHECK(cudaMemcpyAsync(MCGAL::contextPool.fpool, MCGAL::contextPool.dfpool, fsize * sizeof(MCGAL::Facet),
+                          cudaMemcpyDeviceToHost));
+    logt("%d cuda memory copy back", start, i_curDecimationId);
     cudaError_t error = cudaGetLastError();
     if (error != cudaSuccess) {
         printf("ERROR: %s:%d,", __FILE__, __LINE__);
@@ -474,11 +563,9 @@ __device__ MCGAL::Halfedge* find_prevOncuda(MCGAL::Halfedge* hpool, MCGAL::Halfe
     return g;
 }
 
-inline __device__ void remove_tipOnCuda(MCGAL::Halfedge* hpool, MCGAL::Halfedge* h) {
-    // h->next = h->next->opposite->next;
-    h->setNextOnCuda(h->dnext(hpool)->dopposite(hpool)->dnext(hpool));
-}
-
+// 需要得到所有待处理的halfedge，得到一个之后，就将opposite设置为removed，
+// 将这些半边的id全部迁移到gpu上处理，
+// 其中有一些竞争数据，主要是点，可以在cpu上就直接处理掉
 __global__ void joinFacetOnCuda(MCGAL::Vertex* vpool,
                                 MCGAL::Halfedge* hpool,
                                 MCGAL::Facet* fpool,
@@ -488,61 +575,16 @@ __global__ void joinFacetOnCuda(MCGAL::Vertex* vpool,
     int tid = blockIdx.x * (blockDim.x * blockDim.y) + blockDim.x * threadIdx.y + threadIdx.x;
     if (tid < num) {
         MCGAL::Halfedge* h = &hpool[edgeIndexes[tid]];
-        MCGAL::Facet* lockFacet = h->dfacet(fpool);
-        MCGAL::Facet* lockOppoFacet = h->dopposite(hpool)->dfacet(fpool);
-        // int hnext = h->dopposite(hpool)->next_;
-        // int gnext = h->next_;
-        // hprev->next_ = hnext;
-        // gprev->next_ = gnext;
+        MCGAL::Halfedge* hprev = find_prevOncuda(hpool, h);
+        MCGAL::Halfedge* gprev = find_prevOncuda(hpool, h->dopposite(hpool));
+        // hprev->setNextOnCuda(hprev->dnext(hpool)->dopposite(hpool)->next_);
+        // gprev->setNextOnCuda(gprev->dnext(hpool)->dopposite(hpool)->next_);
 
-        // bool blocked = true;
-        // while (blocked) {
-        //     if (0 == atomicExch(&lockFacet->lock, 0)) {
-        //         // **** critical section ****//
-        //         MCGAL::Halfedge* hprev = find_prevOncuda(hpool, h);
-        //         MCGAL::Halfedge* gprev = find_prevOncuda(hpool, h->dopposite(hpool));
-        //         remove_tipOnCuda(hpool, hprev);
-        //         remove_tipOnCuda(hpool, gprev);
-        //         gprev->dfacet(fpool)->setRemovedOnCuda();
-        //         lockFacet->resetOnCuda(vpool, hpool, hprev);
-        //         // __threadfence();
-        //         // **** critical section ****//
-        //         atomicExch(&lockFacet->lock, 1);
-        //         blocked = false;
-        //     }
-        // }
-
-        for (int i = 0; i < 32; i++) {
-            if (tid % 32 != i)
-                continue;
-            // Lock facet
-            while (atomicExch(&lockFacet->lock, 0) == 0)
-                ;
-            // you should lock all halfedge
-            MCGAL::Halfedge* hprev = find_prevOncuda(hpool, h);
-            MCGAL::Halfedge* gprev = find_prevOncuda(hpool, h->dopposite(hpool));
-            remove_tipOnCuda(hpool, hprev);
-            remove_tipOnCuda(hpool, gprev);
-            gprev->dfacet(fpool)->setRemovedOnCuda();
-            lockFacet->resetOnCuda(vpool, hpool, hprev);
-            // Unlock
-            // lockFacet->lock = 1;
-            // lockFacet->lock = 1;
-            atomicExch(&lockFacet->lock, 1);
-        }
-    }
-}
-
-__global__ void resetHalfedgeOnCuda(MCGAL::Vertex* vpool,
-                                    MCGAL::Halfedge* hpool,
-                                    MCGAL::Facet* fpool,
-                                    int* edgeIndexes,
-                                    int num,
-                                    double clockRate) {
-    int tid = blockIdx.x * (blockDim.x * blockDim.y) + blockDim.x * threadIdx.y + threadIdx.x;
-    if (tid < num) {
-        MCGAL::Halfedge* hprev = &hpool[edgeIndexes[tid]];
-        hprev->dfacet(fpool)->resetOnCuda(vpool, hpool, hprev);
+        // // h->dvertex(vpool)->eraseHalfedgeByIndexOnCuda(h->poolId);
+        // // h->dopposite(hpool)->dvertex(vpool)->eraseHalfedgeByIndexOnCuda(h->opposite_);
+        // gprev->dfacet(fpool)->setRemovedOnCuda();
+        // // delete gprev->face;
+        // hprev->dfacet(fpool)->resetOnCuda(vpool, hpool, hprev);
     }
 }
 
@@ -556,65 +598,50 @@ void MyMesh::removeInsertedEdgesOnCuda() {
     double clockRate = prop.clockRate;
     struct timeval start = get_cur_time();
     std::vector<int> edgeIndex(inserted_edgecount);
-    for (int i = 0; i < faces.size(); i++) {
-        MCGAL::Facet* fit = faces[i];
-        for (int j = 0; j < fit->halfedge_size; j++) {
-            MCGAL::Halfedge* hit = fit->getHalfedgeByIndex(j);
-            if (hit->isAdded() && !hit->isRemoved()) {
-                edgeIndex[idx++] = hit->poolId;
-                hit->opposite()->setRemoved();
-                MCGAL::Facet* fit2 = hit->opposite()->facet();
-                hit->vertex()->eraseHalfedgeByPointer(hit);
-                hit->opposite()->vertex()->eraseHalfedgeByPointer(hit->opposite());
-            }
+    pushHehInit();
+    while (!gateQueue.empty()) {
+        MCGAL::Halfedge* h = gateQueue.front();
+        gateQueue.pop();
+
+        if (h->isVisited())
+            continue;
+
+        if (h->isRemoved()) {
+            continue;
+        }
+        // Mark the face as processed.
+        h->setVisited();
+        // Add the other halfedges to the queue
+        MCGAL::Halfedge* hIt = h;
+        do {
+            MCGAL::Halfedge* hOpp = hIt->opposite();
+            // TODO: wait
+            // assert(!hOpp->is_border());
+            if (!hOpp->isVisited())
+                gateQueue.push(hOpp);
+            hIt = hIt->next();
+        } while (hIt != h);
+        if (hIt->isRemoved()) {
+            hIt->setVisited();
+            continue;
+        }
+        if (hIt->isAdded()) {
+            // join_face(hIt);
+            edgeIndex[idx++] = hIt->poolId;
+            hIt->vertex()->eraseHalfedgeByPointer(h);
+            hIt->opposite()->vertex()->eraseHalfedgeByPointer(h->opposite());
+            hIt->opposite()->setRemoved();
+            hIt->setVisited();
         }
     }
-    // pushHehInit();
-    // while (!gateQueue.empty()) {
-    //     MCGAL::Halfedge* h = gateQueue.front();
-    //     gateQueue.pop();
-
-    //     if (h->isVisited())
-    //         continue;
-
-    //     if (h->isRemoved()) {
-    //         continue;
-    //     }
-    //     // Mark the face as processed.
-    //     h->setVisited();
-
-    //     // Add the other halfedges to the queue
-    //     MCGAL::Halfedge* hIt = h;
-    //     do {
-    //         MCGAL::Halfedge* hOpp = hIt->opposite();
-    //         // TODO: wait
-    //         // assert(!hOpp->is_border());
-    //         if (!hOpp->isVisited())
-    //             gateQueue.push(hOpp);
-    //         hIt = hIt->next();
-    //     } while (hIt != h);
-
-    //     if (hIt->isRemoved()) {
-    //         hIt->setVisited();
-    //         continue;
-    //     }
-    //     if (hIt->isAdded()) {
-    //         edgeIndex[idx++] = hIt->poolId;
-    //         hIt->opposite()->setRemoved();
-    //         MCGAL::Facet* fit2 = hIt->opposite()->facet();
-    //         hIt->vertex()->eraseHalfedgeByPointer(hIt);
-    //         hIt->opposite()->vertex()->eraseHalfedgeByPointer(hIt->opposite());
-    //         hIt->setVisited();
-    //     }
-    // }
-    logt("%d collect halfedge information", start, i_curDecimationId);
-
-    // cudaMalloc(&dedgeIndex, splitable_count * sizeof(int));
-    CHECK(cudaMemcpy(dedgeIndexes, edgeIndex.data(), sizeof(int) * inserted_edgecount, cudaMemcpyHostToDevice));
+    int* dedgeIndex;
+    cudaMalloc(&dedgeIndex, splitable_count * sizeof(int));
+    CHECK(cudaMemcpy(dedgeIndex, edgeIndex.data(), sizeof(int) * splitable_count, cudaMemcpyHostToDevice));
     int vsize = MCGAL::contextPool.vindex;
     int hsize = MCGAL::contextPool.hindex;
     int fsize = MCGAL::contextPool.findex;
     int num = inserted_edgecount;
+
     CHECK(cudaMemcpy(MCGAL::contextPool.dvpool, MCGAL::contextPool.vpool, vsize * sizeof(MCGAL::Vertex),
                      cudaMemcpyHostToDevice));
     CHECK(cudaMemcpy(MCGAL::contextPool.dhpool, MCGAL::contextPool.hpool, hsize * sizeof(MCGAL::Halfedge),
@@ -623,10 +650,9 @@ void MyMesh::removeInsertedEdgesOnCuda() {
                      cudaMemcpyHostToDevice));
     dim3 block(256, 1, 1);
     dim3 grid((num + block.x - 1) / block.x, 1, 1);
-    logt("%d cuda memcpy copy", start, i_curDecimationId);
 
     joinFacetOnCuda<<<grid, block>>>(MCGAL::contextPool.dvpool, MCGAL::contextPool.dhpool, MCGAL::contextPool.dfpool,
-                                     dedgeIndexes, num, clockRate);
+                                     dedgeIndex, num, clockRate);
     cudaDeviceSynchronize();
     logt("%d join facet kernel", start, i_curDecimationId);
     cudaError_t error = cudaGetLastError();
@@ -642,8 +668,6 @@ void MyMesh::removeInsertedEdgesOnCuda() {
                           cudaMemcpyDeviceToHost));
     CHECK(cudaMemcpyAsync(MCGAL::contextPool.fpool, MCGAL::contextPool.dfpool, fsize * sizeof(MCGAL::Facet),
                           cudaMemcpyDeviceToHost));
-    // cudaFree(dedgeIndexes);
-    // exit(0);
     return;
 }
 

@@ -143,37 +143,44 @@ void Facet::reset(Halfedge* h) {
     reset(edges);
 }
 
-__device__ void Facet::resetOnCuda(Vertex* vertices, Halfedge* halfedges, Halfedge* h) {
-    halfedge_size = 0;
-    vertex_size = 0;
-    Halfedge* st = h;
-    addHalfedgeOnCuda(st);
-    addVertexOnCuda(st->dvertex(vertices));
-    st->setFacetOnCuda(this);
-    st = st->dnext(halfedges);
-    addHalfedgeOnCuda(st);
-    addVertexOnCuda(st->dvertex(vertices));
-    st->setFacetOnCuda(this);
-    st = st->dnext(halfedges);
-    addHalfedgeOnCuda(st);
-    addVertexOnCuda(st->dvertex(vertices));
-    st->setFacetOnCuda(this);
-    st = st->dnext(halfedges);
-}
-
 // __device__ void Facet::resetOnCuda(Vertex* vertices, Halfedge* halfedges, Halfedge* h) {
 //     halfedge_size = 0;
 //     vertex_size = 0;
 //     Halfedge* st = h;
-//     Halfedge* ed = h;
-//     do {
-//         addHalfedgeOnCuda(st);
-//         // this->vertices.push_back(hs[i]->vertex);
-//         addVertexOnCuda(st->dvertex(vertices));
-//         st->setFacetOnCuda(this);
-//         st = st->dnext(halfedges);
-//     } while (st != ed);
+//     addHalfedgeOnCuda(st);
+//     addVertexOnCuda(st->dvertex(vertices));
+//     st->setFacetOnCuda(this);
+//     st = st->dnext(halfedges);
+//     addHalfedgeOnCuda(st);
+//     addVertexOnCuda(st->dvertex(vertices));
+//     st->setFacetOnCuda(this);
+//     st = st->dnext(halfedges);
+//     addHalfedgeOnCuda(st);
+//     addVertexOnCuda(st->dvertex(vertices));
+//     st->setFacetOnCuda(this);
+//     st = st->dnext(halfedges);
 // }
+
+__device__ void Facet::resetOnCuda(Vertex* vertices, Halfedge* halfedges, Halfedge* h) {
+    int tid = blockIdx.x * (blockDim.x * blockDim.y) + blockDim.x * threadIdx.y + threadIdx.x;
+    halfedge_size = 0;
+    vertex_size = 0;
+    Halfedge* st = h;
+    Halfedge* ed = h;
+    int idx = 0;
+    do {
+        idx++;
+        if (idx >= 120) {
+            printf("%d", idx);
+            break;
+        }
+        addHalfedgeOnCuda(st);
+        // this->vertices.push_back(hs[i]->vertex);
+        addVertexOnCuda(st->dvertex(vertices));
+        st->setFacetOnCuda(this);
+        st = st->dnext(halfedges);
+    } while (st != ed);
+}
 
 void Facet::reset(std::vector<Halfedge*>& hs) {
     halfedge_size = 0;

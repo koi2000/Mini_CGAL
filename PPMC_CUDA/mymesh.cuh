@@ -8,6 +8,7 @@
 #include <queue>
 #define BUFFER_SIZE 10 * 1024 * 1024
 #define SPLITABLE_SIZE 10 * 1024
+#define REMOVEDEDGE_SIZE 100 * 1024
 
 const int COMPRESSION_MODE_ID = 0;
 const int DECOMPRESSION_MODE_ID = 1;
@@ -32,6 +33,7 @@ class MyMesh : public MCGAL::Mesh {
     unsigned i_nbRemovedVertices;
 
     int splitable_count = 0;
+    int inserted_edgecount = 0;
 
     // The vertices of the edge that is the departure of the coding and decoding conquests.
     MCGAL::Vertex* vh_departureConquest[2];
@@ -63,6 +65,7 @@ class MyMesh : public MCGAL::Mesh {
     int* dvertexIndexes;
     int* dstHalfedgeIndexes;
     int* dstFacetIndexes;
+    int* dedgeIndexes;
 
   public:
     int id = 0;
@@ -114,6 +117,7 @@ class MyMesh : public MCGAL::Mesh {
 
     // cuda
     void insertRemovedVerticesOnCuda();
+    void removeInsertedEdgesOnCuda();
 
     // IOs
     void writeFloat(float f);

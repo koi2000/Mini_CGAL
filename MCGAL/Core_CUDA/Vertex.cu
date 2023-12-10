@@ -76,4 +76,12 @@ __device__ void Vertex::addHalfedgeOnCuda(int halfedge) {
     }
 }
 
+void Vertex::eraseHalfedgeByIndexOnCuda(int index) {
+    assert(index < halfedges_size);
+    for (int i = index; i < halfedges_size - 1; ++i) {
+        halfedges[i] = halfedges[i + 1];
+    }
+    --halfedges_size;
+}
+
 }  // namespace MCGAL

@@ -19,6 +19,7 @@ class Halfedge {
     BFSFlag bfsFlag = NotVisited;
 
   public:
+    int lock = 1;
     int poolId;
     int vertex_ = -1;
     int end_vertex_ = -1;

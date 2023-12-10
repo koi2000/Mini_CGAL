@@ -26,6 +26,7 @@ class Facet {
     int halfedges[HALFEDGE_IN_FACE];
     int halfedge_size = 0;
     int poolId;
+    int lock = 1;
 
   public:
     ~Facet();
@@ -61,7 +62,11 @@ class Facet {
     __device__ void addVertexOnCuda(Vertex* vertex);
     __device__ void addVertexOnCuda(int vertex);
 
-    __device__ void resetOnCuda(Vertex* vertices,Halfedge* halfedges, Halfedge* h);
+    __device__ void resetOnCuda(Vertex* vertices, Halfedge* halfedges, Halfedge* h);
+
+    __device__ void setRemovedOnCuda() {
+        removedFlag = Removed;
+    }
 
     // override
     bool equal(const Facet& rhs) const;

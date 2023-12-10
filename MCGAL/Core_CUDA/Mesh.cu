@@ -173,27 +173,9 @@ Halfedge* Mesh::join_face(Halfedge* h) {
     remove_tip(hprev);
     remove_tip(gprev);
     h->opposite()->setRemoved();
-
-    // h->vertex->halfedges.erase(h);
-    // for (auto it = h->vertex->halfedges.begin(); it != h->vertex->halfedges.end(); it++) {
-    //     if ((*it) == h) {
-    //         h->vertex->halfedges.erase(it);
-    //         break;
-    //     }
-    // }
     h->vertex()->eraseHalfedgeByPointer(h);
     h->opposite()->vertex()->eraseHalfedgeByPointer(h->opposite());
-    // for (auto it = h->opposite->vertex->halfedges.begin(); it != h->opposite->vertex->halfedges.end(); it++) {
-    //     if ((*it) == h) {
-    //         h->opposite->vertex->halfedges.erase(it);
-    //         break;
-    //     }
-    // }
-
-    // h->opposite->vertex->halfedges.erase(h->opposite);
-    // this->faces.erase(gprev->face);
     gprev->facet()->setRemoved();
-    // delete gprev->face;
     hprev->facet()->reset(hprev);
     return hprev;
 }

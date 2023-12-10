@@ -13,7 +13,7 @@ ContextPool::~ContextPool() {
     // freeOnCpu();
     // freeCuda();
 }
-#ifdef UNIFIED
+#ifndef UNIFIED
 void ContextPool::mallocOnUnifiedMemory() {
     vpool = new MCGAL::Vertex[VERTEX_POOL_SIZE];
     
