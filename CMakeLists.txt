@@ -48,11 +48,12 @@ link_directories(
     # /usr/lib/x86_64-linux-gnu/
 )
 
-set(PPMC_SOURCE_DIR "PPMC")
+
 set(MINICGAL_SOURCE_DIR "MCGAL/Core")
 set(MINICGAL_CUDA_SOURCE_DIR "MCGAL/Core_CUDA")
-set(MINICGAL_PPMC_SOURCE_DIR "MCGAL_PPMC")
-set(PPMC_CUDA_SOURCE_DIR "PPMC_CUDA")
+set(PPMC_SOURCE_DIR "PPMC/CGAL_PPMC")
+set(MINICGAL_PPMC_SOURCE_DIR "PPMC/MCGAL_PPMC")
+set(PPMC_CUDA_SOURCE_DIR "PPMC/CUDA_PPMC")
 
 include(${CGAL_USE_FILE})
 
@@ -101,21 +102,21 @@ file(GLOB_RECURSE MINICGAL_CUDA
 
 add_subdirectory(CUDA_new)
 
-# add_executable(Mini_CGAL main.cpp ${PPMC_FILES})
-# set_target_properties(Mini_CGAL PROPERTIES COMPILE_FLAGS -frounding-math)
-# target_link_libraries(Mini_CGAL ${CGAL_LIBRARIES} ${OPENGL_LIBRARY} ${GLUT_LIBRARY} m)
+add_executable(Mini_CGAL main.cpp ${PPMC_FILES})
+set_target_properties(Mini_CGAL PROPERTIES COMPILE_FLAGS -frounding-math)
+target_link_libraries(Mini_CGAL ${CGAL_LIBRARIES} ${OPENGL_LIBRARY} ${GLUT_LIBRARY} m)
 
 add_executable(PPMC_compress tools/PPMC_test.cpp ${PPMC_FILES})
 set_target_properties(PPMC_compress PROPERTIES COMPILE_FLAGS -frounding-math)
 target_link_libraries(PPMC_compress ${CGAL_LIBRARIES} ${OPENGL_LIBRARY} ${GLUT_LIBRARY} m)
 
-# add_executable(Mini_CGAL_test tools/MiniCGAL_test.cpp ${MINI_CGAL_FILES})
-# set_target_properties(Mini_CGAL_test PROPERTIES COMPILE_FLAGS -frounding-math)
-# target_link_libraries(Mini_CGAL_test ${CGAL_LIBRARIES} ${OPENGL_LIBRARY} ${GLUT_LIBRARY} m)
+add_executable(Mini_CGAL_test tools/MiniCGAL_test.cpp ${MINI_CGAL_FILES})
+set_target_properties(Mini_CGAL_test PROPERTIES COMPILE_FLAGS -frounding-math)
+target_link_libraries(Mini_CGAL_test ${CGAL_LIBRARIES} ${OPENGL_LIBRARY} ${GLUT_LIBRARY} m)
 
-# add_executable(MiniCGAL_Compress tools/MCompress_test.cpp ${MINICGAL_PPMC_FILES})
-# set_target_properties(MiniCGAL_Compress PROPERTIES COMPILE_FLAGS -frounding-math)
-# target_link_libraries(MiniCGAL_Compress ${CGAL_LIBRARIES} ${OPENGL_LIBRARY} ${GLUT_LIBRARY} m)
+add_executable(MiniCGAL_Compress tools/MCompress_test.cpp ${MINICGAL_PPMC_FILES})
+set_target_properties(MiniCGAL_Compress PROPERTIES COMPILE_FLAGS -frounding-math)
+target_link_libraries(MiniCGAL_Compress ${CGAL_LIBRARIES} ${OPENGL_LIBRARY} ${GLUT_LIBRARY} m)
 
 add_executable(MiniCGAL_Decompress tools/MDecompress_test.cpp ${MINICGAL_PPMC_FILES})
 set_target_properties(MiniCGAL_Decompress PROPERTIES COMPILE_FLAGS -frounding-math)

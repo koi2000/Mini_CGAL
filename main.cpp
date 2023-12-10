@@ -1,4 +1,4 @@
-#include "PPMC/mymesh.h"
+#include "PPMC/CGAL_PPMC/mymesh.h"
 #include <iostream>
 int main() {
     std::cout << "Hello, World!" << std::endl;

@@ -1,5 +1,5 @@
-#include "../MCGAL_PPMC/mymesh.h"
-#include "../MCGAL_PPMC/util.h"
+#include "../PPMC/MCGAL_PPMC/mymesh.h"
+#include "../PPMC/MCGAL_PPMC/util.h"
 
 using namespace std;
 MyMesh* read_mesh(char* path, bool complete_compression) {

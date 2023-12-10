@@ -1,5 +1,5 @@
-#include "../PPMC_CUDA/mymesh.cuh"
-#include "../PPMC_CUDA/util.h"
+#include "../PPMC/CUDA_PPMC/mymesh.cuh"
+#include "../PPMC/CUDA_PPMC/util.h"
 
 using namespace std;
 MyMesh* read_mesh(char* path, bool complete_compression) {
