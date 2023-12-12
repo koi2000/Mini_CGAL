@@ -133,4 +133,8 @@ IF(TEST)
 ENDIF(TEST)
 target_link_libraries(MiniCGAL_CudaDecompress ${CUDA_LIBRARIES})
 
-message(STATUS "list = ${CUDA_PPMC}" )
+add_executable(MiniCGAL_CudaCompress tools/MCudaCompress_test.cu  ${CUDA_PPMC} ${MINICGAL_CUDA})
+set_target_properties(MiniCGAL_CudaCompress PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON)
+target_link_libraries(MiniCGAL_CudaCompress ${CUDA_LIBRARIES})
+
+# message(STATUS "list = ${CUDA_PPMC}" )

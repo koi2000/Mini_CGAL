@@ -9,9 +9,17 @@
 			"type": "cuda-gdb",
 			"request": "launch",
 			"preLaunchTask": "CMake Build",
-			"debuggerPath":"/usr/local/cuda-12/bin/cuda-gdb",
+			"debuggerPath": "/usr/local/cuda-12/bin/cuda-gdb",
 			"program": "/home/koi/mastercode/Mini_CGAL/build/CUDA_new/3_sum_arrays/sum_arrays",
 			// "args": "/home/koi/mastercode/Mini_CGAL/static/buffer",
+		},
+		{
+			"name": "CUDA_MiniCGAL_CudaCompress",
+			"type": "cuda-gdb",
+			"request": "launch",
+			"preLaunchTask": "CMake Build",
+			"program": "/home/koi/mastercode/Mini_CGAL/build/MiniCGAL_CudaCompress",
+			"args": "/home/koi/mastercode/Mini_CGAL/static/fixed.OFF",
 		},
 		{
 			"name": "CUDA_MiniCGAL_CudaDecompress",
@@ -64,6 +72,29 @@
 				// "/home/koi/mastercode/Mini_CGAL/static/compressed_20.mesh.off"
 				// "/home/koi/mastercode/Mini_CGAL/static/bun_zipper.off"
 				"/home/koi/mastercode/Mini_CGAL/static/buffer"
+			],
+			"stopAtEntry": false,
+			"cwd": "${fileDirname}",
+			"environment": [],
+			"externalConsole": false,
+			"MIMode": "gdb",
+			"preLaunchTask": "CMake Build",
+			"setupCommands": [
+				{
+					"description": "Enable pretty-printing for gdb",
+					"text": "-enable-pretty-printing",
+					"ignoreFailures": true
+				}
+			]
+		},
+		{
+			"name": "MiniCGAL_CudaCompress",
+			"type": "cppdbg",
+			"request": "launch",
+			"program": "/home/koi/mastercode/Mini_CGAL/build/MiniCGAL_CudaCompress",
+			//"args": ["-f", "../../etc/observer.ini"],
+			"args": [
+				"/home/koi/mastercode/Mini_CGAL/static/fixed.OFF"
 			],
 			"stopAtEntry": false,
 			"cwd": "${fileDirname}",

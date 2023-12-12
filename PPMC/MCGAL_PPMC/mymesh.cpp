@@ -6,9 +6,6 @@
 // #include "configuration.h"
 #include <algorithm>
 
-int MCGAL::replacing_group::counter = 0;
-int MCGAL::replacing_group::alive = 0;
-
 MyMesh::MyMesh(string& str, bool completeop) : MCGAL::Mesh() {
     boost::replace_all(str, "|", "\n");
     assert(str.size() != 0 && "input string should not be empty!");
@@ -42,8 +39,8 @@ MyMesh::MyMesh(string& str, bool completeop) : MCGAL::Mesh() {
     // }
 
     // Set the vertices of the edge that is the departure of the coding and decoding conquests.
-    // vh_departureConquest[0] = (*halfedges.begin())->vertex;
-    // vh_departureConquest[1] = (*halfedges.begin())->opposite->vertex;
+    vh_departureConquest[0] = (*halfedges.begin())->vertex;
+    vh_departureConquest[1] = (*halfedges.begin())->opposite->vertex;
 
     if (completeop) {
         encode(0);
@@ -74,10 +71,6 @@ MyMesh::~MyMesh() {
     }
     // TODO:
     // clear_aabb_tree();
-    for (MCGAL::replacing_group* rg : map_group) {
-        delete rg;
-    }
-    map_group.clear();
 }
 
 MyMesh::MyMesh(char* path) : MCGAL::Mesh() {
@@ -192,7 +185,6 @@ std::istream& operator>>(std::istream& input, MyMesh& mesh) {
         float x, y, z;
         input >> x >> y >> z;
         MCGAL::Vertex* vt = new MCGAL::Vertex(x, y, z);
-        vt->setVid(i);
         mesh.vertices.push_back(vt);
         vertices.push_back(vt);
     }
@@ -207,9 +199,9 @@ std::istream& operator>>(std::istream& input, MyMesh& mesh) {
             vts.push_back(vertices[vertex_index]);
         }
         MCGAL::Facet* face = mesh.add_face(vts);
-        // for (MCGAL::Halfedge* halfedge : face->halfedges) {
-        //     mesh.halfedges.insert(halfedge);
-        // }
+        for (int k = 0; k < face->halfedges.size(); k++) {
+            mesh.halfedges.push_back(face->halfedges[k]);
+        }
     }
     vertices.clear();
     return input;

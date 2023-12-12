@@ -15,6 +15,7 @@ namespace MCGAL {
 class Mesh {
   public:
     std::vector<Vertex*> vertices;
+    std::vector<Halfedge*> halfedges;
     std::vector<Facet*> faces;
     int nb_vertices = 0;
     int nb_faces = 0;
@@ -43,6 +44,8 @@ class Mesh {
     Facet* add_face(Facet* face);
     Facet* remove_vertex(Vertex* v);
     Halfedge* merge_edges(Vertex* v);
+    void eraseFacetByPointer(Facet* facet);
+    void eraseVertexByPointer(Vertex* vertex);
 
     /*
      * statistics
@@ -81,31 +84,6 @@ class Mesh {
     inline void remove_tip(Halfedge* h) const;
 
     Halfedge* join_face(Halfedge* h);
-};
-
-class replacing_group {
-  public:
-    replacing_group() {
-        // cout<<this<<" is constructed"<<endl;
-        id = counter++;
-        alive++;
-    }
-    ~replacing_group() {
-        removed_vertices.clear();
-        alive--;
-    }
-
-    void print() {
-        // log("%5d (%2d refs %4d alive) - removed_vertices: %ld", id, ref, alive, removed_vertices.size());
-    }
-
-    std::unordered_set<MCGAL::Point, Point::Hash, Point::Equal> removed_vertices;
-    // unordered_set<Triangle> removed_triangles;
-    int id;
-    int ref = 0;
-
-    static int counter;
-    static int alive;
 };
 }  // namespace MCGAL
 

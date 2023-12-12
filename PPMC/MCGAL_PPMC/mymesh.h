@@ -52,9 +52,6 @@ class MyMesh : public MCGAL::Mesh {
     // Store the maximum Hausdorf Distance
     std::vector<MCGAL::Point> removedPoints;
 
-    //
-    std::unordered_set<MCGAL::replacing_group*> map_group;
-
     bool own_data = true;
 
   public:
@@ -80,7 +77,6 @@ class MyMesh : public MCGAL::Mesh {
     void InsertedEdgeCodingStep();
     void HausdorffCodingStep();
 
-    void merge(std::unordered_set<MCGAL::replacing_group*>& reps, MCGAL::replacing_group*);
     MCGAL::Halfedge* vertexCut(MCGAL::Halfedge* startH);
     void encodeInsertedEdges(unsigned i_operationId);
     void encodeRemovedVertices(unsigned i_operationId);

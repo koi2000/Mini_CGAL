@@ -28,19 +28,18 @@ void MyMesh::startNextCompresssionOp() {
 
     // 2. do one round of decimation
     // choose a halfedge that can be processed:
-    if (i_curDecimationId < 2) {
+    if (i_curDecimationId < 10) {
         // teng: we always start from the middle, DO NOT use the rand function
         // size_t i_heInitId = (float)rand() / RAND_MAX * size_of_halfedges();
-        // size_t i_heInitId = size_of_halfedges() / 2;
-        // MCGAL::Halfedge* hitInit;
-        // auto it = halfedges.begin();
-        // while (i_heInitId--) {
-        //     it++;
-        // }
-        // hitInit = *it;
-        // hitInit->setInQueue();
-        // gateQueue.push(hitInit);
-        MCGAL::Halfedge* hitInit = *vh_departureConquest[0]->halfedges.begin();
+        size_t i_heInitId = size_of_halfedges() / 2;
+        MCGAL::Halfedge* hitInit;
+        auto it = halfedges.begin();
+        while (i_heInitId--) {
+            it++;
+        }
+        hitInit = *it;
+        hitInit->setInQueue();
+        // MCGAL::Halfedge* hitInit = *vh_departureConquest[0]->halfedges.begin();
         gateQueue.push(hitInit);
     }
     // bfs all the halfedge
@@ -98,7 +97,7 @@ void MyMesh::startNextCompresssionOp() {
         writeBaseMesh();
         // 按顺序写入数据
         int i_deci = i_curDecimationId;
-        assert(i_deci > 0);
+        assert(i_deci >= 0);
         while (i_deci >= 0) {
             // encodeHausdorff(i_deci);
             encodeRemovedVertices(i_deci);
@@ -116,38 +115,13 @@ void MyMesh::startNextCompresssionOp() {
     }
 }
 
-void MyMesh::merge(std::unordered_set<MCGAL::replacing_group*>& reps, MCGAL::replacing_group* ret) {
-    assert(ret);
-    for (MCGAL::replacing_group* r : reps) {
-        ret->removed_vertices.insert(r->removed_vertices.begin(), r->removed_vertices.end());
-        // ret->removed_triangles.insert(r->removed_triangles.begin(), r->removed_triangles.end());
-        // ret->removed_facets.insert(r->removed_facets.begin(), r->removed_facets.end());
-        if (map_group.find(r) == map_group.end()) {
-            // log("%d is not found", r->id);
-        }
-        assert(map_group.find(r) != map_group.end());
-        if (r->ref == 0) {
-            map_group.erase(r);
-            delete r;
-            r = NULL;
-        }
-    }
-    // log("merged %ld reps with %ld removed vertices", reps.size(), ret->removed_vertices.size());
-    reps.clear();
-    map_group.emplace(ret);
-}
 
-// 顶点删除以及新建边
-// 存被删除的点的位置信息
 MCGAL::Halfedge* MyMesh::vertexCut(MCGAL::Halfedge* startH) {
     MCGAL::Vertex* v = startH->vertex;
 
     // make sure that the center vertex can be removed
     assert(!v->isConquered());
     assert(v->vertex_degree() > 2);
-
-    std::unordered_set<MCGAL::replacing_group*> rep_groups;
-    MCGAL::replacing_group* new_rg = new MCGAL::replacing_group();
 
     MCGAL::Halfedge* h = find_prev(startH)->opposite;
     MCGAL::Halfedge* end(h);
@@ -163,10 +137,6 @@ MCGAL::Halfedge* MyMesh::vertexCut(MCGAL::Halfedge* startH) {
          * will be inherited by the new facet.
          *
          */
-        if (f->rg != NULL) {
-            rep_groups.emplace(f->rg);
-            assert(f->rg->ref-- > 0);
-        }
 
         // if the face is not a triangle, cut the corner to make it a triangle
         if (f->facet_degree() > 3) {
@@ -180,18 +150,7 @@ MCGAL::Halfedge* MyMesh::vertexCut(MCGAL::Halfedge* startH) {
             hCorner->opposite->setAdded();
             // the corner one inherit the original facet
             // while the fRest is a newly generated facet
-            MCGAL::Facet* fCorner = hCorner->face;
-            MCGAL::Facet* fRest = hCorner->opposite->face;
-            assert(fRest->rg == f->rg);
-            if (f->rg) {
-                fCorner->rg = f->rg;
-                // assert(fCorner->rg != NULL && fRest->rg == NULL);
-                fCorner->rg->ref++;
-            }
-            // log("split %ld + %ld %ld", fCorner->facet_degree(), fRest->facet_degree(), f->facet_degree());
         }
-        f->rg = NULL;
-
         // mark the vertex as conquered
         h->end_vertex->setConquered();
         // h->end_vertex->setConquered();
@@ -200,18 +159,12 @@ MCGAL::Halfedge* MyMesh::vertexCut(MCGAL::Halfedge* startH) {
 
     // copy the position of the center vertex:
     MCGAL::Point vPos = startH->vertex->point();
-    new_rg->removed_vertices.emplace(vPos);
+    
 
     int bf = size_of_facets();
     // remove the center vertex
     MCGAL::Halfedge* hNewFace = erase_center_vertex(find_prev(startH));
     MCGAL::Facet* added_face = hNewFace->face;
-    assert(added_face->rg == NULL);
-    added_face->rg = new_rg;
-    new_rg->ref++;
-
-    // log("test: %d = %d - %ld merged %ld replacing groups", removed, bf, size_of_facets(), rep_groups.size());
-    merge(rep_groups, new_rg);
 
     // now mark the new face as having a removed vertex
     added_face->setSplittable();
@@ -230,7 +183,6 @@ MCGAL::Halfedge* MyMesh::vertexCut(MCGAL::Halfedge* startH) {
             hOpp->setInQueue();
         }
     } while ((h = h->next) != hNewFace);
-
     // Increment the number of removed vertices.
     i_nbRemovedVertices++;
     removedPoints.push_back(vPos);

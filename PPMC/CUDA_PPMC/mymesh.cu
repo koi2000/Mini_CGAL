@@ -39,11 +39,10 @@ MyMesh::MyMesh(string& str, bool completeop) : MCGAL::Mesh() {
     // }
 
     // Set the vertices of the edge that is the departure of the coding and decoding conquests.
-    // vh_departureConquest[0] = (*halfedges.begin())->vertex;
-    // vh_departureConquest[1] = (*halfedges.begin())->opposite->vertex;
-
+    vh_departureConquest[0] = (*halfedges.begin())->vertex();
+    vh_departureConquest[1] = (*halfedges.begin())->opposite()->vertex();
     if (completeop) {
-        // encode(0);
+        encode(0);
     }
 }
 
@@ -60,6 +59,11 @@ MyMesh::MyMesh(char* data, size_t dsize, bool owndata) : MCGAL::Mesh() {
         p_data = data;
     }
     readBaseMesh();
+    CHECK(cudaMalloc(&dfaceIndexes, SPLITABLE_SIZE * sizeof(int)));
+    CHECK(cudaMalloc(&dvertexIndexes, SPLITABLE_SIZE * sizeof(int)));
+    CHECK(cudaMalloc(&dstFacetIndexes, SPLITABLE_SIZE * sizeof(int)));
+    CHECK(cudaMalloc(&dstHalfedgeIndexes, SPLITABLE_SIZE * sizeof(int)));
+    CHECK(cudaMalloc(&dedgeIndexes, REMOVEDEDGE_SIZE * sizeof(int)));
     // Set the vertices of the edge that is the departure of the coding and decoding conquests.
     // vh_departureConquest[0] = (*halfedges.begin())->vertex;
     // vh_departureConquest[1] = (*halfedges.begin())->end_vertex;
@@ -96,10 +100,10 @@ void MyMesh::pushHehInit() {
     // MCGAL::Vertex* st = MCGAL::contextPool.getVertexByIndex(vh_departureConquest[1]->poolId);
     for (int i = 0; i < vh_departureConquest[1]->halfedges_size; i++) {
         MCGAL::Halfedge* hit = vh_departureConquest[1]->getHalfedgeByIndex(i);
-        if (hit->opposite()->vertex()==vh_departureConquest[0]) {
+        if (hit->opposite()->vertex() == vh_departureConquest[0]) {
             hehBegin = hit->opposite();
             break;
-        }   
+        }
     }
     assert(hehBegin->vertex() == vh_departureConquest[0]);
     // Push it to the queue.
@@ -123,8 +127,6 @@ bool MyMesh::willViolateManifold(const std::vector<MCGAL::Halfedge*>& polygon) c
     // Test also that two vertices of the patch will not be doubly connected
     // after the vertex cut opeation.
     for (unsigned i = 0; i < i_degree; ++i) {
-        MCGAL::Halfedge* Hvc = polygon[i]->vertex()->getHalfedgeByIndex(0);
-        MCGAL::Halfedge* Hvc_end = Hvc;
         for (int k = 0; k < polygon[i]->vertex()->halfedges_size; k++) {
             MCGAL::Halfedge* hvc = polygon[i]->vertex()->getHalfedgeByIndex(k);
             for (unsigned j = 0; j < i_degree; ++j) {
@@ -141,23 +143,6 @@ bool MyMesh::willViolateManifold(const std::vector<MCGAL::Halfedge*>& polygon) c
                 }
             }
         }
-
-        // for (MCGAL::Halfedge* hvc : polygon[i]->vertex->halfedges) {
-        //     MCGAL::Vertex* vh = Hvc->opposite->vertex;
-        //     for (unsigned j = 0; j < i_degree; ++j) {
-        //         if (vh == polygon[j]->vertex) {
-        //             unsigned i_prev = i == 0 ? i_degree - 1 : i - 1;
-        //             unsigned i_next = i == i_degree - 1 ? 0 : i + 1;
-
-        //             if ((j == i_prev &&
-        //                  polygon[i]->face->facet_degree() != 3)  // The vertex cut operation is forbidden.
-        //                 || (j == i_next &&
-        //                     polygon[i]->opposite->face->facet_degree() != 3))  // The vertex cut operation is
-        //                     forbidden.
-        //                 return true;
-        //         }
-        //     }
-        // }
     }
 
     return false;
@@ -196,14 +181,6 @@ bool MyMesh::isRemovable(MCGAL::Vertex* v) const {
     return false;
 }
 
-void MyMesh::compute_mbb() {
-    // mbb.reset();
-    // for (Vertex_const_iterator vit = vertices_begin(); vit != vertices_end(); ++vit) {
-    //     Point p = vit->point();
-    //     mbb.update(p.x(), p.y(), p.z());
-    // }
-}
-
 std::istream& operator>>(std::istream& input, MyMesh& mesh) {
     std::string format;
     input >> format >> mesh.nb_vertices >> mesh.nb_faces >> mesh.nb_edges;
@@ -215,7 +192,7 @@ std::istream& operator>>(std::istream& input, MyMesh& mesh) {
     for (std::size_t i = 0; i < mesh.nb_vertices; ++i) {
         float x, y, z;
         input >> x >> y >> z;
-        MCGAL::Vertex* vt = new MCGAL::Vertex(x, y, z);
+        MCGAL::Vertex* vt = MCGAL::contextPool.allocateVertexFromPool({x, y, z});
         mesh.vertices.push_back(vt);
         vertices.push_back(vt);
     }
@@ -230,9 +207,9 @@ std::istream& operator>>(std::istream& input, MyMesh& mesh) {
             vts.push_back(vertices[vertex_index]);
         }
         MCGAL::Facet* face = mesh.add_face(vts);
-        // for (MCGAL::Halfedge* halfedge : face->halfedges) {
-        //     mesh.halfedges.insert(halfedge);
-        // }
+        for (int k = 0; k < face->halfedge_size; k++) {
+            mesh.halfedges.push_back(face->getHalfedgeByIndex(k));
+        }
     }
     vertices.clear();
     return input;
@@ -261,91 +238,3 @@ void MyMesh::loadBuffer(char* path) {
     // memset(p_data, 0, BUFFER_SIZE);
     fin.read(p_data, len2);
 }
-
-// TODO: 待完善
-// size_t MyMesh::size_of_edges() {
-//     return size_of_halfedges() / 2;
-// }
-
-// size_t MyMesh::size_of_triangles() {
-//     size_t tri_num = 0;
-//     for (Facet_const_iterator f = facets_begin(); f != facets_end(); ++f) {
-//         tri_num += f->facet_degree() - 2;
-//     }
-//     return tri_num;
-// }
-
-// Polyhedron* MyMesh::to_triangulated_polyhedron() {
-//     Polyhedron* poly = to_polyhedron();
-//     CGAL::Polygon_mesh_processing::triangulate_faces(*poly);
-//     return poly;
-// }
-
-// Polyhedron* MyMesh::to_polyhedron() {
-//     stringstream ss;
-//     ss << *this;
-//     Polyhedron* poly = new Polyhedron();
-//     ss >> *poly;
-//     return poly;
-// }
-
-// TODO: 待完善
-// MyMesh* MyMesh::clone_mesh() {
-//     stringstream ss;
-//     ss << *this;
-//     string str = ss.str();
-//     MyMesh* nmesh = new MyMesh(str);
-//     return nmesh;
-// }
-
-// TODO: 待完善
-// string MyMesh::to_off() {
-//     std::stringstream os;
-//     os << *this;
-//     return os.str();
-// }
-
-// TODO: 待完善
-// void MyMesh::write_to_off(const char* path) {
-//     string ct = to_off();
-//     hispeed::write_file(ct, path);
-// }
-
-// TODO: 待完善
-// string MyMesh::to_wkt() {
-//     std::stringstream ss;
-//     ss << "POLYHEDRALSURFACE Z (";
-//     bool lfirst = true;
-//     for (Facet_const_iterator fit = facets_begin(); fit != facets_end(); ++fit) {
-//         if (lfirst) {
-//             lfirst = false;
-//         } else {
-//             ss << ",";
-//         }
-//         ss << "((";
-//         bool first = true;
-//         Halfedge_around_facet_const_circulator hit(fit->facet_begin()), end(hit);
-//         Point firstpoint;
-//         do {
-//             Point p = hit->vertex()->point();
-//             if (!first) {
-//                 ss << ",";
-//             } else {
-//                 firstpoint = p;
-//             }
-//             first = false;
-//             ss << p[0] << " " << p[1] << " " << p[2];
-//             // Write the current vertex id.
-//         } while (++hit != end);
-//         ss << "," << firstpoint[0] << " " << firstpoint[1] << " " << firstpoint[2];
-//         ss << "))";
-//     }
-//     ss << ")";
-//     return ss.str();
-// }
-
-// TODO: 待完善
-// void MyMesh::write_to_wkt(const char* path) {
-//     string ct = to_wkt();
-//     hispeed::write_file(ct, path);
-// }

@@ -197,10 +197,15 @@ class Vertex : public Point {
         id = nId;
     }
 
-    void reset() {
-        // for (auto it = halfedges.begin();it!=halfedges.end();){
-        //     if((*it)->vertex!=this)
-        // }
+    void eraseHalfedgeByPointer(Halfedge* halfedge) {
+        for (auto it = halfedges.begin(); it != halfedges.end();) {
+            if ((*it) == halfedge) {
+                halfedges.erase(it);
+                break;
+            } else {
+                it++;
+            }
+        }
     }
 };
 
@@ -226,6 +231,8 @@ class Halfedge {
     Halfedge* opposite = nullptr;
     Halfedge(Vertex* v1, Vertex* v2);
     ~Halfedge();
+    static int id;
+    int poolId;
 
     void reset(Vertex* v1, Vertex* v2);
 
@@ -233,7 +240,7 @@ class Halfedge {
         flag = NotYetInQueue;
         flag2 = Original;
         processedFlag = NotProcessed;
-        removedFlag = NotRemoved;
+        // removedFlag = NotRemoved;
         bfsFlag = NotVisited;
     }
 
@@ -337,9 +344,9 @@ class Halfedge {
     }
 };
 
-class replacing_group;
 class Mesh;
 class Facet {
+public:
     typedef MCGAL::Point Point;
     enum Flag { Unknown = 0, Splittable = 1, Unsplittable = 2 };
     enum ProcessedFlag { NotProcessed, Processed };
@@ -363,7 +370,7 @@ class Facet {
     ~Facet();
 
     // constructor
-    Facet() {
+    Facet(){
         // vertices.reserve(BUCKET_SIZE);
         // halfedges.reserve(BUCKET_SIZE);
     };
@@ -392,7 +399,7 @@ class Facet {
     inline void resetState() {
         flag = Unknown;
         processedFlag = NotProcessed;
-        removedFlag = NotRemoved;
+        // removedFlag = NotRemoved;
     }
 
     inline void resetProcessedFlag() {
@@ -400,7 +407,7 @@ class Facet {
     }
 
     inline bool isConquered() const {
-        return (flag == Splittable || flag == Unsplittable);
+        return (flag == Splittable || flag == Unsplittable||removedFlag==Removed);
     }
 
     inline bool isSplittable() const {
@@ -445,9 +452,6 @@ class Facet {
     inline bool isRemoved() {
         return removedFlag == Removed;
     }
-
-  public:
-    replacing_group* rg = NULL;
 };
 
 class Mesh {
@@ -459,6 +463,7 @@ class Mesh {
     // std::unordered_set<Halfedge*> halfedges;
     // std::unordered_set<Facet*> faces;
     std::vector<Facet*> faces;
+    std::vector<Halfedge*> halfedges;
     int nb_vertices = 0;
     int nb_faces = 0;
     int nb_edges = 0;
@@ -534,6 +539,9 @@ class Mesh {
     // element operating
     Facet* add_face(std::vector<Vertex*>& vs);
     Facet* add_face(Facet* face);
+    void eraseFacetByPointer(Facet* facet);
+    void eraseVertexByPointer(Vertex* vertex);
+
     Facet* remove_vertex(Vertex* v);
     Halfedge* merge_edges(Vertex* v);
 
@@ -550,13 +558,14 @@ class Mesh {
     }
 
     size_t size_of_halfedges() {
-        int count = 0;
-        for (Facet* fit : faces) {
-            for (Halfedge* hit : fit->halfedges) {
-                count++;
-            }
-        }
-        return count;
+        // int count = 0;
+        // for (Facet* fit : faces) {
+        //     for (Halfedge* hit : fit->halfedges) {
+        //         count++;
+        //     }
+        // }
+        // return count;
+        return halfedges.size();
     }
 
     Halfedge* split_facet(Halfedge* h, Halfedge* g);
@@ -576,31 +585,6 @@ class Mesh {
     inline void remove_tip(Halfedge* h) const;
 
     Halfedge* join_face(Halfedge* h);
-};
-
-class replacing_group {
-  public:
-    replacing_group() {
-        // cout<<this<<" is constructed"<<endl;
-        id = counter++;
-        alive++;
-    }
-    ~replacing_group() {
-        removed_vertices.clear();
-        alive--;
-    }
-
-    void print() {
-        // log("%5d (%2d refs %4d alive) - removed_vertices: %ld", id, ref, alive, removed_vertices.size());
-    }
-
-    std::unordered_set<MCGAL::Point, Point::Hash, Point::Equal> removed_vertices;
-    // unordered_set<Triangle> removed_triangles;
-    int id;
-    int ref = 0;
-
-    static int counter;
-    static int alive;
 };
 
 }  // namespace MCGAL

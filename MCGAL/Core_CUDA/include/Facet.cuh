@@ -9,6 +9,7 @@ namespace MCGAL {
 class replacing_group;
 class Mesh;
 class Facet {
+  public:
     typedef MCGAL::Point Point;
     enum Flag { Unknown = 0, Splittable = 1, Unsplittable = 2 };
     enum ProcessedFlag { NotProcessed, Processed };
@@ -88,7 +89,7 @@ class Facet {
     }
 
     inline bool isConquered() const {
-        return (flag == Splittable || flag == Unsplittable);
+        return (flag == Splittable || flag == Unsplittable || removedFlag == Removed);
     }
 
     inline bool isSplittable() const {

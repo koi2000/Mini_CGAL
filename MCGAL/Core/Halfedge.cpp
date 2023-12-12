@@ -1,8 +1,11 @@
 #include "core.h"
 
 namespace MCGAL {
+
+int Halfedge::id = 0;
 // create a new half edge, setup the opposite of this half edge if needed
 Halfedge::Halfedge(Vertex* v1, Vertex* v2) {
+    poolId = id++;
     vertex = v1;
     end_vertex = v2;
     vertex->halfedges.push_back(this);

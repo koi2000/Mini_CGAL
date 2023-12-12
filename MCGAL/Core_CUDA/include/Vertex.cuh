@@ -1,12 +1,12 @@
 #ifndef VERTEX_H
 #define VERTEX_H
 
-#include <assert.h>
-#include <stdio.h>
-#include <cuda_runtime.h>
-#include <unordered_set>
-#include <stdexcept>
 #include "Configuration.cuh"
+#include <assert.h>
+#include <cuda_runtime.h>
+#include <stdexcept>
+#include <stdio.h>
+#include <unordered_set>
 namespace MCGAL {
 
 class Point {
@@ -108,6 +108,9 @@ class Vertex : public Point {
     Halfedge* getHalfedgeByIndex(int index);
     void eraseHalfedgeByIndex(int index);
     void eraseHalfedgeByPointer(Halfedge* halfedge);
+    inline void clearHalfedge() {
+        halfedges_size = 0;
+    }
 
     // cuda
     __device__ void addHalfedgeOnCuda(Halfedge* halfedge);
@@ -123,7 +126,6 @@ class Vertex : public Point {
     void print() {
         printf("%f %f %f\n", v[0], v[1], v[2]);
     }
-
 
     float x() const {
         return v[0];
