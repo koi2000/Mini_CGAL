@@ -323,7 +323,7 @@ void MyMesh::insertRemovedVerticesOnCuda() {
             }
         }
     }
-    // logt("%d collect face information", start, i_curDecimationId);
+    logt("%d collect face information", start, i_curDecimationId);
     // add it to mesh
     int num = faceIndexes.size();
     dim3 block(256, 1, 1);
@@ -344,7 +344,7 @@ void MyMesh::insertRemovedVerticesOnCuda() {
     CHECK(cudaMemcpy(MCGAL::contextPool.dfpool, MCGAL::contextPool.fpool, fsize * sizeof(MCGAL::Facet),
                      cudaMemcpyHostToDevice));
 
-    // logt("%d cuda memory copy", start, i_curDecimationId);
+    logt("%d cuda memory copy", start, i_curDecimationId);
 
 #    ifdef TEST
     if (i_curDecimationId == 2) {
@@ -363,7 +363,7 @@ void MyMesh::insertRemovedVerticesOnCuda() {
                                               MCGAL::contextPool.dfpool, dvertexIndexes, dfaceIndexes,
                                               dstHalfedgeIndexes, dstFacetIndexes, num, clockRate, i_curDecimationId);
     cudaDeviceSynchronize();
-    // double t = logt("%d kernel function", start, i_curDecimationId);
+    double t = logt("%d kernel function", start, i_curDecimationId);
 #    ifdef TEST
     if (i_curDecimationId == 2) {
 #        if defined(GRID_SIZE) && defined(BLOCK_SIZE)
@@ -384,7 +384,7 @@ void MyMesh::insertRemovedVerticesOnCuda() {
                      cudaMemcpyDeviceToHost));
     CHECK(cudaMemcpy(MCGAL::contextPool.fpool, MCGAL::contextPool.dfpool, fsize * sizeof(MCGAL::Facet),
                      cudaMemcpyDeviceToHost));
-    // logt("%d cuda memory copy back", start, i_curDecimationId);
+    logt("%d cuda memory copy back", start, i_curDecimationId);
     error = cudaGetLastError();
     if (error != cudaSuccess) {
         printf("ERROR: %s:%d,", __FILE__, __LINE__);

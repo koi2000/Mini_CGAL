@@ -7,6 +7,6 @@ case $round in
         ./MiniCGAL_CudaDecompress /home/koi/mastercode/Mini_CGAL/static/buffer
         ;;
     2) 
-        ./MiniCGAL_CudaDecompress /home/koi/mastercode/Mini_CGAL/static/buffer2
+        ./MiniCGAL_CudaCompress /home/koi/mastercode/Mini_CGAL/static/fixed.OFF
         ;;
 esac

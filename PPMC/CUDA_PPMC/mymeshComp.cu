@@ -52,7 +52,7 @@ void MyMesh::startNextCompresssionOp() {
     // 2. do one round of decimation
     // choose a halfedge that can be processed:
     if (i_curDecimationId < 10) {
-        size_t i_heInitId = size_of_halfedges() / 7;
+        size_t i_heInitId = size_of_halfedges() / 2;
         MCGAL::Halfedge* hitInit = halfedges[i_heInitId];
         hitInit->setInQueue();
         // MCGAL::Halfedge* hitInit = *vh_departureConquest[0]->halfedges.begin();
@@ -119,6 +119,7 @@ void MyMesh::startNextCompresssionOp() {
         }
     }
     log("%d number is %d", i_curDecimationId, count);
+    log("%d removed number is %d", i_curDecimationId, i_nbRemovedVertices);
     // 3. do the encoding job
     if (i_nbRemovedVertices == 0) {
         b_jobCompleted = true;
