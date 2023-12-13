@@ -1,4 +1,4 @@
-#include "mymesh.h"
+#include "himesh.h"
 #include <fstream>
 #include <unistd.h>
 
@@ -61,19 +61,19 @@ float MyMesh::readFloat() {
 }
 
 // Write a floating point number in the data buffer.
-void MyMesh::writePoint(MCGAL::Point& p) {
+void MyMesh::writePoint(Point& p) {
     for (unsigned i = 0; i < 3; ++i) {
         writeFloat(p[i]);
     }
 }
 
 // Write a floating point number in the data buffer.
-MCGAL::Point MyMesh::readPoint() {
+Point MyMesh::readPoint() {
     float coord[3];
     for (unsigned i = 0; i < 3; ++i) {
         coord[i] = readFloat();
     }
-    MCGAL::Point pt(coord[0], coord[1], coord[2]);
+    Point pt(coord[0], coord[1], coord[2]);
     return pt;
 }
 

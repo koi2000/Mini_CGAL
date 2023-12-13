@@ -2,7 +2,7 @@
 // Created by DELL on 2023/11/9.
 //
 #include "math.h"
-#include "mymesh.cuh"
+#include "himesh.cuh"
 #include "util.h"
 
 void MyMesh::encode(int lod) {

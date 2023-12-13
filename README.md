@@ -16,9 +16,20 @@ Mesh
 
 ## TODO:
 
-fix encode
- 
+multi object
+
+bfs on cuda
+
 joinFacetOnCuda
+
+fix encode
+
+先用中文写一段思路，后面再删除，我现在需要解决的问题，一是进一步提高decode的性能，把能在cuda上进行运算的尽量全搞到cuda上去，
+二是对其进行模块化的封装，想办法让他能够同时处理一个batch的数据，cuda处理每个面，但不清楚具体某个面属于哪个mesh
+
+针对第一个点，
+
+
 
 ## Performance analysis
 the performance of MCGAL is poor. 

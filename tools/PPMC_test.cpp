@@ -1,4 +1,4 @@
-#include "../PPMC/CGAL_PPMC/mymesh.h"
+#include "../PPMC/CGAL_PPMC/himesh.h"
 
 MyMesh* read_mesh(char* path, bool complete_compression) {
     string mesh_str = hispeed::read_file(path);

@@ -1,4 +1,4 @@
-#include "mymesh.h"
+#include "himesh.h"
 #include "util.h"
 void MyMesh::decode(int lod) {
     assert(lod >= 0 && lod <= 100);

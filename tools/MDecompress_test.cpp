@@ -1,4 +1,4 @@
-#include "../PPMC/MCGAL_PPMC/mymesh.h"
+#include "../PPMC/MCGAL_PPMC/himesh.h"
 #include "../PPMC/MCGAL_PPMC/util.h"
 
 using namespace std;

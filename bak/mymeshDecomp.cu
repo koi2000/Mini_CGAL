@@ -1,5 +1,5 @@
 // #include "../MCGAL/Core_CUDA/global.cuh"
-#include "mymesh.cuh"
+#include "himesh.cuh"
 #include "util.h"
 #include <nvToolsExt.h>
 

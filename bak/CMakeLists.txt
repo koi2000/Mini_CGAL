@@ -118,10 +118,10 @@ target_link_libraries(MiniCGAL_Decompress ${CGAL_LIBRARIES} ${OPENGL_LIBRARY} ${
 
 # add_executable(MiniCGAL_CudaDecompress tools/MCudaDecompress_test.cu ${MINICGAL_CUDA_PPMC_FILES})
 add_executable(MiniCGAL_CudaDecompress tools/MCudaDecompress_test.cu  ${CUDA_PPMC} ${MINICGAL_CUDA}                                     
-                                        # /home/koi/mastercode/Mini_CGAL/PPMC_CUDA/mymesh.cuh 
-                                        # /home/koi/mastercode/Mini_CGAL/PPMC_CUDA/mymesh.cu 
-                                        # /home/koi/mastercode/Mini_CGAL/PPMC_CUDA/mymeshDecomp.cu 
-                                        # /home/koi/mastercode/Mini_CGAL/PPMC_CUDA/mymeshIO.cu
+                                        # /home/koi/mastercode/Mini_CGAL/PPMC_CUDA/himesh.cuh 
+                                        # /home/koi/mastercode/Mini_CGAL/PPMC_CUDA/himesh.cu 
+                                        # /home/koi/mastercode/Mini_CGAL/PPMC_CUDA/himeshDecomp.cu 
+                                        # /home/koi/mastercode/Mini_CGAL/PPMC_CUDA/himeshIO.cu
 
                                         # /home/koi/mastercode/Mini_CGAL/MCGAL/Core_CUDA/include/Mesh.cuh
                                         # /home/koi/mastercode/Mini_CGAL/MCGAL/Core_CUDA/Mesh.cu 
@@ -148,10 +148,10 @@ target_link_libraries(MiniCGAL_CudaDecompress ${CUDA_LIBRARIES})
 message(STATUS "mylist = ${MINICGAL_CUDA_PPMC_FILES}" )
 
 # add_executable(CudaTest tools/test.cu   
-#                                     /home/koi/mastercode/Mini_CGAL/PPMC_CUDA/mymesh.cuh 
-#                                     /home/koi/mastercode/Mini_CGAL/PPMC_CUDA/mymesh.cu 
-#                                     /home/koi/mastercode/Mini_CGAL/PPMC_CUDA/mymeshDecomp.cu 
-#                                     /home/koi/mastercode/Mini_CGAL/PPMC_CUDA/mymeshIO.cu
+#                                     /home/koi/mastercode/Mini_CGAL/PPMC_CUDA/himesh.cuh 
+#                                     /home/koi/mastercode/Mini_CGAL/PPMC_CUDA/himesh.cu 
+#                                     /home/koi/mastercode/Mini_CGAL/PPMC_CUDA/himeshDecomp.cu 
+#                                     /home/koi/mastercode/Mini_CGAL/PPMC_CUDA/himeshIO.cu
                                     
 #                                     /home/koi/mastercode/Mini_CGAL/MCGAL/Core_CUDA/include/Mesh.cuh
 #                                     /home/koi/mastercode/Mini_CGAL/MCGAL/Core_CUDA/Mesh.cu 

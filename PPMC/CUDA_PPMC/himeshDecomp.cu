@@ -1,5 +1,5 @@
 // #include "../MCGAL/Core_CUDA/global.cuh"
-#include "mymesh.cuh"
+#include "himesh.cuh"
 #include "util.h"
 #include <map>
 #include <nvToolsExt.h>
@@ -395,7 +395,7 @@ void MyMesh::insertRemovedVerticesOnCuda() {
 #else
 
 void MyMesh::insertRemovedVerticesOnCuda() {
-    cudaSetDevice(0);  // 选择设备号为0的GPU
+    cudaSetDevice(0); 
     struct timeval start = get_cur_time();
     std::vector<int> faceIndexes(splitable_count);
     std::vector<int> vertexIndexes(splitable_count);

@@ -1,4 +1,4 @@
-// #include "../PPMC_CUDA/mymesh.cuh"
+// #include "../PPMC_CUDA/himesh.cuh"
 // #include "../PPMC_CUDA/util.h"
 #include "stdio.h"
 #include <cuda_runtime.h>
