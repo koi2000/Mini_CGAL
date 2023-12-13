@@ -89,7 +89,8 @@ class Facet {
     }
 
     inline bool isConquered() const {
-        return (flag == Splittable || flag == Unsplittable || removedFlag == Removed);
+        // return (flag == Splittable || flag == Unsplittable || removedFlag == Removed);
+        return (flag == Splittable || flag == Unsplittable);
     }
 
     inline bool isSplittable() const {

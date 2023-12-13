@@ -96,7 +96,8 @@ Halfedge* Mesh::erase_center_vertex(Halfedge* h) {
         Halfedge* gprev = find_prev(g);
         remove_tip(gprev);
         g->face->setRemoved();
-        g->face->setRemoved();
+        g->setRemoved();
+        g->opposite->setRemoved();
         eraseFacetByPointer(g->face);
         Halfedge* gnext = g->next->opposite;
         g->vertex->eraseHalfedgeByPointer(g);
@@ -106,6 +107,8 @@ Halfedge* Mesh::erase_center_vertex(Halfedge* h) {
     eraseFacetByPointer(h->face);
     remove_tip(hret);
     h->vertex->eraseHalfedgeByPointer(h);
+    h->setRemoved();
+    h->opposite->setRemoved();
     h->end_vertex->halfedges.clear();
     eraseVertexByPointer(h->end_vertex);
     Facet* face = allocateFaceFromPool(hret);

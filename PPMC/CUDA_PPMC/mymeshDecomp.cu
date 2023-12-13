@@ -372,6 +372,12 @@ void MyMesh::insertRemovedVerticesOnCuda() {
         exit(0);
     }
 #    endif
+    cudaError_t error = cudaGetLastError();
+    if (error != cudaSuccess) {
+        printf("ERROR: %s:%d,", __FILE__, __LINE__);
+        printf("code:%d,reason:%s\n", error, cudaGetErrorString(error));
+        exit(1);
+    }
     CHECK(cudaMemcpy(MCGAL::contextPool.vpool, MCGAL::contextPool.dvpool, vsize * sizeof(MCGAL::Vertex),
                      cudaMemcpyDeviceToHost));
     CHECK(cudaMemcpy(MCGAL::contextPool.hpool, MCGAL::contextPool.dhpool, hsize * sizeof(MCGAL::Halfedge),
@@ -379,7 +385,7 @@ void MyMesh::insertRemovedVerticesOnCuda() {
     CHECK(cudaMemcpy(MCGAL::contextPool.fpool, MCGAL::contextPool.dfpool, fsize * sizeof(MCGAL::Facet),
                      cudaMemcpyDeviceToHost));
     // logt("%d cuda memory copy back", start, i_curDecimationId);
-    cudaError_t error = cudaGetLastError();
+    error = cudaGetLastError();
     if (error != cudaSuccess) {
         printf("ERROR: %s:%d,", __FILE__, __LINE__);
         printf("code:%d,reason:%s\n", error, cudaGetErrorString(error));

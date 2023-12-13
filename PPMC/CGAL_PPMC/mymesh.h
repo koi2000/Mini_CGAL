@@ -476,6 +476,7 @@ class MyMesh : public CGAL::Polyhedron_3<MyKernel, MyItems> {
     bool isPlanar(const std::vector<Vertex_const_handle>& polygon, float epsilon) const;
     bool willViolateManifold(const std::vector<Halfedge_const_handle>& polygon) const;
     float removalError(Vertex_const_handle v, const std::vector<Vertex_const_handle>& polygon) const;
+    Vector computeNormal(const std::vector<Vertex_const_handle>& polygon) const;
 
     // Decompression
     void startNextDecompresssionOp();

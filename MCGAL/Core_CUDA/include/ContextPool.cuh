@@ -43,6 +43,14 @@ class ContextPool {
     ContextPool(const ContextPool&) = delete;
     ContextPool& operator=(const ContextPool&) = delete;
 
+    void reset() {
+        vindex = 0;
+        hindex = 0;
+        findex = 0;
+        freeOnUnifiedMemory();
+        mallocOnUnifiedMemory();
+    }
+
     int getFindex() {
         return findex;
     }

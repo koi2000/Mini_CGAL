@@ -3,6 +3,7 @@
 //
 #include "math.h"
 #include "mymesh.cuh"
+#include "util.h"
 
 void MyMesh::encode(int lod) {
     b_jobCompleted = false;
@@ -12,13 +13,35 @@ void MyMesh::encode(int lod) {
 }
 
 void MyMesh::startNextCompresssionOp() {
+    for (auto it = halfedges.begin(); it != halfedges.end();) {
+        if ((*it)->isRemoved()) {
+            it = halfedges.erase(it);
+        } else {
+            it++;
+        }
+    }
     // 1. reset the stats
-    for (MCGAL::Vertex* vit : vertices)
+    for (MCGAL::Vertex* vit : vertices) {
         vit->resetState();
-    for (MCGAL::Facet* fit : faces) {
-        fit->resetState();
-        for (int i = 0; i < fit->halfedge_size; i++) {
-            fit->getHalfedgeByIndex(i)->resetState();
+    }
+
+    // for (MCGAL::Facet* fit : faces) {
+    //     fit->resetState();
+    //     for (int i = 0; i < fit->halfedge_size; i++) {
+    //         fit->getHalfedgeByIndex(i)->resetState();
+    //     }
+    // }
+    int cnt = 0;
+    for (auto fit = faces.begin(); fit != faces.end();) {
+        if ((*fit)->isRemoved()) {
+            fit = faces.erase(fit);
+        } else {
+            (*fit)->resetState();
+            for (int i = 0; i < (*fit)->halfedge_size; i++) {
+                (*fit)->getHalfedgeByIndex(i)->resetState();
+                cnt++;
+            }
+            fit++;
         }
     }
     i_nbRemovedVertices = 0;  // Reset the number of removed vertices.
@@ -29,36 +52,44 @@ void MyMesh::startNextCompresssionOp() {
     // 2. do one round of decimation
     // choose a halfedge that can be processed:
     if (i_curDecimationId < 10) {
-        size_t i_heInitId = size_of_halfedges() / 2;
-        MCGAL::Halfedge* hitInit;
-        auto it = halfedges.begin();
-        while (i_heInitId--) {
-            it++;
-        }
-        hitInit = *it;
+        size_t i_heInitId = size_of_halfedges() / 7;
+        MCGAL::Halfedge* hitInit = halfedges[i_heInitId];
         hitInit->setInQueue();
         // MCGAL::Halfedge* hitInit = *vh_departureConquest[0]->halfedges.begin();
         gateQueue.push(hitInit);
     }
-    // bfs all the halfedge
+    // bfs all the facet
+    /**
+     * 本质是对所有的facet进行bfs，对于一个面，如果被处理过就不能再被处理了，如果没有被处理
+     * 就根据情况来，如果点可以被删除，就删除，并标记为splittable，如果不能被删，就不删，标记为unsplittable
+     * 这里是通过bfs halfedge来达到bfs facet的目的的
+     * 按道理来说，一个面被标记为splittable，说明这个面中有多个面被删除，多个边被删除，这些被删的不能再进入bfs
+     * 被标记为conqured的点也不能被删除，
+     * 大概率问题出在判断是否为 流型结构 上
+     */
+    int count = 0;
     while (!gateQueue.empty()) {
         MCGAL::Halfedge* h = gateQueue.front();
         gateQueue.pop();
         // TODO: wait
         // assert(!h->is_border());
         MCGAL::Facet* f = h->facet();
-
+        // if (h->isRemoved()) {
+        //     h->removeFromQueue();
+        //     continue;
+        // }
         // if the face is already processed, pick the next halfedge:
         if (f->isConquered()) {
             h->removeFromQueue();
             continue;
         }
+        count++;
         // the face is not processed. Count the number of non conquered vertices that can be split
         bool hasRemovable = false;
         MCGAL::Halfedge* unconqueredVertexHE;
 
         for (MCGAL::Halfedge* hh = h->next(); hh != h; hh = hh->next()) {
-            if (isRemovable(hh->vertex())) {
+            if (isRemovable(hh->end_vertex())) {
                 hasRemovable = true;
                 unconqueredVertexHE = hh;
                 break;
@@ -87,6 +118,7 @@ void MyMesh::startNextCompresssionOp() {
             vertexCut(unconqueredVertexHE);
         }
     }
+    log("%d number is %d", i_curDecimationId, count);
     // 3. do the encoding job
     if (i_nbRemovedVertices == 0) {
         b_jobCompleted = true;
@@ -94,7 +126,7 @@ void MyMesh::startNextCompresssionOp() {
         // Write the compressed data to the buffer.
         writeBaseMesh();
         int i_deci = i_curDecimationId;
-        assert(i_deci > 0);
+        assert(i_deci >= 0);
         while (i_deci >= 0) {
             // encodeHausdorff(i_deci);
             encodeRemovedVertices(i_deci);
@@ -113,20 +145,20 @@ void MyMesh::startNextCompresssionOp() {
 }
 
 MCGAL::Halfedge* MyMesh::vertexCut(MCGAL::Halfedge* startH) {
-    MCGAL::Vertex* v = startH->vertex();
+    MCGAL::Vertex* v = startH->end_vertex();
 
     // make sure that the center vertex can be removed
     assert(!v->isConquered());
     assert(v->vertex_degree() > 2);
 
-    MCGAL::Halfedge* h = find_prev(startH)->opposite();
+    MCGAL::Halfedge* h = startH->opposite();
     MCGAL::Halfedge* end(h);
     int removed = 0;
     do {
         // TODO: wait
         // assert(!h->is_border());
         MCGAL::Facet* f = h->facet();
-        assert(!f->isConquered());  // we cannot cut again an already cut face, or a NULL patch
+        assert(!f->isConquered() && !f->isRemoved());  // we cannot cut again an already cut face, or a NULL patch
         /*
          * the old facets around the vertex will be removed in the vertex cut operation
          * and being replaced with a merged one. but the replacing group information
@@ -154,11 +186,9 @@ MCGAL::Halfedge* MyMesh::vertexCut(MCGAL::Halfedge* startH) {
     } while ((h = h->opposite()->next()) != end);
 
     // copy the position of the center vertex:
-    MCGAL::Point vPos = startH->vertex()->point();
-
-    int bf = size_of_facets();
+    MCGAL::Point vPos = startH->end_vertex()->point();
     // remove the center vertex
-    MCGAL::Halfedge* hNewFace = erase_center_vertex(find_prev(startH));
+    MCGAL::Halfedge* hNewFace = erase_center_vertex(startH);
     MCGAL::Facet* added_face = hNewFace->facet();
 
     // now mark the new face as having a removed vertex
@@ -297,9 +327,15 @@ void MyMesh::writeBaseMesh() {
     for (MCGAL::Facet* fit : faces) {
         unsigned i_faceDegree = fit->facet_degree();
         writeInt(i_faceDegree);
-        for (int i = 0; i < fit->halfedge_size; i++) {
-            writeInt(fit->getHalfedgeByIndex(i)->vertex()->getId());
-        }
+        MCGAL::Halfedge* st = fit->getHalfedgeByIndex(0);
+        MCGAL::Halfedge* ed = st;
+        do {
+            writeInt(st->vertex()->getId());
+            st = st->next();
+        } while (st != ed);
+        // for (int i = 0; i < fit->halfedge_size; i++) {
+        //     writeInt(fit->getHalfedgeByIndex(i)->vertex()->getId());
+        // }
     }
 }
 

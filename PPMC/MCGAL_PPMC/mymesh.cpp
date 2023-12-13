@@ -144,22 +144,17 @@ bool MyMesh::isRemovable(MCGAL::Vertex* v) const {
     if (v != vh_departureConquest[0] && v != vh_departureConquest[1] && !v->isConquered() && v->vertex_degree() > 2 &&
         v->vertex_degree() <= 8) {
         // test convexity
-        std::vector<MCGAL::Vertex*> vh_oneRing;
+        // std::vector<MCGAL::Vertex*> vh_oneRing;
         std::vector<MCGAL::Halfedge*> heh_oneRing;
 
-        vh_oneRing.reserve(v->vertex_degree());
+        // vh_oneRing.reserve(v->vertex_degree());
         heh_oneRing.reserve(v->vertex_degree());
-        // vh_oneRing.push_back(v);
-        // MCGAL::Halfedge* hit(*v->halfedges.begin());
-        // MCGAL::Halfedge* end(hit);
         for (MCGAL::Halfedge* hit : v->halfedges) {
-            vh_oneRing.push_back(hit->opposite->vertex);
+            // vh_oneRing.push_back(hit->opposite->vertex);
             heh_oneRing.push_back(hit->opposite);
         }  // while (hit != end);
         //
         bool removable = !willViolateManifold(heh_oneRing);
-        // && isProtruding(heh_oneRing);
-        //&& isConvex(vh_oneRing)
         return removable;
     }
     return false;

@@ -10,7 +10,6 @@ MyMesh::MyMesh(string& str, bool completeop) : MCGAL::Mesh() {
     boost::replace_all(str, "|", "\n");
     assert(str.size() != 0 && "input string should not be empty!");
     struct timeval start = get_cur_time();
-    auto very_start = start;
     srand(PPMC_RANDOM_CONSTANT);
     i_mode = COMPRESSION_MODE_ID;
     const size_t d_capacity = 3 * str.size();
@@ -58,6 +57,7 @@ MyMesh::MyMesh(char* data, size_t dsize, bool owndata) : MCGAL::Mesh() {
     } else {
         p_data = data;
     }
+    MCGAL::contextPool.reset();
     readBaseMesh();
     CHECK(cudaMalloc(&dfaceIndexes, SPLITABLE_SIZE * sizeof(int)));
     CHECK(cudaMalloc(&dvertexIndexes, SPLITABLE_SIZE * sizeof(int)));
@@ -160,25 +160,35 @@ bool MyMesh::isRemovable(MCGAL::Vertex* v) const {
 
         vh_oneRing.reserve(v->vertex_degree());
         heh_oneRing.reserve(v->vertex_degree());
-        // vh_oneRing.push_back(v);
-        // MCGAL::Halfedge* hit(*v->halfedges.begin());
-        // MCGAL::Halfedge* end(hit);
         for (int i = 0; i < v->halfedges_size; i++) {
             MCGAL::Halfedge* hit = v->getHalfedgeByIndex(i);
             vh_oneRing.push_back(hit->opposite()->vertex());
             heh_oneRing.push_back(hit->opposite());
         }
-
-        // for (MCGAL::Halfedge* hit : v->halfedges) {
-        //     vh_oneRing.push_back(hit->opposite()->vertex());
-        //     heh_oneRing.push_back(hit->opposite());
-        // }
-        bool removable = !willViolateManifold(heh_oneRing);
-        // && isProtruding(heh_oneRing);
-        //&& isConvex(vh_oneRing)
+        bool removable = //!willViolateManifold(heh_oneRing)
+                         // && isProtruding(heh_oneRing);
+                         isConvex(vh_oneRing);
         return removable;
     }
     return false;
+}
+
+bool MyMesh::isConvex(const std::vector<MCGAL::Vertex*>& polygon) const {
+    // 遍历所有点
+    for (unsigned i = 0; i < polygon.size(); i++) {
+        MCGAL::Vertex* vt = polygon[i];
+        // 遍历这个点的所有半边
+        for (unsigned j = 0; j < vt->halfedges_size; j++) {
+            MCGAL::Halfedge* hit = vt->getHalfedgeByIndex(j);
+            // 查看是否有半边指向了点集里的其他点
+            for (unsigned k = 0; k < polygon.size(); k++) {
+                if (hit->end_vertex() == polygon[k] && i != k && hit->facet()->facet_degree() != 3) {
+                    return false;
+                }
+            }
+        }
+    }
+    return true;
 }
 
 std::istream& operator>>(std::istream& input, MyMesh& mesh) {

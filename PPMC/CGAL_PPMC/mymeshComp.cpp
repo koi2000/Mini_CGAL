@@ -24,10 +24,10 @@ void MyMesh::startNextCompresssionOp() {
 
     // 2. do one round of decimation
     // choose a halfedge that can be processed:
-    if (i_curDecimationId < 2) {
+    if (i_curDecimationId < 10) {
         // teng: we always start from the middle, DO NOT use the rand function
         // size_t i_heInitId = (float)rand() / RAND_MAX * size_of_halfedges();
-        size_t i_heInitId = size_of_halfedges() / 2;
+        size_t i_heInitId = size_of_halfedges() / 3;
         Halfedge_iterator hitInit = halfedges_begin();
         for (unsigned i = 0; i < i_heInitId; ++i)
             ++hitInit;

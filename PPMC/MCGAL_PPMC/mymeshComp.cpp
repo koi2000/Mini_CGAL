@@ -12,6 +12,15 @@ void MyMesh::encode(int lod) {
 }
 
 void MyMesh::startNextCompresssionOp() {
+    for (auto it=halfedges.begin();it!=halfedges.end();)
+        {
+            if ((*it)->isRemoved()) {
+                it = halfedges.erase(it);
+            }else{
+                it++;
+            }
+            
+        }
     // 1. reset the stats
     for (MCGAL::Vertex* vit : vertices)
         vit->resetState();
@@ -31,6 +40,8 @@ void MyMesh::startNextCompresssionOp() {
     if (i_curDecimationId < 10) {
         // teng: we always start from the middle, DO NOT use the rand function
         // size_t i_heInitId = (float)rand() / RAND_MAX * size_of_halfedges();
+        
+        
         size_t i_heInitId = size_of_halfedges() / 2;
         MCGAL::Halfedge* hitInit;
         auto it = halfedges.begin();

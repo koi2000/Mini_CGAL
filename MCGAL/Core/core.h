@@ -240,7 +240,7 @@ class Halfedge {
         flag = NotYetInQueue;
         flag2 = Original;
         processedFlag = NotProcessed;
-        // removedFlag = NotRemoved;
+        removedFlag = NotRemoved;
         bfsFlag = NotVisited;
     }
 
@@ -399,7 +399,7 @@ public:
     inline void resetState() {
         flag = Unknown;
         processedFlag = NotProcessed;
-        // removedFlag = NotRemoved;
+        removedFlag = NotRemoved;
     }
 
     inline void resetProcessedFlag() {
