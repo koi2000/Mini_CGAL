@@ -117,7 +117,7 @@
 			"program": "/home/koi/mastercode/Mini_CGAL/build/MiniCGAL_CudaDecompress",
 			//"args": ["-f", "../../etc/observer.ini"],
 			"args": [
-				"/home/koi/mastercode/Mini_CGAL/static/buffer"
+				"/home/koi/mastercode/Mini_CGAL/static/buffer2"
 			],
 			"stopAtEntry": false,
 			"cwd": "${fileDirname}",

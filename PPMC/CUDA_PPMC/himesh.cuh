@@ -65,7 +65,7 @@ class MyMesh : public MCGAL::Mesh {
     int* dvertexIndexes;
     int* dstHalfedgeIndexes;
     int* dstFacetIndexes;
-    int* dedgeIndexes;
+    // int* dedgeIndexes;
 
   public:
     int id = 0;

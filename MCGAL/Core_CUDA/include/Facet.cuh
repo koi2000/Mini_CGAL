@@ -14,10 +14,12 @@ class Facet {
     enum Flag { Unknown = 0, Splittable = 1, Unsplittable = 2 };
     enum ProcessedFlag { NotProcessed, Processed };
     enum RemovedFlag { NotRemoved, Removed };
+    enum VisitedFlag { NotVisited, Visited };
 
     Flag flag = Unknown;
     ProcessedFlag processedFlag = NotProcessed;
     RemovedFlag removedFlag = NotRemoved;
+    VisitedFlag visitedFlag = NotVisited;
     Point removedVertexPos;
 
   public:
@@ -82,6 +84,7 @@ class Facet {
         flag = Unknown;
         processedFlag = NotProcessed;
         removedFlag = NotRemoved;
+        visitedFlag = NotVisited;
     }
 
     inline void resetProcessedFlag() {
@@ -117,6 +120,14 @@ class Facet {
 
     inline bool isProcessed() const {
         return (processedFlag == Processed);
+    }
+
+    inline void setVisitedFlag() {
+        visitedFlag = Visited;
+    }
+
+    inline bool isVisited() const {
+        return (visitedFlag == Visited);
     }
 
     inline MCGAL::Point getRemovedVertexPos() {

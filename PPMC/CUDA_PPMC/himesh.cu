@@ -63,7 +63,7 @@ MyMesh::MyMesh(char* data, size_t dsize, bool owndata) : MCGAL::Mesh() {
     CHECK(cudaMalloc(&dvertexIndexes, SPLITABLE_SIZE * sizeof(int)));
     CHECK(cudaMalloc(&dstFacetIndexes, SPLITABLE_SIZE * sizeof(int)));
     CHECK(cudaMalloc(&dstHalfedgeIndexes, SPLITABLE_SIZE * sizeof(int)));
-    CHECK(cudaMalloc(&dedgeIndexes, REMOVEDEDGE_SIZE * sizeof(int)));
+    // CHECK(cudaMalloc(&dedgeIndexes, REMOVEDEDGE_SIZE * sizeof(int)));
     // Set the vertices of the edge that is the departure of the coding and decoding conquests.
     // vh_departureConquest[0] = (*halfedges.begin())->vertex;
     // vh_departureConquest[1] = (*halfedges.begin())->end_vertex;
@@ -77,7 +77,7 @@ MyMesh::~MyMesh() {
     cudaFree(dvertexIndexes);
     cudaFree(dstHalfedgeIndexes);
     cudaFree(dstFacetIndexes);
-    cudaFree(dedgeIndexes);
+    // cudaFree(dedgeIndexes);
     // TODO:
     // clear_aabb_tree();
 }
@@ -91,7 +91,7 @@ MyMesh::MyMesh(char* path) : MCGAL::Mesh() {
     CHECK(cudaMalloc(&dvertexIndexes, SPLITABLE_SIZE * sizeof(int)));
     CHECK(cudaMalloc(&dstFacetIndexes, SPLITABLE_SIZE * sizeof(int)));
     CHECK(cudaMalloc(&dstHalfedgeIndexes, SPLITABLE_SIZE * sizeof(int)));
-    CHECK(cudaMalloc(&dedgeIndexes, REMOVEDEDGE_SIZE * sizeof(int)));
+    // CHECK(cudaMalloc(&dedgeIndexes, REMOVEDEDGE_SIZE * sizeof(int)));
     // Set the vertices of the edge that is the departure of the coding and decoding conquests.
 }
 
