@@ -120,7 +120,7 @@
 				"/home/koi/mastercode/Mini_CGAL/static/buffer2"
 			],
 			"stopAtEntry": false,
-			"cwd": "${fileDirname}",
+			"cwd": "${workspaceFolder}/build",
 			"environment": [],
 			"externalConsole": false,
 			"MIMode": "gdb",

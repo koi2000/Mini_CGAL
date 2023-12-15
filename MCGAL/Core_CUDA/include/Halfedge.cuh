@@ -26,6 +26,7 @@ class Halfedge {
     int facet_ = -1;
     int next_ = -1;
     int opposite_ = -1;
+    int count = 0;
     Halfedge() {
         vertex_ = -1;
         end_vertex_ = -1;
@@ -129,6 +130,10 @@ class Halfedge {
     }
 
     inline bool isAdded() const {
+        return flag2 == Added;
+    }
+
+    __device__ inline bool isAddedOnCuda() const {
         return flag2 == Added;
     }
 

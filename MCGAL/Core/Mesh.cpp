@@ -80,9 +80,6 @@ Halfedge* Mesh::split_facet(Halfedge* h, Halfedge* g) {
     // create new face depend on vertexs
     origin->reset(hnew);
     fnew->reset(oppo_hnew);
-    fnew->processedFlag = origin->processedFlag;
-    fnew->flag = origin->flag;
-    // fnew->processedFlag = origin->processedFlag;
     // add halfedge and face to mesh
     this->faces.push_back(fnew);
     return hnew;

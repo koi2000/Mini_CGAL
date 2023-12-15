@@ -9,11 +9,11 @@ set(CMAKE_CUDA_ARCHITECTURES 89)
 # set(CMAKE_CUDA_COMPILER "/usr/local/cuda-12.2/bin/nvcc")
 project(Mini_CGAL LANGUAGES  CXX C CUDA)
 
-set(CMAKE_CUDA_FLAGS "-arch=compute_89 -code=sm_89 -rdc=true -g -G -O0")
+set(CMAKE_CUDA_FLAGS "-arch=compute_89 -code=sm_89 -rdc=true -g -G -O3")
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xcompiler -std=c++14")
 
 set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -g -Wno-unused-result")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -g -Wno-unused-result")
 
 if(PROF)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pg")
@@ -37,6 +37,7 @@ include_directories(
     ${CUDA_INCLUDE_DIRS}
 )
 find_package(CGAL REQUIRED)
+find_package(OpenMP REQUIRED)
 # find_package(OpenGL REQUIRED)
 # find_package(GLUT REQUIRED)
 find_package(CUDA REQUIRED)
@@ -131,7 +132,7 @@ IF(TEST)
     target_compile_definitions(MiniCGAL_CudaDecompress PRIVATE BLOCK_SIZE=${BLOCK})
     target_compile_definitions(MiniCGAL_CudaDecompress PRIVATE GRID_SIZE=${GRID})
 ENDIF(TEST)
-target_link_libraries(MiniCGAL_CudaDecompress ${CUDA_LIBRARIES})
+target_link_libraries(MiniCGAL_CudaDecompress ${CUDA_LIBRARIES} OpenMP::OpenMP_CXX)
 
 add_executable(MiniCGAL_CudaCompress tools/MCudaCompress_test.cu  ${CUDA_PPMC} ${MINICGAL_CUDA})
 set_target_properties(MiniCGAL_CudaCompress PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON)

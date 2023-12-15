@@ -107,34 +107,52 @@ MCGAL::Facet* MyMesh::add_face_by_pool(std::vector<MCGAL::Vertex*>& vs) {
     return f;
 }
 
-bool MyMesh::willViolateManifold(const std::vector<MCGAL::Halfedge*>& polygon) const {
-    unsigned i_degree = polygon.size();
+// bool MyMesh::willViolateManifold(const std::vector<MCGAL::Halfedge*>& polygon) const {
+//     unsigned i_degree = polygon.size();
 
-    // Test if a patch vertex is not connected to one vertex
-    // that is not one of its direct neighbor.
-    // Test also that two vertices of the patch will not be doubly connected
-    // after the vertex cut opeation.
-    for (unsigned i = 0; i < i_degree; ++i) {
-        MCGAL::Halfedge* Hvc = *polygon[i]->vertex->halfedges.begin();
-        MCGAL::Halfedge* Hvc_end = Hvc;
-        for (MCGAL::Halfedge* hvc : polygon[i]->vertex->halfedges) {
-            MCGAL::Vertex* vh = Hvc->opposite->vertex;
-            for (unsigned j = 0; j < i_degree; ++j) {
-                if (vh == polygon[j]->vertex) {
-                    unsigned i_prev = i == 0 ? i_degree - 1 : i - 1;
-                    unsigned i_next = i == i_degree - 1 ? 0 : i + 1;
+//     // Test if a patch vertex is not connected to one vertex
+//     // that is not one of its direct neighbor.
+//     // Test also that two vertices of the patch will not be doubly connected
+//     // after the vertex cut opeation.
+//     for (unsigned i = 0; i < i_degree; ++i) {
+//         MCGAL::Halfedge* Hvc = *polygon[i]->vertex->halfedges.begin();
+//         MCGAL::Halfedge* Hvc_end = Hvc;
+//         for (MCGAL::Halfedge* hvc : polygon[i]->vertex->halfedges) {
+//             MCGAL::Vertex* vh = Hvc->opposite->vertex;
+//             for (unsigned j = 0; j < i_degree; ++j) {
+//                 if (vh == polygon[j]->vertex) {
+//                     unsigned i_prev = i == 0 ? i_degree - 1 : i - 1;
+//                     unsigned i_next = i == i_degree - 1 ? 0 : i + 1;
 
-                    if ((j == i_prev &&
-                         polygon[i]->face->facet_degree() != 3)  // The vertex cut operation is forbidden.
-                        || (j == i_next &&
-                            polygon[i]->opposite->face->facet_degree() != 3))  // The vertex cut operation is forbidden.
-                        return true;
+//                     if ((j == i_prev &&
+//                          polygon[i]->face->facet_degree() != 3)  // The vertex cut operation is forbidden.
+//                         || (j == i_next &&
+//                             polygon[i]->opposite->face->facet_degree() != 3))  // The vertex cut operation is forbidden.
+//                         return true;
+//                 }
+//             }
+//         }
+//     }
+
+//     return false;
+// }
+
+bool MyMesh::isConvex(const std::vector<MCGAL::Vertex*>& polygon) const {
+    // 遍历所有点
+    for (unsigned i = 0; i < polygon.size(); i++) {
+        MCGAL::Vertex* vt = polygon[i];
+        // 遍历这个点的所有半边
+        for (unsigned j = 0; j < vt->halfedges.size(); j++) {
+            MCGAL::Halfedge* hit = vt->halfedges[j];
+            // 查看是否有半边指向了点集里的其他点
+            for (unsigned k = 0; k < polygon.size(); k++) {
+                if (hit->end_vertex == polygon[k] && i != k && hit->face->facet_degree() != 3) {
+                    return false;
                 }
             }
         }
     }
-
-    return false;
+    return true;
 }
 
 bool MyMesh::isRemovable(MCGAL::Vertex* v) const {
@@ -144,17 +162,18 @@ bool MyMesh::isRemovable(MCGAL::Vertex* v) const {
     if (v != vh_departureConquest[0] && v != vh_departureConquest[1] && !v->isConquered() && v->vertex_degree() > 2 &&
         v->vertex_degree() <= 8) {
         // test convexity
-        // std::vector<MCGAL::Vertex*> vh_oneRing;
-        std::vector<MCGAL::Halfedge*> heh_oneRing;
+        std::vector<MCGAL::Vertex*> vh_oneRing;
+        // std::vector<MCGAL::Halfedge*> heh_oneRing;
 
-        // vh_oneRing.reserve(v->vertex_degree());
-        heh_oneRing.reserve(v->vertex_degree());
+        vh_oneRing.reserve(v->vertex_degree());
+        // heh_oneRing.reserve(v->vertex_degree());
         for (MCGAL::Halfedge* hit : v->halfedges) {
-            // vh_oneRing.push_back(hit->opposite->vertex);
-            heh_oneRing.push_back(hit->opposite);
+            vh_oneRing.push_back(hit->opposite->vertex);
+            // heh_oneRing.push_back(hit->opposite);
         }  // while (hit != end);
         //
-        bool removable = !willViolateManifold(heh_oneRing);
+        // bool removable = !willViolateManifold(heh_oneRing);
+        bool removable = isConvex(vh_oneRing);
         return removable;
     }
     return false;

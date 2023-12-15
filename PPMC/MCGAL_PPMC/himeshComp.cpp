@@ -1,8 +1,8 @@
 //
 // Created by DELL on 2023/11/9.
 //
-#include "math.h"
 #include "himesh.h"
+#include "math.h"
 
 void MyMesh::encode(int lod) {
     b_jobCompleted = false;
@@ -12,15 +12,13 @@ void MyMesh::encode(int lod) {
 }
 
 void MyMesh::startNextCompresssionOp() {
-    for (auto it=halfedges.begin();it!=halfedges.end();)
-        {
-            if ((*it)->isRemoved()) {
-                it = halfedges.erase(it);
-            }else{
-                it++;
-            }
-            
+    for (auto it = halfedges.begin(); it != halfedges.end();) {
+        if ((*it)->isRemoved()) {
+            it = halfedges.erase(it);
+        } else {
+            it++;
         }
+    }
     // 1. reset the stats
     for (MCGAL::Vertex* vit : vertices)
         vit->resetState();
@@ -40,8 +38,7 @@ void MyMesh::startNextCompresssionOp() {
     if (i_curDecimationId < 10) {
         // teng: we always start from the middle, DO NOT use the rand function
         // size_t i_heInitId = (float)rand() / RAND_MAX * size_of_halfedges();
-        
-        
+
         size_t i_heInitId = size_of_halfedges() / 2;
         MCGAL::Halfedge* hitInit;
         auto it = halfedges.begin();
@@ -126,7 +123,6 @@ void MyMesh::startNextCompresssionOp() {
     }
 }
 
-
 MCGAL::Halfedge* MyMesh::vertexCut(MCGAL::Halfedge* startH) {
     MCGAL::Vertex* v = startH->vertex;
 
@@ -170,7 +166,6 @@ MCGAL::Halfedge* MyMesh::vertexCut(MCGAL::Halfedge* startH) {
 
     // copy the position of the center vertex:
     MCGAL::Point vPos = startH->vertex->point();
-    
 
     int bf = size_of_facets();
     // remove the center vertex

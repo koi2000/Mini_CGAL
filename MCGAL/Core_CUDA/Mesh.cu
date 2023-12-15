@@ -172,6 +172,19 @@ Halfedge* Mesh::join_face(Halfedge* h) {
     return hprev;
 }
 
+// Halfedge* Mesh::join_face(Halfedge* h) {
+//     Halfedge* hprev = find_prev(h);
+//     Halfedge* gprev = find_prev(h->opposite());
+//     remove_tip(hprev);
+//     remove_tip(gprev);
+//     h->opposite()->setRemoved();
+//     // h->vertex()->eraseHalfedgeByPointer(h);
+//     // h->opposite()->vertex()->eraseHalfedgeByPointer(h->opposite());
+//     gprev->facet()->setRemoved();
+//     hprev->facet()->reset(hprev);
+//     return hprev;
+// }
+
 bool Mesh::loadOFF(std::string path) {
     std::ifstream fp(path);
     if (!fp.is_open()) {
@@ -288,6 +301,11 @@ void Mesh::dumpto(std::string path) {
         offFile << face->vertex_size << " ";
         Halfedge* hst = contextPool.getHalfedgeByIndex(face->halfedges[0]);
         Halfedge* hed = hst;
+        // for (int i = 0; i < face->halfedge_size; i++) {
+        //     hst = face->getHalfedgeByIndex(i);
+        //     offFile << hst->vertex()->getId() << " ";
+        // }
+
         do {
             offFile << hst->vertex()->getId() << " ";
             hst = hst->next();

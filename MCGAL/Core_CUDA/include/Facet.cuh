@@ -30,6 +30,7 @@ class Facet {
     int halfedge_size = 0;
     int poolId;
     int lock = 1;
+    int count = 0;
 
   public:
     ~Facet();
@@ -144,6 +145,10 @@ class Facet {
     }
 
     inline bool isRemoved() {
+        return removedFlag == Removed;
+    }
+
+    __device__ inline bool isRemovedOnCuda() {
         return removedFlag == Removed;
     }
 
