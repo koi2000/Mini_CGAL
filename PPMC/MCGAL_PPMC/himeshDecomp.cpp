@@ -1,6 +1,6 @@
 #include "himesh.h"
 #include "util.h"
-void MyMesh::decode(int lod) {
+void HiMesh::decode(int lod) {
     assert(lod >= 0 && lod <= 100);
     // assert(!this->is_compression_mode());
     if (lod < i_decompPercentage) {
@@ -13,7 +13,7 @@ void MyMesh::decode(int lod) {
     }
 }
 
-void MyMesh::startNextDecompresssionOp() {
+void HiMesh::startNextDecompresssionOp() {
     // check if the target LOD is reached
     if (i_curDecimationId * 100.0 / i_nbDecimations >= i_decompPercentage) {
         if (i_curDecimationId == i_nbDecimations) {}
@@ -55,7 +55,7 @@ void MyMesh::startNextDecompresssionOp() {
     logt("%d removeInsertedEdges", start, i_curDecimationId);
 }
 
-void MyMesh::readBaseMesh() {
+void HiMesh::readBaseMesh() {
     // read the number of level of detail
     i_nbDecimations = readuInt16();
     // set the mesh bounding box
@@ -92,7 +92,7 @@ void MyMesh::readBaseMesh() {
     delete p_pointDeque;
 }
 
-void MyMesh::buildFromBuffer(std::deque<MCGAL::Point>* p_pointDeque, std::deque<uint32_t*>* p_faceDeque) {
+void HiMesh::buildFromBuffer(std::deque<MCGAL::Point>* p_pointDeque, std::deque<uint32_t*>* p_faceDeque) {
     this->vertices.clear();
     // this->halfedges.clear();
     // used to create faces
@@ -125,7 +125,7 @@ void MyMesh::buildFromBuffer(std::deque<MCGAL::Point>* p_pointDeque, std::deque<
     vertices.clear();
 }
 
-void MyMesh::RemovedVerticesDecodingStep() {
+void HiMesh::RemovedVerticesDecodingStep() {
     //
     pushHehInit();
     while (!gateQueue.empty()) {
@@ -164,7 +164,7 @@ void MyMesh::RemovedVerticesDecodingStep() {
 /**
  * One step of the inserted edge coding conquest.
  */
-void MyMesh::InsertedEdgeDecodingStep() {
+void HiMesh::InsertedEdgeDecodingStep() {
     pushHehInit();
     while (!gateQueue.empty()) {
         MCGAL::Halfedge* h = gateQueue.front();
@@ -203,7 +203,7 @@ void MyMesh::InsertedEdgeDecodingStep() {
 /**
  * Insert center vertices.
  */
-void MyMesh::insertRemovedVertices() {
+void HiMesh::insertRemovedVertices() {
     // Add the first halfedge to the queue.
     pushHehInit();
     while (!gateQueue.empty()) {
@@ -250,7 +250,7 @@ void MyMesh::insertRemovedVertices() {
 /**
  * Remove all the marked edges
  */
-void MyMesh::removeInsertedEdges() {
+void HiMesh::removeInsertedEdges() {
     pushHehInit();
     while (!gateQueue.empty()) {
         MCGAL::Halfedge* h = gateQueue.front();

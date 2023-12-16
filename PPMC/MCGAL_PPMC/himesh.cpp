@@ -6,7 +6,7 @@
 // #include "configuration.h"
 #include <algorithm>
 
-MyMesh::MyMesh(string& str, bool completeop) : MCGAL::Mesh() {
+HiMesh::HiMesh(string& str, bool completeop) : MCGAL::Mesh() {
     boost::replace_all(str, "|", "\n");
     assert(str.size() != 0 && "input string should not be empty!");
     struct timeval start = get_cur_time();
@@ -48,7 +48,7 @@ MyMesh::MyMesh(string& str, bool completeop) : MCGAL::Mesh() {
 }
 
 // in decompression mode
-MyMesh::MyMesh(char* data, size_t dsize, bool owndata) : MCGAL::Mesh() {
+HiMesh::HiMesh(char* data, size_t dsize, bool owndata) : MCGAL::Mesh() {
     assert(dsize > 0);
     srand(PPMC_RANDOM_CONSTANT);
     own_data = owndata;
@@ -65,7 +65,7 @@ MyMesh::MyMesh(char* data, size_t dsize, bool owndata) : MCGAL::Mesh() {
     // vh_departureConquest[1] = (*halfedges.begin())->end_vertex;
 }
 
-MyMesh::~MyMesh() {
+HiMesh::~HiMesh() {
     if (own_data && p_data != NULL) {
         delete[] p_data;
     }
@@ -73,7 +73,7 @@ MyMesh::~MyMesh() {
     // clear_aabb_tree();
 }
 
-MyMesh::MyMesh(char* path) : MCGAL::Mesh() {
+HiMesh::HiMesh(char* path) : MCGAL::Mesh() {
     this->loadBuffer(path);
     // assert(dsize > 0);
     srand(PPMC_RANDOM_CONSTANT);
@@ -83,7 +83,7 @@ MyMesh::MyMesh(char* path) : MCGAL::Mesh() {
     // vh_departureConquest[1] = (*halfedges.begin())->end_vertex;
 }
 
-void MyMesh::pushHehInit() {
+void HiMesh::pushHehInit() {
     MCGAL::Halfedge* hehBegin;
     // std::unordered_set<MCGAL::Halfedge*> hset = vh_departureConquest[0]->halfedges;
     auto hit = vh_departureConquest[1]->halfedges.begin();
@@ -98,7 +98,7 @@ void MyMesh::pushHehInit() {
     gateQueue.push(hehBegin);
 }
 
-MCGAL::Facet* MyMesh::add_face_by_pool(std::vector<MCGAL::Vertex*>& vs) {
+MCGAL::Facet* HiMesh::add_face_by_pool(std::vector<MCGAL::Vertex*>& vs) {
     MCGAL::Facet* f = allocateFaceFromPool(vs, this);
     // for (MCGAL::Halfedge* hit : f->halfedges) {
     //     this->halfedges.insert(hit);
@@ -107,7 +107,7 @@ MCGAL::Facet* MyMesh::add_face_by_pool(std::vector<MCGAL::Vertex*>& vs) {
     return f;
 }
 
-// bool MyMesh::willViolateManifold(const std::vector<MCGAL::Halfedge*>& polygon) const {
+// bool HiMesh::willViolateManifold(const std::vector<MCGAL::Halfedge*>& polygon) const {
 //     unsigned i_degree = polygon.size();
 
 //     // Test if a patch vertex is not connected to one vertex
@@ -137,7 +137,7 @@ MCGAL::Facet* MyMesh::add_face_by_pool(std::vector<MCGAL::Vertex*>& vs) {
 //     return false;
 // }
 
-bool MyMesh::isConvex(const std::vector<MCGAL::Vertex*>& polygon) const {
+bool HiMesh::isConvex(const std::vector<MCGAL::Vertex*>& polygon) const {
     // 遍历所有点
     for (unsigned i = 0; i < polygon.size(); i++) {
         MCGAL::Vertex* vt = polygon[i];
@@ -155,7 +155,7 @@ bool MyMesh::isConvex(const std::vector<MCGAL::Vertex*>& polygon) const {
     return true;
 }
 
-bool MyMesh::isRemovable(MCGAL::Vertex* v) const {
+bool HiMesh::isRemovable(MCGAL::Vertex* v) const {
     //	if(size_of_vertices()<10){
     //		return false;
     //	}
@@ -179,7 +179,7 @@ bool MyMesh::isRemovable(MCGAL::Vertex* v) const {
     return false;
 }
 
-void MyMesh::compute_mbb() {
+void HiMesh::compute_mbb() {
     // mbb.reset();
     // for (Vertex_const_iterator vit = vertices_begin(); vit != vertices_end(); ++vit) {
     //     Point p = vit->point();
@@ -187,7 +187,7 @@ void MyMesh::compute_mbb() {
     // }
 }
 
-std::istream& operator>>(std::istream& input, MyMesh& mesh) {
+std::istream& operator>>(std::istream& input, HiMesh& mesh) {
     std::string format;
     input >> format >> mesh.nb_vertices >> mesh.nb_faces >> mesh.nb_edges;
 
@@ -221,11 +221,11 @@ std::istream& operator>>(std::istream& input, MyMesh& mesh) {
     return input;
 }
 
-void MyMesh::write_to_off(const char* path) {
+void HiMesh::write_to_off(const char* path) {
     this->dumpto(path);
 }
 
-void MyMesh::dumpBuffer(char* path) {
+void HiMesh::dumpBuffer(char* path) {
     ofstream fout(path, ios::binary);
     int len = dataOffset;
     fout.write((char*)&len, sizeof(int));
@@ -233,7 +233,7 @@ void MyMesh::dumpBuffer(char* path) {
     fout.close();
 }
 
-void MyMesh::loadBuffer(char* path) {
+void HiMesh::loadBuffer(char* path) {
     ifstream fin(path, ios::binary);
     int len2;
     fin.read((char*)&len2, sizeof(int));
@@ -246,11 +246,11 @@ void MyMesh::loadBuffer(char* path) {
 }
 
 // TODO: 待完善
-// size_t MyMesh::size_of_edges() {
+// size_t HiMesh::size_of_edges() {
 //     return size_of_halfedges() / 2;
 // }
 
-// size_t MyMesh::size_of_triangles() {
+// size_t HiMesh::size_of_triangles() {
 //     size_t tri_num = 0;
 //     for (Facet_const_iterator f = facets_begin(); f != facets_end(); ++f) {
 //         tri_num += f->facet_degree() - 2;
@@ -258,13 +258,13 @@ void MyMesh::loadBuffer(char* path) {
 //     return tri_num;
 // }
 
-// Polyhedron* MyMesh::to_triangulated_polyhedron() {
+// Polyhedron* HiMesh::to_triangulated_polyhedron() {
 //     Polyhedron* poly = to_polyhedron();
 //     CGAL::Polygon_mesh_processing::triangulate_faces(*poly);
 //     return poly;
 // }
 
-// Polyhedron* MyMesh::to_polyhedron() {
+// Polyhedron* HiMesh::to_polyhedron() {
 //     stringstream ss;
 //     ss << *this;
 //     Polyhedron* poly = new Polyhedron();
@@ -273,29 +273,29 @@ void MyMesh::loadBuffer(char* path) {
 // }
 
 // TODO: 待完善
-// MyMesh* MyMesh::clone_mesh() {
+// HiMesh* HiMesh::clone_mesh() {
 //     stringstream ss;
 //     ss << *this;
 //     string str = ss.str();
-//     MyMesh* nmesh = new MyMesh(str);
+//     HiMesh* nmesh = new HiMesh(str);
 //     return nmesh;
 // }
 
 // TODO: 待完善
-// string MyMesh::to_off() {
+// string HiMesh::to_off() {
 //     std::stringstream os;
 //     os << *this;
 //     return os.str();
 // }
 
 // TODO: 待完善
-// void MyMesh::write_to_off(const char* path) {
+// void HiMesh::write_to_off(const char* path) {
 //     string ct = to_off();
 //     hispeed::write_file(ct, path);
 // }
 
 // TODO: 待完善
-// string MyMesh::to_wkt() {
+// string HiMesh::to_wkt() {
 //     std::stringstream ss;
 //     ss << "POLYHEDRALSURFACE Z (";
 //     bool lfirst = true;
@@ -328,7 +328,7 @@ void MyMesh::loadBuffer(char* path) {
 // }
 
 // TODO: 待完善
-// void MyMesh::write_to_wkt(const char* path) {
+// void HiMesh::write_to_wkt(const char* path) {
 //     string ct = to_wkt();
 //     hispeed::write_file(ct, path);
 // }

@@ -5,7 +5,7 @@
 #include <nvToolsExt.h>
 #include <omp.h>
 
-void MyMesh::decode(int lod) {
+void HiMesh::decode(int lod) {
     assert(lod >= 0 && lod <= 100);
     // assert(!this->is_compression_mode());
     if (lod < i_decompPercentage) {
@@ -18,7 +18,7 @@ void MyMesh::decode(int lod) {
     }
 }
 
-void MyMesh::startNextDecompresssionOp() {
+void HiMesh::startNextDecompresssionOp() {
     // check if the target LOD is reached
     if (i_curDecimationId * 100.0 / i_nbDecimations >= i_decompPercentage) {
         if (i_curDecimationId == i_nbDecimations) {}
@@ -57,8 +57,8 @@ void MyMesh::startNextDecompresssionOp() {
     InsertedEdgeDecodingStep();
     logt("%d InsertedEdgeDecodingStep", start, i_curDecimationId);
     // 4. truly insert the removed vertices
-    insertRemovedVertices();
-    // insertRemovedVerticesOnCuda();
+    // insertRemovedVertices();
+    insertRemovedVerticesOnCuda();
     logt("%d insertRemovedVertices", start, i_curDecimationId);
     // 5. truly remove the added edges
     removeInsertedEdgesOnCuda();
@@ -66,7 +66,7 @@ void MyMesh::startNextDecompresssionOp() {
     logt("%d removeInsertedEdges", start, i_curDecimationId);
 }
 
-void MyMesh::readBaseMesh() {
+void HiMesh::readBaseMesh() {
     // read the number of level of detail
     i_nbDecimations = readuInt16();
     // set the mesh bounding box
@@ -103,7 +103,7 @@ void MyMesh::readBaseMesh() {
     delete p_pointDeque;
 }
 
-void MyMesh::buildFromBuffer(std::deque<MCGAL::Point>* p_pointDeque, std::deque<uint32_t*>* p_faceDeque) {
+void HiMesh::buildFromBuffer(std::deque<MCGAL::Point>* p_pointDeque, std::deque<uint32_t*>* p_faceDeque) {
     this->vertices.clear();
     // this->halfedges.clear();
     // used to create faces
@@ -135,7 +135,7 @@ void MyMesh::buildFromBuffer(std::deque<MCGAL::Point>* p_pointDeque, std::deque<
     vertices.clear();
 }
 
-void MyMesh::RemovedVerticesDecodingStep() {
+void HiMesh::RemovedVerticesDecodingStep() {
     pushHehInit();
     while (!gateQueue.empty()) {
         MCGAL::Halfedge* h = gateQueue.front();
@@ -174,7 +174,7 @@ void MyMesh::RemovedVerticesDecodingStep() {
 /**
  * One step of the inserted edge coding conquest.
  */
-void MyMesh::InsertedEdgeDecodingStep() {
+void HiMesh::InsertedEdgeDecodingStep() {
     pushHehInit();
     while (!gateQueue.empty()) {
         MCGAL::Halfedge* h = gateQueue.front();
@@ -275,7 +275,7 @@ __global__ void createCenterVertexOnCuda(MCGAL::Vertex* vpool,
 }
 
 #ifndef UNIFIED
-void MyMesh::insertRemovedVerticesOnCuda() {
+void HiMesh::insertRemovedVerticesOnCuda() {
     struct timeval start = get_cur_time();
     std::vector<int> faceIndexes(splitable_count);
     std::vector<int> vertexIndexes(splitable_count);
@@ -381,7 +381,7 @@ void MyMesh::insertRemovedVerticesOnCuda() {
 }
 #else
 
-void MyMesh::insertRemovedVerticesOnCuda() {
+void HiMesh::insertRemovedVerticesOnCuda() {
     cudaSetDevice(0);
     struct timeval start = get_cur_time();
     std::vector<int> faceIndexes(splitable_count);
@@ -544,7 +544,7 @@ __global__ void resetHalfedgeOnCuda(MCGAL::Vertex* vpool,
 /**
  * 以面为单位进行bfs，将所有联通的面作为一个block进行处理
  */
-// void MyMesh::removeInsertedEdgesOnCuda() {
+// void HiMesh::removeInsertedEdgesOnCuda() {
 //     cudaDeviceProp prop;
 //     cudaGetDeviceProperties(&prop, 0);
 //     double clockRate = prop.clockRate;
@@ -647,11 +647,13 @@ __global__ void joinFacetOnCuda(MCGAL::Vertex* vpool,
     if (tid < num) {
         int stIndex = stIndexes[tid];
         int thNumber = thNumberes[tid];
-        for (int i = 0; i < thNumber; i++) {
+        for (int i = 0; i < 1; i++) {
             MCGAL::Halfedge* h = &hpool[edgeIndexes[stIndex + i]];
             // join_face(h);
             MCGAL::Halfedge* hprev = find_prevOncuda(hpool, h);
             MCGAL::Halfedge* gprev = find_prevOncuda(hpool, h->dopposite(hpool));
+            atomicAdd(&hprev->count, 1);
+            atomicAdd(&hprev->count, 1);
             remove_tipOnCuda(hpool, hprev);
             remove_tipOnCuda(hpool, gprev);
             // h->dopposite(hpool)->setRemoved();
@@ -662,7 +664,7 @@ __global__ void joinFacetOnCuda(MCGAL::Vertex* vpool,
     }
 }
 
-void MyMesh::removeInsertedEdgesOnCuda() {
+void HiMesh::removeInsertedEdgesOnCuda() {
     cudaDeviceProp prop;
     cudaGetDeviceProperties(&prop, 0);
     double clockRate = prop.clockRate;
@@ -719,12 +721,7 @@ void MyMesh::removeInsertedEdgesOnCuda() {
     }
     int stIndex = stIndexes[0];
     int thNumber = thNumberes[0];
-    auto s = 0LL;
-    // #pragma omp parallel for reduction(+ : s)
-    //     for (auto i = 1; i <= 2; i++) {
-    //         s += i;
-    //     }
-    logt("%d join facet kernel", start, i_curDecimationId);
+    logt("%d collect information", start, i_curDecimationId);
 #pragma omp parallel for num_threads(60)
     for (int i = 0; i < thNumber; i++) {
         MCGAL::Halfedge* h = &MCGAL::contextPool.hpool[edgeIndexes[stIndex + i]];
@@ -745,23 +742,10 @@ void MyMesh::removeInsertedEdgesOnCuda() {
     return;
 }
 
-// Halfedge* Mesh::join_face(Halfedge* h) {
-//     Halfedge* hprev = find_prev(h);
-//     Halfedge* gprev = find_prev(h->opposite());
-//     remove_tip(hprev);
-//     remove_tip(gprev);
-//     h->opposite()->setRemoved();
-//     h->vertex()->eraseHalfedgeByPointer(h);
-//     h->opposite()->vertex()->eraseHalfedgeByPointer(h->opposite());
-//     gprev->facet()->setRemoved();
-//     hprev->facet()->reset(hprev);
-//     return hprev;
-// }
-
 /**
  * Remove all the marked edges on cuda
  */
-// void MyMesh::removeInsertedEdgesOnCuda() {
+// void HiMesh::removeInsertedEdgesOnCuda() {
 //     cudaDeviceProp prop;
 //     cudaGetDeviceProperties(&prop, 0);
 //     double clockRate = prop.clockRate;
@@ -793,9 +777,9 @@ void MyMesh::removeInsertedEdgesOnCuda() {
 //             int flag = 0;
 //             for (int j = 0; j < fit->halfedge_size; j++) {
 //                 MCGAL::Halfedge* hit = fit->getHalfedgeByIndex(j);
-//                 MCGAL::Facet* fit2 = hit->opposite()->facet();
+//                 // MCGAL::Facet* fit2 = hit->opposite()->facet();
 //                 if (hit->isAdded() && !hit->isVisited()) {
-//                     // MCGAL::Facet* fit2 = hit->opposite()->facet();
+//                     MCGAL::Facet* fit2 = hit->opposite()->facet();
 //                     // edgeIndex[idx++] = hit->poolId;
 //                     ids.push_back(hit->poolId);
 //                     hit->setVisited();
@@ -803,15 +787,16 @@ void MyMesh::removeInsertedEdgesOnCuda() {
 //                     // fit2->setRemoved();
 //                     hit->vertex()->eraseHalfedgeByPointer(hit);
 //                     hit->opposite()->vertex()->eraseHalfedgeByPointer(hit->opposite());
-//                     // fqueue.push(fit2);
+//                     fqueue.push(fit2);
 //                 }
-//                 for (int i = 0; i < fit2->halfedge_size; i++) {
-//                     MCGAL::Halfedge* hit = fit2->getHalfedgeByIndex(i);
-//                     if (hit->isAdded()) {
-//                         fqueue.push(fit2);
-//                         break;
-//                     }
-//                 }
+//                 // fqueue.push(fit2);
+//                 // for (int i = 0; i < fit2->halfedge_size; i++) {
+//                 //     MCGAL::Halfedge* hit = fit2->getHalfedgeByIndex(i);
+//                 //     if (hit->isAdded()) {
+//                 //         fqueue.push(fit2);
+//                 //         break;
+//                 //     }
+//                 // }
 //             }
 //         }
 //         if (!ids.empty()) {
@@ -873,7 +858,7 @@ void MyMesh::removeInsertedEdgesOnCuda() {
 /**
  * Insert center vertices.
  */
-void MyMesh::insertRemovedVertices() {
+void HiMesh::insertRemovedVertices() {
     // Add the first halfedge to the queue.
     pushHehInit();
     while (!gateQueue.empty()) {
@@ -921,7 +906,7 @@ void MyMesh::insertRemovedVertices() {
 /**
  * Remove all the marked edges
  */
-void MyMesh::removeInsertedEdges() {
+void HiMesh::removeInsertedEdges() {
     pushHehInit();
     while (!gateQueue.empty()) {
         MCGAL::Halfedge* h = gateQueue.front();

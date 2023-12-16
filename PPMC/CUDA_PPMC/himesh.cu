@@ -6,7 +6,7 @@
 #include "util.h"
 #include <algorithm>
 
-MyMesh::MyMesh(string& str, bool completeop) : MCGAL::Mesh() {
+HiMesh::HiMesh(string& str, bool completeop) : MCGAL::Mesh() {
     boost::replace_all(str, "|", "\n");
     assert(str.size() != 0 && "input string should not be empty!");
     struct timeval start = get_cur_time();
@@ -46,7 +46,7 @@ MyMesh::MyMesh(string& str, bool completeop) : MCGAL::Mesh() {
 }
 
 // in decompression mode
-MyMesh::MyMesh(char* data, size_t dsize, bool owndata) : MCGAL::Mesh() {
+HiMesh::HiMesh(char* data, size_t dsize, bool owndata) : MCGAL::Mesh() {
     assert(dsize > 0);
     srand(PPMC_RANDOM_CONSTANT);
     own_data = owndata;
@@ -69,7 +69,7 @@ MyMesh::MyMesh(char* data, size_t dsize, bool owndata) : MCGAL::Mesh() {
     // vh_departureConquest[1] = (*halfedges.begin())->end_vertex;
 }
 
-MyMesh::~MyMesh() {
+HiMesh::~HiMesh() {
     if (own_data && p_data != NULL) {
         delete[] p_data;
     }
@@ -82,7 +82,7 @@ MyMesh::~MyMesh() {
     // clear_aabb_tree();
 }
 
-MyMesh::MyMesh(char* path) : MCGAL::Mesh() {
+HiMesh::HiMesh(char* path) : MCGAL::Mesh() {
     this->loadBuffer(path);
     // assert(dsize > 0);
     srand(PPMC_RANDOM_CONSTANT);
@@ -95,7 +95,7 @@ MyMesh::MyMesh(char* path) : MCGAL::Mesh() {
     // Set the vertices of the edge that is the departure of the coding and decoding conquests.
 }
 
-void MyMesh::pushHehInit() {
+void HiMesh::pushHehInit() {
     MCGAL::Halfedge* hehBegin;
     // MCGAL::Vertex* st = MCGAL::contextPool.getVertexByIndex(vh_departureConquest[1]->poolId);
     for (int i = 0; i < vh_departureConquest[1]->halfedges_size; i++) {
@@ -110,7 +110,7 @@ void MyMesh::pushHehInit() {
     gateQueue.push(hehBegin);
 }
 
-MCGAL::Facet* MyMesh::add_face_by_pool(std::vector<MCGAL::Vertex*>& vs) {
+MCGAL::Facet* HiMesh::add_face_by_pool(std::vector<MCGAL::Vertex*>& vs) {
     MCGAL::Facet* f = MCGAL::contextPool.allocateFaceFromPool(vs);
     // for (MCGAL::Halfedge* hit : f->halfedges) {
     //     this->halfedges.insert(hit);
@@ -119,7 +119,7 @@ MCGAL::Facet* MyMesh::add_face_by_pool(std::vector<MCGAL::Vertex*>& vs) {
     return f;
 }
 
-// bool MyMesh::willViolateManifold(const std::vector<MCGAL::Halfedge*>& polygon) const {
+// bool HiMesh::willViolateManifold(const std::vector<MCGAL::Halfedge*>& polygon) const {
 //     unsigned i_degree = polygon.size();
 //     for (unsigned i = 0; i < i_degree; ++i) {
 //         for (int k = 0; k < polygon[i]->vertex()->halfedges_size; k++) {
@@ -141,7 +141,7 @@ MCGAL::Facet* MyMesh::add_face_by_pool(std::vector<MCGAL::Vertex*>& vs) {
 //     return false;
 // }
 
-bool MyMesh::willViolateManifold(const std::vector<MCGAL::Halfedge*>& polygon) const {
+bool HiMesh::willViolateManifold(const std::vector<MCGAL::Halfedge*>& polygon) const {
     unsigned i_degree = polygon.size();
     for (unsigned i = 0; i < i_degree; ++i) {
         MCGAL::Halfedge* it = polygon[i];
@@ -165,7 +165,7 @@ bool MyMesh::willViolateManifold(const std::vector<MCGAL::Halfedge*>& polygon) c
     return false;
 }
 
-bool MyMesh::isRemovable(MCGAL::Vertex* v) const {
+bool HiMesh::isRemovable(MCGAL::Vertex* v) const {
     //	if(size_of_vertices()<10){
     //		return false;
     //	}
@@ -190,7 +190,7 @@ bool MyMesh::isRemovable(MCGAL::Vertex* v) const {
     return false;
 }
 
-bool MyMesh::isConvex(const std::vector<MCGAL::Vertex*>& polygon) const {
+bool HiMesh::isConvex(const std::vector<MCGAL::Vertex*>& polygon) const {
     // 遍历所有点
     for (unsigned i = 0; i < polygon.size(); i++) {
         MCGAL::Vertex* vt = polygon[i];
@@ -208,7 +208,7 @@ bool MyMesh::isConvex(const std::vector<MCGAL::Vertex*>& polygon) const {
     return true;
 }
 
-std::istream& operator>>(std::istream& input, MyMesh& mesh) {
+std::istream& operator>>(std::istream& input, HiMesh& mesh) {
     std::string format;
     input >> format >> mesh.nb_vertices >> mesh.nb_faces >> mesh.nb_edges;
 
@@ -242,11 +242,11 @@ std::istream& operator>>(std::istream& input, MyMesh& mesh) {
     return input;
 }
 
-void MyMesh::write_to_off(const char* path) {
+void HiMesh::write_to_off(const char* path) {
     this->dumpto(path);
 }
 
-void MyMesh::dumpBuffer(char* path) {
+void HiMesh::dumpBuffer(char* path) {
     ofstream fout(path, ios::binary);
     int len = dataOffset;
     fout.write((char*)&len, sizeof(int));
@@ -254,7 +254,7 @@ void MyMesh::dumpBuffer(char* path) {
     fout.close();
 }
 
-void MyMesh::loadBuffer(char* path) {
+void HiMesh::loadBuffer(char* path) {
     ifstream fin(path, ios::binary);
     int len2;
     fin.read((char*)&len2, sizeof(int));

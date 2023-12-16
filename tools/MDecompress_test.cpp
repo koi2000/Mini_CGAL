@@ -2,14 +2,14 @@
 #include "../PPMC/MCGAL_PPMC/util.h"
 
 using namespace std;
-MyMesh* read_mesh(char* path, bool complete_compression) {
+HiMesh* read_mesh(char* path, bool complete_compression) {
     string mesh_str = read_file(path);
-    MyMesh* mesh = new MyMesh(mesh_str, complete_compression);
+    HiMesh* mesh = new HiMesh(mesh_str, complete_compression);
     return mesh;
 }
 
 void compress(int argc, char** argv) {
-    MyMesh* hm = new MyMesh(argv[1]);
+    HiMesh* hm = new HiMesh(argv[1]);
     int lod = 100;
 
     char path[256];

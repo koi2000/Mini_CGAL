@@ -46,7 +46,7 @@ uint32_t readBits(unsigned i_nbBits, char* p_src, unsigned& i_bitOffset, size_t&
 }
 
 // Write a floating point number in the data buffer.
-void MyMesh::writeFloat(float f) {
+void HiMesh::writeFloat(float f) {
     *(float*)(p_data + dataOffset) = f;
     dataOffset += sizeof(float);
 }
@@ -54,21 +54,21 @@ void MyMesh::writeFloat(float f) {
 /**
  * Read a floating point number in the data buffer.
  */
-float MyMesh::readFloat() {
+float HiMesh::readFloat() {
     float f = *(float*)(p_data + dataOffset);
     dataOffset += sizeof(float);
     return f;
 }
 
 // Write a floating point number in the data buffer.
-void MyMesh::writePoint(MCGAL::Point& p) {
+void HiMesh::writePoint(MCGAL::Point& p) {
     for (unsigned i = 0; i < 3; ++i) {
         writeFloat(p[i]);
     }
 }
 
 // Write a floating point number in the data buffer.
-MCGAL::Point MyMesh::readPoint() {
+MCGAL::Point HiMesh::readPoint() {
     float coord[3];
     for (unsigned i = 0; i < 3; ++i) {
         coord[i] = readFloat();
@@ -80,14 +80,14 @@ MCGAL::Point MyMesh::readPoint() {
 /**
  * Read an integer in the data buffer.
  */
-int MyMesh::readInt() {
+int HiMesh::readInt() {
     int i = *(int*)(p_data + dataOffset);
     dataOffset += sizeof(int);
     return i;
 }
 
 // Write an integer in the data buffer
-void MyMesh::writeInt(int i) {
+void HiMesh::writeInt(int i) {
     *(int*)(p_data + dataOffset) = i;
     dataOffset += sizeof(int);
 }
@@ -95,14 +95,14 @@ void MyMesh::writeInt(int i) {
 /**
  * Read a 16 bits integer in the data buffer.
  */
-int16_t MyMesh::readInt16() {
+int16_t HiMesh::readInt16() {
     int16_t i = *(int16_t*)(p_data + dataOffset);
     dataOffset += sizeof(int16_t);
     return i;
 }
 
 // Write a 16 bits integer in the data buffer
-void MyMesh::writeInt16(int16_t i) {
+void HiMesh::writeInt16(int16_t i) {
     *(int16_t*)(p_data + dataOffset) = i;
     dataOffset += sizeof(int16_t);
 }
@@ -110,14 +110,14 @@ void MyMesh::writeInt16(int16_t i) {
 /**
  * Read a 16 bits integer in the data buffer.
  */
-uint16_t MyMesh::readuInt16() {
+uint16_t HiMesh::readuInt16() {
     uint16_t i = *(uint16_t*)(p_data + dataOffset);
     dataOffset += sizeof(uint16_t);
     return i;
 }
 
 // Write a 16 bits integer in the data buffer
-void MyMesh::writeuInt16(uint16_t i) {
+void HiMesh::writeuInt16(uint16_t i) {
     *(uint16_t*)(p_data + dataOffset) = i;
     dataOffset += sizeof(uint16_t);
 }
@@ -125,14 +125,14 @@ void MyMesh::writeuInt16(uint16_t i) {
 /**
  * Read a byte in the data buffer.
  */
-unsigned char MyMesh::readChar() {
+unsigned char HiMesh::readChar() {
     unsigned char i = *(unsigned char*)(p_data + dataOffset);
     dataOffset += sizeof(unsigned char);
     return i;
 }
 
 // Write a byte in the data buffer
-void MyMesh::writeChar(unsigned char i) {
+void HiMesh::writeChar(unsigned char i) {
     *(unsigned char*)(p_data + dataOffset) = i;
     dataOffset += sizeof(unsigned char);
 }

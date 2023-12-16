@@ -4,14 +4,14 @@
 #include "himesh.h"
 #include "math.h"
 
-void MyMesh::encode(int lod) {
+void HiMesh::encode(int lod) {
     b_jobCompleted = false;
     while (!b_jobCompleted) {
         startNextCompresssionOp();
     }
 }
 
-void MyMesh::startNextCompresssionOp() {
+void HiMesh::startNextCompresssionOp() {
     for (auto it = halfedges.begin(); it != halfedges.end();) {
         if ((*it)->isRemoved()) {
             it = halfedges.erase(it);
@@ -123,7 +123,7 @@ void MyMesh::startNextCompresssionOp() {
     }
 }
 
-MCGAL::Halfedge* MyMesh::vertexCut(MCGAL::Halfedge* startH) {
+MCGAL::Halfedge* HiMesh::vertexCut(MCGAL::Halfedge* startH) {
     MCGAL::Vertex* v = startH->vertex;
 
     // make sure that the center vertex can be removed
@@ -195,7 +195,7 @@ MCGAL::Halfedge* MyMesh::vertexCut(MCGAL::Halfedge* startH) {
     return hNewFace;
 }
 
-void MyMesh::RemovedVertexCodingStep() {
+void HiMesh::RemovedVertexCodingStep() {
     // resize the vectors to add the current conquest symbols
     geometrySym.push_back(std::deque<MCGAL::Point>());
     connectFaceSym.push_back(std::deque<unsigned>());
@@ -242,7 +242,7 @@ void MyMesh::RemovedVertexCodingStep() {
     }
 }
 
-void MyMesh::InsertedEdgeCodingStep() {
+void HiMesh::InsertedEdgeCodingStep() {
     connectEdgeSym.push_back(std::deque<unsigned>());
     pushHehInit();
     while (!gateQueue.empty()) {
@@ -280,7 +280,7 @@ void MyMesh::InsertedEdgeCodingStep() {
     }
 }
 
-void MyMesh::writeBaseMesh() {
+void HiMesh::writeBaseMesh() {
     unsigned i_nbVerticesBaseMesh = size_of_vertices();
     unsigned i_nbFacesBaseMesh = size_of_facets();
     // Write the number of level of decimations.
@@ -317,7 +317,7 @@ void MyMesh::writeBaseMesh() {
 /**
  * Encode an inserted edge list.
  */
-void MyMesh::encodeInsertedEdges(unsigned i_operationId) {
+void HiMesh::encodeInsertedEdges(unsigned i_operationId) {
     std::deque<unsigned>& symbols = connectEdgeSym[i_operationId];
     assert(symbols.size() > 0);
 
@@ -330,7 +330,7 @@ void MyMesh::encodeInsertedEdges(unsigned i_operationId) {
 /**
  * Encode the geometry and the connectivity of a removed vertex list.
  */
-void MyMesh::encodeRemovedVertices(unsigned i_operationId) {
+void HiMesh::encodeRemovedVertices(unsigned i_operationId) {
     std::deque<unsigned>& connSym = connectFaceSym[i_operationId];
     std::deque<MCGAL::Point>& geomSym = geometrySym[i_operationId];
 

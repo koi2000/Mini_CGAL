@@ -15,7 +15,7 @@ const int DECOMPRESSION_MODE_ID = 1;
 
 #define PPMC_RANDOM_CONSTANT 0315
 
-class MyMesh : public MCGAL::Mesh {
+class HiMesh : public MCGAL::Mesh {
     // Gate queues
     std::queue<MCGAL::Halfedge*> gateQueue;
     // Processing mode: 0 for compression and 1 for decompression.
@@ -56,14 +56,14 @@ class MyMesh : public MCGAL::Mesh {
 
   public:
     int id = 0;
-    MyMesh(char* bufferPath);
+    HiMesh(char* bufferPath);
     // constructor for encoding
-    MyMesh(std::string& str, bool completeop = false);
+    HiMesh(std::string& str, bool completeop = false);
 
     // constructors for decoding
-    MyMesh(char* data, size_t dsize, bool own_data = true);
-    MyMesh(MyMesh* mesh) : MyMesh(mesh->p_data, mesh->dataOffset, true) {}
-    ~MyMesh();
+    HiMesh(char* data, size_t dsize, bool own_data = true);
+    HiMesh(HiMesh* mesh) : HiMesh(mesh->p_data, mesh->dataOffset, true) {}
+    ~HiMesh();
 
     void encode(int lod = 0);
     void decode(int lod = 100);
@@ -143,9 +143,9 @@ class MyMesh : public MCGAL::Mesh {
     const char* get_data() {
         return p_data;
     }
-    friend std::istream& operator>>(std::istream& in, MyMesh& A);
+    friend std::istream& operator>>(std::istream& in, HiMesh& A);
 
     void buildFromBuffer(std::deque<MCGAL::Point>* p_pointDeque, std::deque<uint32_t*>* p_faceDeque);
 
-    MyMesh* clone_mesh();
+    HiMesh* clone_mesh();
 };
