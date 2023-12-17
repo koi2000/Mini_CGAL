@@ -31,6 +31,7 @@ class Facet {
     int poolId;
     int lock = 1;
     int count = 0;
+    int meshId = -1;
 
   public:
     ~Facet();
@@ -57,6 +58,9 @@ class Facet {
     void reset(std::vector<Vertex*>& vs);
     void remove(Halfedge* h);
     int facet_degree();
+    void setMeshId(int id) {
+        this->meshId = id;
+    }
 
     // cuda
     __device__ Vertex* getVertexByIndexOnCuda(Vertex* vertices, int index);
@@ -70,6 +74,21 @@ class Facet {
 
     __device__ void setRemovedOnCuda() {
         removedFlag = Removed;
+    }
+
+    __device__ void setMeshIdOnCuda(int id) {
+        this->meshId = id;
+    }
+
+    __device__ inline bool isRemovedOnCuda() {
+        return removedFlag == Removed;
+    }
+
+    __device__ inline void resetStateOnCuda() {
+        flag = Unknown;
+        processedFlag = NotProcessed;
+        removedFlag = NotRemoved;
+        visitedFlag = NotVisited;
     }
 
     // override
@@ -145,10 +164,6 @@ class Facet {
     }
 
     inline bool isRemoved() {
-        return removedFlag == Removed;
-    }
-
-    __device__ inline bool isRemovedOnCuda() {
         return removedFlag == Removed;
     }
 

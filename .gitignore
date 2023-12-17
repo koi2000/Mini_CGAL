@@ -1,4 +1,7 @@
 # Project exclude paths
 /cmake-build-debug/
 /build/
-/vs
+/x64
+/Debug
+.vs
+/buffers

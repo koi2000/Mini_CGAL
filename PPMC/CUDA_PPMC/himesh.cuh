@@ -57,9 +57,6 @@ class HiMesh : public MCGAL::Mesh {
     // Store the maximum Hausdorf Distance
     std::vector<MCGAL::Point> removedPoints;
 
-    //
-    std::unordered_set<MCGAL::replacing_group*> map_group;
-
     bool own_data = true;
     int* dfaceIndexes;
     int* dvertexIndexes;

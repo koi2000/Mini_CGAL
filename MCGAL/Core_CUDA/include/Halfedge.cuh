@@ -19,6 +19,7 @@ class Halfedge {
     BFSFlag bfsFlag = NotVisited;
 
   public:
+    int meshId = -1;
     int lock = 1;
     int poolId;
     int vertex_ = -1;
@@ -60,6 +61,9 @@ class Halfedge {
     void setFacet(int facet);
 
     void reset(Vertex* v1, Vertex* v2);
+    void setMeshId(int id) {
+        this->meshId = id;
+    }
 
     // gpu
     __device__ void setOppositeOnCuda(Halfedge* opposite);
@@ -79,6 +83,14 @@ class Halfedge {
     __device__ Halfedge* dnext(Halfedge* halfedges);
     __device__ void resetOnCuda(Vertex* v1, Vertex* v2);
     __device__ void resetOnCuda(int v1, int v2);
+
+    __device__ inline void resetStateOnCuda() {
+        flag = NotYetInQueue;
+        flag2 = Original;
+        processedFlag = NotProcessed;
+        removedFlag = NotRemoved;
+        bfsFlag = NotVisited;
+    }
 
     inline void resetState() {
         flag = NotYetInQueue;

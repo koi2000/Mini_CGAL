@@ -97,6 +97,11 @@ class Vertex : public Point {
         // *lock = 1;
     }
 
+    void setMeshId(int id) {
+        this->meshId = id;
+    }
+
+    int meshId = -1;
     int lock = 1;
     int poolId;
     int halfedges[HALFEDGE_IN_VERTEX];

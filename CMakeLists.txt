@@ -38,8 +38,6 @@ include_directories(
 )
 find_package(CGAL REQUIRED)
 find_package(OpenMP REQUIRED)
-# find_package(OpenGL REQUIRED)
-# find_package(GLUT REQUIRED)
 find_package(CUDA REQUIRED)
 
 # Add library paths
@@ -55,6 +53,7 @@ set(MINICGAL_CUDA_SOURCE_DIR "MCGAL/Core_CUDA")
 set(PPMC_SOURCE_DIR "PPMC/CGAL_PPMC")
 set(MINICGAL_PPMC_SOURCE_DIR "PPMC/MCGAL_PPMC")
 set(PPMC_CUDA_SOURCE_DIR "PPMC/CUDA_PPMC")
+set(BATCH_PPMC_SOURCE_DIR "PPMC/BATCH_PPMC")
 
 include(${CGAL_USE_FILE})
 
@@ -74,6 +73,11 @@ file(GLOB_RECURSE MINICGAL_PPMC_FILES
     "${MINICGAL_SOURCE_DIR}/*.cpp"
     "${MINICGAL_PPMC_SOURCE_DIR}/*.h"
     "${MINICGAL_PPMC_SOURCE_DIR}/*.cpp"
+)
+
+file(GLOB_RECURSE BATCH_PPMC_FILES
+    "${BATCH_PPMC_SOURCE_DIR}/*.cuh"
+    "${BATCH_PPMC_SOURCE_DIR}/*.cu"
 )
 
 # file(GLOB_RECURSE MINICGAL_CUDA_PPMC_FILES
@@ -138,4 +142,7 @@ add_executable(MiniCGAL_CudaCompress tools/MCudaCompress_test.cu  ${CUDA_PPMC} $
 set_target_properties(MiniCGAL_CudaCompress PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON)
 target_link_libraries(MiniCGAL_CudaCompress ${CUDA_LIBRARIES})
 
+add_executable(Batch_Decompress tools/BatchDecompress_test.cu  ${BATCH_PPMC_FILES} ${MINICGAL_CUDA})
+set_target_properties(Batch_Decompress PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON)
+target_link_libraries(Batch_Decompress ${CUDA_LIBRARIES} OpenMP::OpenMP_CXX)
 # message(STATUS "list = ${CUDA_PPMC}" )
