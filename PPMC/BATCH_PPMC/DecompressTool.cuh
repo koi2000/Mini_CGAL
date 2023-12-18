@@ -7,7 +7,7 @@
 #include <omp.h>
 #include <queue>
 #define BUFFER_SIZE 10 * 10 * 1024 * 1024
-
+#define SPLITABLE_SIZE 10 * 10 * 1024
 /**
  * @brief 用于对一个batch里的数据进行decompress，尝试full gpu处理
  * 可能存在的需求，让某个mesh多decode一轮，而不是从baseMesh开始decode，这种情况需要提前存储mesh的信息
@@ -46,6 +46,10 @@ class DeCompressTool {
     int* dstOffsets;
     // 直接存一维数组，通过奇数位偶数位访问
     int* dvh_departureConquest;
+    int* dfaceIndexes;
+    int* dvertexIndexes;
+    int* dstHalfedgeIndexes;
+    int* dstFacetIndexes;
 
   public:
     DeCompressTool(char* bufferPath, std::vector<int> stOffsets);

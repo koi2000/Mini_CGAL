@@ -7,7 +7,27 @@ readBaseMeshOnCuda(char* buffer, int* stOffsets, int num, int* vh_departureConqu
 }
 
 DeCompressTool::~DeCompressTool() {
-    delete buffer;
+    stOffsets.clear();
+    stOffsets.shrink_to_fit();
+    lods.clear();
+    lods.shrink_to_fit();
+    nbDecimations.clear();
+    nbDecimations.shrink_to_fit();
+    vh_departureConquest.clear();
+    vh_departureConquest.shrink_to_fit();
+    splitableCounts.clear();
+    splitableCounts.shrink_to_fit();
+    insertedCounts.clear();
+    insertedCounts.shrink_to_fit();
+
+    delete[] buffer;
+    cudaFree(dbuffer);
+    cudaFree(dvh_departureConquest);
+    cudaFree(dstOffsets);
+    cudaFree(dfaceIndexes);
+    cudaFree(dvertexIndexes);
+    cudaFree(dstHalfedgeIndexes);
+    cudaFree(dstFacetIndexes);
 }
 
 /**
@@ -16,6 +36,7 @@ DeCompressTool::~DeCompressTool() {
  */
 DeCompressTool::DeCompressTool(char** path, int number, bool is_base) {
     int dataOffset = 0;
+    buffer = new char[BUFFER_SIZE];
     for (int i = 0; i < number; i++) {
         std::ifstream fin(path[i], std::ios::binary);
         int len2;
@@ -28,13 +49,23 @@ DeCompressTool::DeCompressTool(char** path, int number, bool is_base) {
         dataOffset += len2;
         free(p_data);
     }
+    CHECK(cudaMalloc((int**)&dfaceIndexes, SPLITABLE_SIZE * sizeof(int)));
+    CHECK(cudaMalloc((int**)&dvertexIndexes, SPLITABLE_SIZE * sizeof(int)));
+    CHECK(cudaMalloc((int**)&dstHalfedgeIndexes, SPLITABLE_SIZE * sizeof(int)));
+    CHECK(cudaMalloc((int**)&dstFacetIndexes, SPLITABLE_SIZE * sizeof(int)));
     CHECK(cudaMalloc(&dbuffer, dataOffset));
     CHECK(cudaMalloc(&dstOffsets, stOffsets.size() * sizeof(int)));
     CHECK(cudaMemcpy(dbuffer, buffer, dataOffset, cudaMemcpyHostToDevice));
     CHECK(cudaMemcpy(dstOffsets, stOffsets.data(), stOffsets.size() * sizeof(int), cudaMemcpyHostToDevice));
+    cudaError_t error = cudaGetLastError();
+    if (error != cudaSuccess) {
+        printf("ERROR: %s:%d,", __FILE__, __LINE__);
+        printf("code:%d,reason:%s\n", error, cudaGetErrorString(error));
+        exit(1);
+    }
     batch_size = number;
     if (is_base) {
-        vh_departureConquest.resize(number);
+        vh_departureConquest.resize(2 * number);
         nbDecimations.resize(number);
         splitableCounts.resize(number);
         insertedCounts.resize(number);
@@ -75,8 +106,8 @@ __global__ void resetStateOnCuda(MCGAL::Halfedge* hpool, MCGAL::Facet* fpool, in
 
 void DeCompressTool::startNextDecompresssionOp() {
     // check if the target LOD is reached
-    if (i_curDecimationId * 100.0 / i_nbDecimations >= i_decompPercentage) {
-        if (i_curDecimationId == i_nbDecimations) {}
+    if (i_curDecimationId * 100.0 / nbDecimations[0] >= i_decompPercentage) {
+        if (i_curDecimationId == nbDecimations[0]) {}
         b_jobCompleted = true;
         return;
     }
@@ -86,7 +117,23 @@ void DeCompressTool::startNextDecompresssionOp() {
     int number = MCGAL::contextPool.findex;
     dim3 block(256, 1, 1);
     dim3 grid((number + block.x - 1) / block.x, 1, 1);
-    resetStateOnCuda<<<grid, block>>>(MCGAL::contextPool.hpool, MCGAL::contextPool.fpool, number);
+    int vsize = MCGAL::contextPool.vindex;
+    int hsize = MCGAL::contextPool.hindex;
+    int fsize = MCGAL::contextPool.findex;
+    CHECK(cudaMemcpy(MCGAL::contextPool.dvpool, MCGAL::contextPool.vpool, vsize * sizeof(MCGAL::Vertex),
+                     cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpy(MCGAL::contextPool.dhpool, MCGAL::contextPool.hpool, hsize * sizeof(MCGAL::Halfedge),
+                     cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpy(MCGAL::contextPool.dfpool, MCGAL::contextPool.fpool, fsize * sizeof(MCGAL::Facet),
+                     cudaMemcpyHostToDevice));
+    resetStateOnCuda<<<grid, block>>>(MCGAL::contextPool.dhpool, MCGAL::contextPool.dfpool, number);
+    cudaDeviceSynchronize();
+    CHECK(cudaMemcpy(MCGAL::contextPool.vpool, MCGAL::contextPool.dvpool, vsize * sizeof(MCGAL::Vertex),
+                     cudaMemcpyDeviceToHost));
+    CHECK(cudaMemcpy(MCGAL::contextPool.hpool, MCGAL::contextPool.dhpool, hsize * sizeof(MCGAL::Halfedge),
+                     cudaMemcpyDeviceToHost));
+    CHECK(cudaMemcpy(MCGAL::contextPool.fpool, MCGAL::contextPool.dfpool, fsize * sizeof(MCGAL::Facet),
+                     cudaMemcpyDeviceToHost));
     for (int i = 0; i < splitableCounts.size(); i++) {
         splitableCounts[i] = 0;
         insertedCounts[i] = 0;
@@ -283,6 +330,7 @@ void DeCompressTool::insertRemovedVertices() {
     }
 
     std::vector<int> faceIndexes(splitable_count);
+    // int* faceIndexes = new int[splitable_count];
     std::vector<int> vertexIndexes(splitable_count);
     std::vector<int> stHalfedgeIndexes(splitable_count);
     std::vector<int> stFacetIndexes(splitable_count);
@@ -292,26 +340,36 @@ void DeCompressTool::insertRemovedVertices() {
     double clockRate = prop.clockRate;
     int findex = MCGAL::contextPool.findex;
     //
-#pragma omp parallel for num_threads(50) schedule(dynamic)
+    #pragma omp parallel for num_threads(50) schedule(dynamic)
     for (int i = 0; i < findex; i++) {
         MCGAL::Facet* fit = MCGAL::contextPool.getFacetByIndex(i);
-        if (fit->isSplittable()) {
+        if (fit->meshId != -1 && fit->isSplittable()) {
             faceIndexes[index] = fit->poolId;
             int hcount = fit->halfedge_size * 2;
             int fcount = fit->halfedge_size - 1;
             // atomic
-            int findex = MCGAL::contextPool.preAllocFace(fcount);
+            int findex;
+#pragma omp critical
+            { findex = MCGAL::contextPool.preAllocFace(fcount); }
             for (int i = 0; i < fcount; i++) {
                 MCGAL::contextPool.getFacetByIndex(findex + i)->setMeshId(fit->meshId);
             }
             stFacetIndexes[index] = findex;
-            // atomic
-            int hindex = MCGAL::contextPool.preAllocHalfedge(hcount);
-            stHalfedgeIndexes[index] = hindex;
-            vertexIndexes[index] = (MCGAL::contextPool.getVindex());
-            // atomic
-            MCGAL::Vertex* vnew = MCGAL::contextPool.allocateVertexFromPool(fit->getRemovedVertexPos());
+            int hindex;
+#pragma omp critical
+            {
+                hindex = MCGAL::contextPool.preAllocHalfedge(hcount);
+                stHalfedgeIndexes[index] = hindex;
+            }
+            MCGAL::Vertex* vnew;
+#pragma omp critical
+            {
+                vertexIndexes[index] = MCGAL::contextPool.getVindex();
+                // atomic
+                vnew = MCGAL::contextPool.allocateVertexFromPool(fit->getRemovedVertexPos());
+            }
             vnew->setMeshId(fit->meshId);
+#pragma omp atomic
             index++;
             for (int i = 0; i < fit->halfedge_size; i++) {
                 MCGAL::Halfedge* h = fit->getHalfedgeByIndex(i);
@@ -321,21 +379,21 @@ void DeCompressTool::insertRemovedVertices() {
         }
     }
     // add it to mesh
-    int* dfaceIndexes;
-    int* dvertexIndexes;
-    int* dstHalfedgeIndexes;
-    int* dstFacetIndexes;
-    int num = faceIndexes.size();
+    int num = splitable_count;
     dim3 block(256, 1, 1);
     dim3 grid((num + block.x - 1) / block.x, 1, 1);
-    CHECK(cudaMalloc(&dfaceIndexes, num * sizeof(int)));
-    CHECK(cudaMalloc(&dvertexIndexes, num * sizeof(int)));
-    CHECK(cudaMalloc(&dstHalfedgeIndexes, num * sizeof(int)));
-    CHECK(cudaMalloc(&dstFacetIndexes, num * sizeof(int)));
-    CHECK(cudaMemcpy(dfaceIndexes, faceIndexes.data(), num * sizeof(int), cudaMemcpyHostToDevice));
-    CHECK(cudaMemcpy(dvertexIndexes, vertexIndexes.data(), num * sizeof(int), cudaMemcpyHostToDevice));
-    CHECK(cudaMemcpy(dstHalfedgeIndexes, stHalfedgeIndexes.data(), num * sizeof(int), cudaMemcpyHostToDevice));
-    CHECK(cudaMemcpy(dstFacetIndexes, stFacetIndexes.data(), num * sizeof(int), cudaMemcpyHostToDevice));
+    cudaError_t error = cudaGetLastError();
+    if (error != cudaSuccess) {
+        printf("ERROR: %s:%d,", __FILE__, __LINE__);
+        printf("code:%d,reason:%s\n", error, cudaGetErrorString(error));
+        exit(1);
+    }
+    CHECK(cudaMemcpy(dfaceIndexes, faceIndexes.data(), faceIndexes.size() * sizeof(int), cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpy(dvertexIndexes, vertexIndexes.data(), vertexIndexes.size() * sizeof(int), cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpy(dstHalfedgeIndexes, stHalfedgeIndexes.data(), stHalfedgeIndexes.size() * sizeof(int),
+                     cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpy(dstFacetIndexes, stFacetIndexes.data(), stFacetIndexes.size() * sizeof(int),
+                     cudaMemcpyHostToDevice));
     int vsize = MCGAL::contextPool.vindex;
     int hsize = MCGAL::contextPool.hindex;
     int fsize = MCGAL::contextPool.findex;
@@ -351,7 +409,7 @@ void DeCompressTool::insertRemovedVertices() {
                                               dstHalfedgeIndexes, dstFacetIndexes, num, clockRate, i_curDecimationId);
     cudaDeviceSynchronize();
     double t = logt("%d kernel function", start, i_curDecimationId);
-    cudaError_t error = cudaGetLastError();
+    error = cudaGetLastError();
     if (error != cudaSuccess) {
         printf("ERROR: %s:%d,", __FILE__, __LINE__);
         printf("code:%d,reason:%s\n", error, cudaGetErrorString(error));
@@ -370,10 +428,11 @@ void DeCompressTool::insertRemovedVertices() {
         printf("code:%d,reason:%s\n", error, cudaGetErrorString(error));
         exit(1);
     }
-    cudaFree(dfaceIndexes);
-    cudaFree(dvertexIndexes);
-    cudaFree(dstHalfedgeIndexes);
-    cudaFree(dstFacetIndexes);
+    // cudaFree(dfaceIndexes);
+    // cudaFree(dvertexIndexes);
+    // cudaFree(dstHalfedgeIndexes);
+    // cudaFree(dstFacetIndexes);
+    // delete faceIndexes;
 }
 
 void DeCompressTool::removeInsertedEdges(int meshId) {
@@ -522,6 +581,8 @@ void DeCompressTool::dumpto(std::string prefix) {
     for (int i = 0; i < findex; i++) {
         MCGAL::Facet* f = MCGAL::contextPool.getFacetByIndex(i);
         if (f->meshId != -1) {
+            if (f->isRemoved())
+                continue;
             facets[f->meshId].push_back(f);
         }
     }

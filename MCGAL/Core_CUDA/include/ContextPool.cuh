@@ -93,7 +93,6 @@ class ContextPool {
 
     inline MCGAL::Vertex* allocateVertexFromPool(MCGAL::Point p) {
         vpool[vindex].setPoint(p);
-#pragma omp atomic
         return &vpool[vindex++];
     }
 
@@ -122,21 +121,18 @@ class ContextPool {
 
     inline int preAllocVertex(int size) {
         int ret = vindex;
-#pragma omp atomic
         vindex += size;
         return ret;
     }
 
     inline int preAllocHalfedge(int size) {
         int ret = hindex;
-#pragma omp atomic
         hindex += size;
         return ret;
     }
 
     inline int preAllocFace(int size) {
         int ret = findex;
-#pragma omp atomic
         findex += size;
         return ret;
     }
