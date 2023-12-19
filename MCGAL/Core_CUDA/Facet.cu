@@ -171,7 +171,7 @@ __device__ void Facet::resetOnCuda(Vertex* vertices, Halfedge* halfedges, Halfed
     do {
         idx++;
         if (idx >= 120) {
-            // printf("%d\n", this->poolId);
+            printf("%d\n", this->poolId);
             break;
         }
         addHalfedgeOnCuda(st);

@@ -20,7 +20,7 @@ class Halfedge {
 
   public:
     int meshId = -1;
-    int lock = 1;
+    int lock = 0;
     int poolId;
     int vertex_ = -1;
     int end_vertex_ = -1;

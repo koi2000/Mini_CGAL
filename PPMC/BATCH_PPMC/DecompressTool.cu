@@ -428,11 +428,6 @@ void DeCompressTool::insertRemovedVertices() {
         printf("code:%d,reason:%s\n", error, cudaGetErrorString(error));
         exit(1);
     }
-    // cudaFree(dfaceIndexes);
-    // cudaFree(dvertexIndexes);
-    // cudaFree(dstHalfedgeIndexes);
-    // cudaFree(dstFacetIndexes);
-    // delete faceIndexes;
 }
 
 void DeCompressTool::removeInsertedEdges(int meshId) {
