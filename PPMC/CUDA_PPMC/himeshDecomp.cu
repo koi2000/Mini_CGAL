@@ -28,24 +28,18 @@ void HiMesh::startNextDecompresssionOp() {
     std::vector<int> twos;
     // 1. reset the states. note that the states of the vertices need not to be reset
     for (auto fit = faces.begin(); fit != faces.end();) {
-        // if ((*fit)->count >= 2) {
-        //     twos.push_back((*fit)->poolId);
-        //     printf("%d", (*fit)->poolId);
-        // }
-        // fit++;
         if ((*fit)->isRemoved()) {
             fit = faces.erase(fit);
         } else {
             (*fit)->resetState();
-            // for (MCGAL::Halfedge* hit : (*fit)->halfedges) {
-            //     hit->resetState();
-            // }
             for (int i = 0; i < (*fit)->halfedge_size; i++) {
                 (*fit)->getHalfedgeByIndex(i)->resetState();
             }
             fit++;
         }
     }
+    cur_offset = 0;
+    cur_total = 0;
     splitable_count = 0;
     inserted_edgecount = 0;
     i_curDecimationId++;  // increment the current decimation operation id.
@@ -81,7 +75,6 @@ void HiMesh::readBaseMesh() {
         p_pointDeque->push_back(pos);
     }
     // read the face vertex indices
-    // Read the face vertex indices.
     for (unsigned i = 0; i < i_nbFacesBaseMesh; ++i) {
         int nv = readInt();
         uint32_t* f = new uint32_t[nv + 1];
@@ -136,6 +129,9 @@ void HiMesh::buildFromBuffer(std::deque<MCGAL::Point>* p_pointDeque, std::deque<
 }
 
 void HiMesh::RemovedVerticesDecodingStep() {
+    // 首先读出totalOffset
+    // 然后开始随机读取
+    cur_total = readInt();
     pushHehInit();
     while (!gateQueue.empty()) {
         MCGAL::Halfedge* h = gateQueue.front();
@@ -159,9 +155,12 @@ void HiMesh::RemovedVerticesDecodingStep() {
         } while (hIt != h);
 
         // Decode the face symbol.
-        unsigned sym = readChar();
+        int offset = readInt() + cur_total;
+        unsigned sym = readCharByOffset(offset);
+        cur_offset += 1;
         if (sym == 1) {
-            MCGAL::Point rmved = readPoint();
+            MCGAL::Point rmved = readPointByOffset(offset + 1);
+            cur_offset += sizeof(float) * 3;
             f->setSplittable();
             splitable_count++;
             f->setRemovedVertexPos(rmved);
@@ -169,12 +168,15 @@ void HiMesh::RemovedVerticesDecodingStep() {
             f->setUnsplittable();
         }
     }
+    // dataOffset = before + cur_total + sizeof(int);
 }
 
 /**
  * One step of the inserted edge coding conquest.
  */
 void HiMesh::InsertedEdgeDecodingStep() {
+    // 首先读出totalOffset
+    // 然后开始随机读取
     pushHehInit();
     while (!gateQueue.empty()) {
         MCGAL::Halfedge* h = gateQueue.front();
@@ -188,17 +190,14 @@ void HiMesh::InsertedEdgeDecodingStep() {
         h->setProcessed();
         h->opposite()->setProcessed();
 
-        // Test if there is a symbol for this edge.
-        // There is no symbol if the two faces of an edge are unsplitable.
-        if (h->facet()->isSplittable() || h->opposite()->facet()->isSplittable()) {
-            // Decode the edge symbol.
-            unsigned sym = readChar();
-            // Determine if the edge is original or not.
-            // Mark the edge to be removed.
-            if (sym != 0) {
-                h->setAdded();
-                inserted_edgecount++;
-            }
+        int offset = readInt() + cur_total;
+        unsigned sym = readCharByOffset(offset);
+        cur_offset += 1;
+        // Determine if the edge is original or not.
+        // Mark the edge to be removed.
+        if (sym != 0) {
+            h->setAdded();
+            inserted_edgecount++;
         }
 
         // Add the other halfedges to the queue
@@ -210,6 +209,7 @@ void HiMesh::InsertedEdgeDecodingStep() {
         }
         assert(!hIt->isNew());
     }
+    dataOffset += cur_offset;
 }
 
 inline __device__ void insert_tip_cuda(MCGAL::Halfedge* hs, MCGAL::Halfedge* h, MCGAL::Halfedge* v) {

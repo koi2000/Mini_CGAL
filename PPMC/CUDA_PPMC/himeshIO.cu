@@ -136,3 +136,38 @@ void HiMesh::writeChar(unsigned char i) {
     *(unsigned char*)(p_data + dataOffset) = i;
     dataOffset += sizeof(unsigned char);
 }
+
+float HiMesh::readFloatByOffset(int offset) {
+    float f = *(float*)(p_data + offset);
+    return f;
+}
+
+int16_t HiMesh::readInt16ByOffset(int offset) {
+    int16_t i = *(int16_t*)(p_data + offset);
+    return i;
+}
+
+uint16_t HiMesh::readuInt16ByOffset(int offset) {
+    uint16_t i = *(uint16_t*)(p_data + offset);
+    return i;
+}
+
+int HiMesh::readIntByOffset(int offset) {
+    int i = *(int*)(p_data + offset);
+    return i;
+}
+
+unsigned char HiMesh::readCharByOffset(int offset) {
+    unsigned char i = *(unsigned char*)(p_data + offset);
+    return i;
+}
+
+MCGAL::Point HiMesh::readPointByOffset(int offset) {
+    float coord[3];
+    for (unsigned i = 0; i < 3; ++i) {
+        coord[i] = readFloatByOffset(offset);
+        offset += sizeof(float);
+    }
+    MCGAL::Point pt(coord[0], coord[1], coord[2]);
+    return pt;
+}

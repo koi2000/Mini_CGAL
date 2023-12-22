@@ -1,8 +1,8 @@
 //
 // Created by DELL on 2023/11/9.
 //
-#include "math.h"
 #include "himesh.cuh"
+#include "math.h"
 #include "util.h"
 
 void HiMesh::encode(int lod) {
@@ -24,13 +24,6 @@ void HiMesh::startNextCompresssionOp() {
     for (MCGAL::Vertex* vit : vertices) {
         vit->resetState();
     }
-
-    // for (MCGAL::Facet* fit : faces) {
-    //     fit->resetState();
-    //     for (int i = 0; i < fit->halfedge_size; i++) {
-    //         fit->getHalfedgeByIndex(i)->resetState();
-    //     }
-    // }
     int cnt = 0;
     for (auto fit = faces.begin(); fit != faces.end();) {
         if ((*fit)->isRemoved()) {
@@ -55,35 +48,20 @@ void HiMesh::startNextCompresssionOp() {
         size_t i_heInitId = size_of_halfedges() / 2;
         MCGAL::Halfedge* hitInit = halfedges[i_heInitId];
         hitInit->setInQueue();
-        // MCGAL::Halfedge* hitInit = *vh_departureConquest[0]->halfedges.begin();
         gateQueue.push(hitInit);
     }
     // bfs all the facet
-    /**
-     * 本质是对所有的facet进行bfs，对于一个面，如果被处理过就不能再被处理了，如果没有被处理
-     * 就根据情况来，如果点可以被删除，就删除，并标记为splittable，如果不能被删，就不删，标记为unsplittable
-     * 这里是通过bfs halfedge来达到bfs facet的目的的
-     * 按道理来说，一个面被标记为splittable，说明这个面中有多个面被删除，多个边被删除，这些被删的不能再进入bfs
-     * 被标记为conqured的点也不能被删除，
-     * 大概率问题出在判断是否为 流型结构 上
-     */
-    int count = 0;
     while (!gateQueue.empty()) {
         MCGAL::Halfedge* h = gateQueue.front();
         gateQueue.pop();
         // TODO: wait
         // assert(!h->is_border());
         MCGAL::Facet* f = h->facet();
-        // if (h->isRemoved()) {
-        //     h->removeFromQueue();
-        //     continue;
-        // }
         // if the face is already processed, pick the next halfedge:
         if (f->isConquered()) {
             h->removeFromQueue();
             continue;
         }
-        count++;
         // the face is not processed. Count the number of non conquered vertices that can be split
         bool hasRemovable = false;
         MCGAL::Halfedge* unconqueredVertexHE;
@@ -118,7 +96,6 @@ void HiMesh::startNextCompresssionOp() {
             vertexCut(unconqueredVertexHE);
         }
     }
-    log("%d number is %d", i_curDecimationId, count);
     log("%d removed number is %d", i_curDecimationId, i_nbRemovedVertices);
     // 3. do the encoding job
     if (i_nbRemovedVertices == 0) {
@@ -130,9 +107,24 @@ void HiMesh::startNextCompresssionOp() {
         assert(i_deci >= 0);
         while (i_deci >= 0) {
             // encodeHausdorff(i_deci);
+            // 先把这一轮的都插进去，计算offset
+            // 计算这一轮所占用的offset一共是多少，然后写在最前面
+            // 最后把所有的offset都写进去
+            int before = dataOffset;
             encodeRemovedVertices(i_deci);
             encodeInsertedEdges(i_deci);
+            int after = dataOffset;
+            // 分别是offset信息，加一个头信息
+            int cur_totalOffset = connectFaceOffset[i_deci].size() * sizeof(int) +
+                                  connectEdgeOffset[i_deci].size() * sizeof(int) +sizeof(int);
+            // 先拷贝
+            memcpy(p_data + before + cur_totalOffset, p_data + before, after - before);
+            dataOffset = before;
+            writeInt(cur_totalOffset);
+            encodeRemovedVerticesOffset(i_deci);
+            encodeInsertedEdgesOffset(i_deci);
             i_deci--;
+            dataOffset += after - before;
         }
     } else {
         // 3dpro: compute and encode the Hausdorff distance for all the facets in this LOD
@@ -182,7 +174,6 @@ MCGAL::Halfedge* HiMesh::vertexCut(MCGAL::Halfedge* startH) {
         }
         // mark the vertex as conquered
         h->end_vertex()->setConquered();
-        // h->end_vertex->setConquered();
         removed++;
     } while ((h = h->opposite()->next()) != end);
 
@@ -219,6 +210,7 @@ void HiMesh::RemovedVertexCodingStep() {
     // resize the vectors to add the current conquest symbols
     geometrySym.push_back(std::deque<MCGAL::Point>());
     connectFaceSym.push_back(std::deque<unsigned>());
+    connectFaceOffset.push_back(std::deque<int>());
 
     // Add the first halfedge to the queue.
     pushHehInit();
@@ -264,6 +256,7 @@ void HiMesh::RemovedVertexCodingStep() {
 
 void HiMesh::InsertedEdgeCodingStep() {
     connectEdgeSym.push_back(std::deque<unsigned>());
+    connectEdgeOffset.push_back(std::deque<int>());
     pushHehInit();
     while (!gateQueue.empty()) {
         MCGAL::Halfedge* h = gateQueue.front();
@@ -285,7 +278,8 @@ void HiMesh::InsertedEdgeCodingStep() {
 
         // Don't write a symbol if the two faces of an edgde are unsplitable.
         // this can help to save some space, since it is guaranteed that the edge is not inserted
-        bool b_toCode = h->facet()->isUnsplittable() && h->opposite()->facet()->isUnsplittable() ? false : true;
+        // bool b_toCode = h->facet()->isUnsplittable() && h->opposite()->facet()->isUnsplittable() ? false : true;
+        bool b_toCode = true;
 
         // Determine the edge symbol.
         unsigned sym;
@@ -345,10 +339,12 @@ void HiMesh::writeBaseMesh() {
  */
 void HiMesh::encodeInsertedEdges(unsigned i_operationId) {
     std::deque<unsigned>& symbols = connectEdgeSym[i_operationId];
+    std::deque<int>& offsets = connectEdgeOffset[i_operationId];
     assert(symbols.size() > 0);
 
     unsigned i_len = symbols.size();
     for (unsigned i = 0; i < i_len; ++i) {
+        offsets.push_back(dataOffset);
         writeChar(symbols[i]);
     }
 }
@@ -358,6 +354,7 @@ void HiMesh::encodeInsertedEdges(unsigned i_operationId) {
  */
 void HiMesh::encodeRemovedVertices(unsigned i_operationId) {
     std::deque<unsigned>& connSym = connectFaceSym[i_operationId];
+    std::deque<int>& faceOffset = connectFaceOffset[i_operationId];
     std::deque<MCGAL::Point>& geomSym = geometrySym[i_operationId];
 
     unsigned i_lenGeom = geomSym.size();
@@ -369,11 +366,35 @@ void HiMesh::encodeRemovedVertices(unsigned i_operationId) {
     for (unsigned i = 0; i < i_lenConn; ++i) {
         // Encode the connectivity.
         unsigned sym = connSym[i];
+        faceOffset.push_back(dataOffset);
         writeChar(sym);
         // Encode the geometry if necessary.
         if (sym) {
             writePoint(geomSym[k]);
             k++;
         }
+    }
+}
+
+void HiMesh::encodeInsertedEdgesOffset(unsigned i_operationId) {
+    std::deque<int>& offsets = connectEdgeOffset[i_operationId];
+    assert(offsets.size() > 0);
+    unsigned i_len = offsets.size();
+    for (unsigned i = 0; i < i_len; ++i) {
+        writeInt(offsets[i]);
+    }
+}
+
+/**
+ * Encode the geometry and the connectivity of a removed vertex list.
+ */
+void HiMesh::encodeRemovedVerticesOffset(unsigned i_operationId) {
+    std::deque<int>& faceOffset = connectFaceOffset[i_operationId];
+    unsigned i_lenConn = faceOffset.size();
+    assert(i_lenConn > 0);
+    for (unsigned i = 0; i < i_lenConn; ++i) {
+        // Encode the connectivity.
+        unsigned sym = faceOffset[i];
+        writeInt(sym);
     }
 }

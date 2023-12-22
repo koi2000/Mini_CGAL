@@ -6,7 +6,7 @@
 #include <boost/foreach.hpp>
 #include <deque>
 #include <queue>
-#define BUFFER_SIZE 10 * 1024 * 1024
+#define BUFFER_SIZE 500 * 1024 * 1024
 #define SPLITABLE_SIZE 10 * 1024
 #define REMOVEDEDGE_SIZE 100 * 1024
 
@@ -34,6 +34,8 @@ class HiMesh : public MCGAL::Mesh {
 
     int splitable_count = 0;
     int inserted_edgecount = 0;
+    int cur_offset = 0;
+    int cur_total = 0;
 
     // The vertices of the edge that is the departure of the coding and decoding conquests.
     MCGAL::Vertex* vh_departureConquest[2];
@@ -49,6 +51,8 @@ class HiMesh : public MCGAL::Mesh {
     // Connectivity symbol list.
     std::deque<std::deque<unsigned>> connectFaceSym;
     std::deque<std::deque<unsigned>> connectEdgeSym;
+    std::deque<std::deque<int>> connectFaceOffset;
+    std::deque<std::deque<int>> connectEdgeOffset;
 
     // The compressed data;
     char* p_data;
@@ -90,7 +94,9 @@ class HiMesh : public MCGAL::Mesh {
     void merge(std::unordered_set<MCGAL::replacing_group*>& reps, MCGAL::replacing_group*);
     MCGAL::Halfedge* vertexCut(MCGAL::Halfedge* startH);
     void encodeInsertedEdges(unsigned i_operationId);
+    void encodeInsertedEdgesOffset(unsigned i_operationId);
     void encodeRemovedVertices(unsigned i_operationId);
+    void encodeRemovedVerticesOffset(unsigned i_operationId);
     void encodeHausdorff(unsigned i_operationId);
 
     // Compression geometry and connectivity tests.
@@ -129,6 +135,13 @@ class HiMesh : public MCGAL::Mesh {
     void writeChar(unsigned char ch);
     void writePoint(MCGAL::Point& p);
     MCGAL::Point readPoint();
+
+    float readFloatByOffset(int offset);
+    int16_t readInt16ByOffset(int offset);
+    uint16_t readuInt16ByOffset(int offset);
+    int readIntByOffset(int offset);
+    unsigned char readCharByOffset(int offset);
+    MCGAL::Point readPointByOffset(int offset);
 
     void writeBaseMesh();
     void readBaseMesh();
