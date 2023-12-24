@@ -73,7 +73,7 @@ class Point {
         }
     }
 
-  protected:
+  public:
     float v[3];
 };
 

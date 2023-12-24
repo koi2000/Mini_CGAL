@@ -100,6 +100,40 @@ class Halfedge {
         bfsFlag = NotVisited;
     }
 
+    __device__ inline void setProcessedOnCuda() {
+        processedFlag = Processed;
+    }
+
+    __device__ inline bool isProcessedOnCuda() const {
+        return (processedFlag == Processed);
+    }
+
+    __device__ inline bool isAddedOnCuda() const {
+        return flag2 == Added;
+    }
+
+    __device__ inline void setAddedOnCuda() {
+        assert(flag2 == Original);
+        flag2 = Added;
+    }
+
+    __device__ inline void setNewOnCuda() {
+        assert(flag2 == Original);
+        flag2 = New;
+    }
+
+    __device__ inline bool isNewOnCuda() const {
+        return flag2 == New;
+    }
+
+    __device__ inline void setVisitedOnCuda() {
+        bfsFlag = Visited;
+    }
+
+    __device__ inline bool isVisitedOnCuda() {
+        return bfsFlag == Visited;
+    }
+
     /* Flag 1 */
 
     inline void setInQueue() {
@@ -142,10 +176,6 @@ class Halfedge {
     }
 
     inline bool isAdded() const {
-        return flag2 == Added;
-    }
-
-    __device__ inline bool isAddedOnCuda() const {
         return flag2 == Added;
     }
 

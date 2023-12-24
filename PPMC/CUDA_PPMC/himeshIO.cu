@@ -81,7 +81,7 @@ MCGAL::Point HiMesh::readPoint() {
  * Read an integer in the data buffer.
  */
 int HiMesh::readInt() {
-    int i = *(int*)(p_data + dataOffset);
+    int i = *(int*)(p_data + origin + dataOffset);
     dataOffset += sizeof(int);
     return i;
 }

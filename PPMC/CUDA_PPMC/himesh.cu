@@ -59,10 +59,19 @@ HiMesh::HiMesh(char* data, size_t dsize, bool owndata) : MCGAL::Mesh() {
     }
     MCGAL::contextPool.reset();
     readBaseMesh();
+    CHECK(cudaMalloc(&dbuffer, BUFFER_SIZE));
+    CHECK(cudaMalloc(&dcur_offset, sizeof(int)));
+    CHECK(cudaMalloc(&dsplitable_count, sizeof(int)));
+    CHECK(cudaMalloc(&dinserted_edgecount, sizeof(int)));
+    // CHECK(cudaMallocManaged(&d_dataOffset, sizeof(int)));
+
     CHECK(cudaMalloc(&dfaceIndexes, SPLITABLE_SIZE * sizeof(int)));
     CHECK(cudaMalloc(&dvertexIndexes, SPLITABLE_SIZE * sizeof(int)));
     CHECK(cudaMalloc(&dstFacetIndexes, SPLITABLE_SIZE * sizeof(int)));
     CHECK(cudaMalloc(&dstHalfedgeIndexes, SPLITABLE_SIZE * sizeof(int)));
+    CHECK(cudaMemcpy(dbuffer, p_data + dataOffset, dsize - dataOffset, cudaMemcpyHostToDevice));
+    origin = dataOffset;
+    dataOffset = 0;
     // CHECK(cudaMalloc(&dedgeIndexes, REMOVEDEDGE_SIZE * sizeof(int)));
     // Set the vertices of the edge that is the departure of the coding and decoding conquests.
     // vh_departureConquest[0] = (*halfedges.begin())->vertex;

@@ -1,9 +1,21 @@
 // #include "../MCGAL/Core_CUDA/global.cuh"
+#include "cuda_function.cuh"
 #include "himesh.cuh"
 #include "util.h"
 #include <map>
 #include <nvToolsExt.h>
 #include <omp.h>
+
+__device__ void acquireLock(int* lock) {
+    while (atomicExch(lock, 1) != 0)
+        ;
+    __syncthreads();  // Wait for all threads to acquire the lock
+}
+
+__device__ void releaseLock(int* lock) {
+    __syncthreads();  // Wait for all threads to reach this point
+    atomicExch(lock, 0);
+}
 
 void HiMesh::decode(int lod) {
     assert(lod >= 0 && lod <= 100);
@@ -39,16 +51,18 @@ void HiMesh::startNextDecompresssionOp() {
         }
     }
     cur_offset = 0;
-    cur_total = 0;
+    cur_header = 0;
     splitable_count = 0;
     inserted_edgecount = 0;
     i_curDecimationId++;  // increment the current decimation operation id.
     // 2. decoding the removed vertices and add to target facets
     struct timeval start = get_cur_time();
-    RemovedVerticesDecodingStep();
+    // RemovedVerticesDecodingStep();
+    RemovedVerticesDecodingStepOnCuda();
     logt("%d RemovedVerticesDecodingStep", start, i_curDecimationId);
     // 3. decoding the inserted edge and marking the ones added
-    InsertedEdgeDecodingStep();
+    // InsertedEdgeDecodingStep();
+    InsertedEdgeDecodingStepOnCuda();
     logt("%d InsertedEdgeDecodingStep", start, i_curDecimationId);
     // 4. truly insert the removed vertices
     // insertRemovedVertices();
@@ -60,78 +74,242 @@ void HiMesh::startNextDecompresssionOp() {
     logt("%d removeInsertedEdges", start, i_curDecimationId);
 }
 
-void HiMesh::readBaseMesh() {
-    // read the number of level of detail
-    i_nbDecimations = readuInt16();
-    // set the mesh bounding box
-    unsigned i_nbVerticesBaseMesh = readInt();
-    unsigned i_nbFacesBaseMesh = readInt();
-
-    std::deque<MCGAL::Point>* p_pointDeque = new std::deque<MCGAL::Point>();
-    std::deque<uint32_t*>* p_faceDeque = new std::deque<uint32_t*>();
-    // Read the vertex positions.
-    for (unsigned i = 0; i < i_nbVerticesBaseMesh; ++i) {
-        MCGAL::Point pos = readPoint();
-        p_pointDeque->push_back(pos);
-    }
-    // read the face vertex indices
-    for (unsigned i = 0; i < i_nbFacesBaseMesh; ++i) {
-        int nv = readInt();
-        uint32_t* f = new uint32_t[nv + 1];
-        // Write in the first cell of the array the face degree.
-        f[0] = nv;
-        for (unsigned j = 1; j < nv + 1; ++j) {
-            f[j] = readInt();
+__global__ void computeNextQueueInRemovedVertex(MCGAL::Vertex* vpool,
+                                                MCGAL::Halfedge* hpool,
+                                                MCGAL::Facet* fpool,
+                                                char* buffer,
+                                                int* currentQueue,
+                                                int queueSize,
+                                                int* nextQueue,
+                                                int* nextQueueSize,
+                                                int* splitable_count,
+                                                int* cur_offset,
+                                                int cur_header,
+                                                int dataOffset,
+                                                int origin) {
+    int tid = blockIdx.x * (blockDim.x * blockDim.y) + blockDim.x * threadIdx.y + threadIdx.x;
+    if (tid < queueSize) {
+        int tpOffset = tid * sizeof(int) + dataOffset;
+        // printf("%d\t", tpOffset);
+        // 获得当前的halfedge
+        int current = currentQueue[tid];
+        // printf("%d_%d\t", current, tid);
+        MCGAL::Halfedge* h = &hpool[current];
+        MCGAL::Facet* f = h->dfacet(fpool);
+        if (f->isConqueredOnCuda()) {
+            return;
         }
-        p_faceDeque->push_back(f);
+        MCGAL::Halfedge* hIt = h;
+        do {
+            MCGAL::Halfedge* hOpp = hIt->dopposite(hpool);
+            // TODO: wait
+            // assert(!hOpp->is_border());
+            // acquireLock(&hOpp->lock);
+            if (!hOpp->dfacet(fpool)->isConqueredOnCuda() /*&& !h->isVisitedOnCuda()*/) {
+                // printf("%d_%d\t", hOpp->poolId, tid);
+                hOpp->setVisitedOnCuda();
+                int position = atomicAdd(nextQueueSize, 1);
+                nextQueue[position] = hOpp->poolId;
+            }
+            // releaseLock(&hOpp->lock);
+            hIt = hIt->dnext(hpool);
+        } while (hIt != h);
+        // Decode the face symbol.
+        // printf("offset %d", tpOffset);
+        int offset = readIntOnCuda(buffer, tpOffset) + cur_header;
+        unsigned sym = readCharOnCuda(buffer, offset);
+        (*cur_offset) += 1;
+        if (sym == 1) {
+            printf("%d_1 ", f->poolId);
+            float* rmved = readPointOnCuda(buffer, offset + 1);
+            (*cur_offset) += sizeof(float) * 3;
+            f->setSplittableOnCuda();
+            (*splitable_count)++;
+            f->setRemovedVertexPosOnCuda(rmved);
+        } else {
+            printf("%d_0 ", f->poolId);
+            f->setUnsplittableOnCuda();
+        }
+        // printf("%d", nextQueueSize);
     }
-    // Let the builder do its job.
-    buildFromBuffer(p_pointDeque, p_faceDeque);
-
-    // Free the memory.
-    for (unsigned i = 0; i < p_faceDeque->size(); ++i) {
-        delete[] p_faceDeque->at(i);
-    }
-    delete p_faceDeque;
-    delete p_pointDeque;
 }
 
-void HiMesh::buildFromBuffer(std::deque<MCGAL::Point>* p_pointDeque, std::deque<uint32_t*>* p_faceDeque) {
-    this->vertices.clear();
-    // this->halfedges.clear();
-    // used to create faces
-    std::vector<MCGAL::Vertex*> vertices;
-    // add vertex to Mesh
-    for (std::size_t i = 0; i < p_pointDeque->size(); ++i) {
-        MCGAL::Point p = p_pointDeque->at(i);
-        MCGAL::Vertex* vt = MCGAL::contextPool.allocateVertexFromPool(p);
-        vt->setId(i);
-        this->vertices.push_back(vt);
-        vertices.push_back(vt);
-    }
-    this->vh_departureConquest[0] = vertices[0];
-    this->vh_departureConquest[1] = vertices[1];
-    // read face and add to Mesh
-    for (int i = 0; i < p_faceDeque->size(); ++i) {
-        uint32_t* ptr = p_faceDeque->at(i);
-        int num_face_vertices = ptr[0];
-        std::vector<MCGAL::Vertex*> vts;
-        for (int j = 0; j < num_face_vertices; ++j) {
-            int vertex_index = ptr[j + 1];
-            vts.push_back(vertices[vertex_index]);
+__global__ void computeNextQueueInInsertedEdge(MCGAL::Vertex* vpool,
+                                               MCGAL::Halfedge* hpool,
+                                               MCGAL::Facet* fpool,
+                                               char* buffer,
+                                               int dataOffset,
+                                               int queueSize,
+                                               int* currentQueue,
+                                               int* nextQueueSize,
+                                               int* cur_offset,
+                                               int* nextQueue,
+                                               int* inserted_edgecount,
+                                               int cur_header,
+                                               int origin) {
+    int tid = blockIdx.x * (blockDim.x * blockDim.y) + blockDim.x * threadIdx.y + threadIdx.x;
+    if (tid < queueSize) {
+        int tpOffset = tid * sizeof(int) + dataOffset;
+        // 获得当前的halfedge
+        int current = currentQueue[tid];
+        MCGAL::Halfedge* h = &hpool[current];
+        if (h->isProcessedOnCuda()) {
+            return;
         }
-        MCGAL::Facet* face = MCGAL::contextPool.allocateFaceFromPool(vts);
-        this->add_face(face);
-        // this->faces
+        h->setProcessedOnCuda();
+        h->dopposite(hpool)->setProcessedOnCuda();
+        int offset = readIntOnCuda(buffer, tpOffset) + cur_header;
+        unsigned sym = readCharOnCuda(buffer, offset);
+        cur_offset += 1;
+        // Determine if the edge is original or not.
+        // Mark the edge to be removed.
+        if (sym != 0) {
+            h->setAddedOnCuda();
+            inserted_edgecount++;
+        }
+
+        // Add the other halfedges to the queue
+        MCGAL::Halfedge* hIt = h->dnext(hpool);
+        while (hIt->opposite_ != h->poolId) {
+            if (!hIt->isProcessedOnCuda() && !hIt->isNewOnCuda()) {
+                int position = atomicAdd(nextQueueSize, 1);
+                nextQueue[position] = hIt->poolId;
+            }
+            hIt = hIt->dopposite(hpool)->dnext(hpool);
+        }
     }
-    // clear vector
-    vertices.clear();
+}
+
+void HiMesh::RemovedVerticesDecodingStepOnCuda() {
+    cur_header = readInt();
+    pushHehInit();
+    int size = size_of_facets();
+    // 创建队列，队列里存的是halfedge
+
+    int* d_firstQueue;
+    int* d_secondQueue;
+    int* d_nextQueueSize;
+    cudaMalloc((void**)&d_firstQueue, size);
+    cudaMalloc((void**)&d_secondQueue, size);
+    cudaMalloc((void**)&d_firstQueue, size);
+    cudaMalloc((void**)&d_secondQueue, size);
+    cudaMalloc((void**)&d_nextQueueSize, sizeof(int));
+    int currentQueueSize = 1;
+    const int NEXT_QUEUE_SIZE = 0;
+    int level = 0;
+    dim3 block(32, 1, 1);
+    dim3 grid((size + block.x - 1) / block.x, 1, 1);
+    CHECK(cudaMemcpy(d_nextQueueSize, &NEXT_QUEUE_SIZE, sizeof(int), cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpy(d_firstQueue, &gateQueue.front()->poolId, sizeof(int), cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpy(dsplitable_count, &splitable_count, sizeof(int), cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpy(dcur_offset, &cur_offset, sizeof(int), cudaMemcpyHostToDevice));
+    int vsize = MCGAL::contextPool.vindex;
+    int hsize = MCGAL::contextPool.hindex;
+    int fsize = MCGAL::contextPool.findex;
+    CHECK(cudaMemcpy(MCGAL::contextPool.dvpool, MCGAL::contextPool.vpool, vsize * sizeof(MCGAL::Vertex),
+                     cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpy(MCGAL::contextPool.dhpool, MCGAL::contextPool.hpool, hsize * sizeof(MCGAL::Halfedge),
+                     cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpy(MCGAL::contextPool.dfpool, MCGAL::contextPool.fpool, fsize * sizeof(MCGAL::Facet),
+                     cudaMemcpyHostToDevice));
+    while (currentQueueSize > 0) {
+        int* d_currentQueue;
+        int* d_nextQueue;
+        if (level % 2 == 0) {
+            d_currentQueue = d_firstQueue;
+            d_nextQueue = d_secondQueue;
+        } else {
+            d_currentQueue = d_secondQueue;
+            d_nextQueue = d_firstQueue;
+        }
+        computeNextQueueInRemovedVertex<<<grid, block>>>(MCGAL::contextPool.dvpool, MCGAL::contextPool.dhpool,
+                                                         MCGAL::contextPool.dfpool, dbuffer, d_currentQueue,
+                                                         currentQueueSize, d_nextQueue, d_nextQueueSize,
+                                                         dsplitable_count, dcur_offset, cur_header, dataOffset, origin);
+        cudaDeviceSynchronize();
+        cudaError_t error = cudaGetLastError();
+        printf("==========================");
+        dataOffset += currentQueueSize * sizeof(int);
+        ++level;
+        cudaMemcpy(&currentQueueSize, d_nextQueueSize, sizeof(int), cudaMemcpyDeviceToHost);
+        cudaMemcpy(d_nextQueueSize, &NEXT_QUEUE_SIZE, sizeof(int), cudaMemcpyHostToDevice);
+        if (error != cudaSuccess) {
+            printf("ERROR: %s:%d,", __FILE__, __LINE__);
+            printf("code:%d,reason:%s\n", error, cudaGetErrorString(error));
+            exit(1);
+        }
+    }
+    cudaMemcpy(&splitable_count, dsplitable_count, sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy(&cur_offset, dcur_offset, sizeof(int), cudaMemcpyDeviceToHost);
+    CHECK(cudaMemcpy(MCGAL::contextPool.vpool, MCGAL::contextPool.dvpool, vsize * sizeof(MCGAL::Vertex),
+                     cudaMemcpyDeviceToHost));
+    CHECK(cudaMemcpy(MCGAL::contextPool.hpool, MCGAL::contextPool.dhpool, hsize * sizeof(MCGAL::Halfedge),
+                     cudaMemcpyDeviceToHost));
+    CHECK(cudaMemcpy(MCGAL::contextPool.fpool, MCGAL::contextPool.dfpool, fsize * sizeof(MCGAL::Facet),
+                     cudaMemcpyDeviceToHost));
+}
+
+void HiMesh::InsertedEdgeDecodingStepOnCuda() {
+    // 首先读出totalOffset
+    // 然后开始随机读取
+    pushHehInit();
+    int size = size_of_facets();
+    // 创建队列，队列里存的是halfedge
+
+    int* d_firstQueue;
+    int* d_secondQueue;
+    int* d_nextQueueSize;
+    cudaMalloc((void**)&d_firstQueue, size);
+    cudaMalloc((void**)&d_secondQueue, size);
+    int currentQueueSize = 1;
+    const int NEXT_QUEUE_SIZE = 0;
+    int level = 0;
+    dim3 block(32, 1, 1);
+    dim3 grid((size + block.x - 1) / block.x, 1, 1);
+    cudaMemcpy(d_nextQueueSize, &NEXT_QUEUE_SIZE, sizeof(int), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_firstQueue, &gateQueue.front()->poolId, sizeof(int), cudaMemcpyHostToDevice);
+    int vsize = MCGAL::contextPool.vindex;
+    int hsize = MCGAL::contextPool.hindex;
+    int fsize = MCGAL::contextPool.findex;
+    CHECK(cudaMemcpy(MCGAL::contextPool.dvpool, MCGAL::contextPool.vpool, vsize * sizeof(MCGAL::Vertex),
+                     cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpy(MCGAL::contextPool.dhpool, MCGAL::contextPool.hpool, hsize * sizeof(MCGAL::Halfedge),
+                     cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpy(MCGAL::contextPool.dfpool, MCGAL::contextPool.fpool, fsize * sizeof(MCGAL::Facet),
+                     cudaMemcpyHostToDevice));
+    while (currentQueueSize > 0) {
+        int* d_currentQueue;
+        int* d_nextQueue;
+        if (level % 2 == 0) {
+            d_currentQueue = d_firstQueue;
+            d_nextQueue = d_secondQueue;
+        } else {
+            d_currentQueue = d_secondQueue;
+            d_nextQueue = d_firstQueue;
+        }
+        computeNextQueueInInsertedEdge<<<grid, block>>>(MCGAL::contextPool.dvpool, MCGAL::contextPool.dhpool,
+                                                        MCGAL::contextPool.dfpool, dbuffer, dataOffset,
+                                                        currentQueueSize, d_currentQueue, d_nextQueueSize, dcur_offset,
+                                                        d_nextQueue, dsplitable_count, cur_header, origin);
+        cudaDeviceSynchronize();
+        dataOffset += currentQueueSize * sizeof(int);
+        ++level;
+        cudaMemcpy(&currentQueueSize, d_nextQueueSize, sizeof(int), cudaMemcpyDeviceToHost);
+        cudaMemcpy(d_nextQueueSize, &NEXT_QUEUE_SIZE, sizeof(int), cudaMemcpyHostToDevice);
+    }
+    dataOffset += (*dcur_offset);
+    CHECK(cudaMemcpy(MCGAL::contextPool.vpool, MCGAL::contextPool.dvpool, vsize * sizeof(MCGAL::Vertex),
+                     cudaMemcpyDeviceToHost));
+    CHECK(cudaMemcpy(MCGAL::contextPool.hpool, MCGAL::contextPool.dhpool, hsize * sizeof(MCGAL::Halfedge),
+                     cudaMemcpyDeviceToHost));
+    CHECK(cudaMemcpy(MCGAL::contextPool.fpool, MCGAL::contextPool.dfpool, fsize * sizeof(MCGAL::Facet),
+                     cudaMemcpyDeviceToHost));
 }
 
 void HiMesh::RemovedVerticesDecodingStep() {
     // 首先读出totalOffset
     // 然后开始随机读取
-    cur_total = readInt();
+    cur_header = readInt();
     pushHehInit();
     while (!gateQueue.empty()) {
         MCGAL::Halfedge* h = gateQueue.front();
@@ -155,7 +333,7 @@ void HiMesh::RemovedVerticesDecodingStep() {
         } while (hIt != h);
 
         // Decode the face symbol.
-        int offset = readInt() + cur_total;
+        int offset = readInt() + cur_header;
         unsigned sym = readCharByOffset(offset);
         cur_offset += 1;
         if (sym == 1) {
@@ -168,7 +346,7 @@ void HiMesh::RemovedVerticesDecodingStep() {
             f->setUnsplittable();
         }
     }
-    // dataOffset = before + cur_total + sizeof(int);
+    // dataOffset = before + cur_header + sizeof(int);
 }
 
 /**
@@ -190,7 +368,7 @@ void HiMesh::InsertedEdgeDecodingStep() {
         h->setProcessed();
         h->opposite()->setProcessed();
 
-        int offset = readInt() + cur_total;
+        int offset = readInt() + cur_header;
         unsigned sym = readCharByOffset(offset);
         cur_offset += 1;
         // Determine if the edge is original or not.
@@ -492,17 +670,6 @@ __global__ void resetHalfedgeOnCuda(MCGAL::Vertex* vpool,
         MCGAL::Halfedge* hprev = &hpool[edgeIndexes[tid]];
         hprev->dfacet(fpool)->resetOnCuda(vpool, hpool, hprev);
     }
-}
-
-__device__ void acquireLock(int* lock) {
-    while (atomicExch(lock, 1) != 0)
-        ;
-    __syncthreads();  // Wait for all threads to acquire the lock
-}
-
-__device__ void releaseLock(int* lock) {
-    __syncthreads();  // Wait for all threads to reach this point
-    atomicExch(lock, 0);
 }
 
 // __global__ void joinFacetOnCuda(MCGAL::Vertex* vpool,
@@ -997,4 +1164,72 @@ void HiMesh::removeInsertedEdges() {
         }
     }
     return;
+}
+
+void HiMesh::readBaseMesh() {
+    // read the number of level of detail
+    i_nbDecimations = readuInt16();
+    // set the mesh bounding box
+    unsigned i_nbVerticesBaseMesh = readInt();
+    unsigned i_nbFacesBaseMesh = readInt();
+
+    std::deque<MCGAL::Point>* p_pointDeque = new std::deque<MCGAL::Point>();
+    std::deque<uint32_t*>* p_faceDeque = new std::deque<uint32_t*>();
+    // Read the vertex positions.
+    for (unsigned i = 0; i < i_nbVerticesBaseMesh; ++i) {
+        MCGAL::Point pos = readPoint();
+        p_pointDeque->push_back(pos);
+    }
+    // read the face vertex indices
+    for (unsigned i = 0; i < i_nbFacesBaseMesh; ++i) {
+        int nv = readInt();
+        uint32_t* f = new uint32_t[nv + 1];
+        // Write in the first cell of the array the face degree.
+        f[0] = nv;
+        for (unsigned j = 1; j < nv + 1; ++j) {
+            f[j] = readInt();
+        }
+        p_faceDeque->push_back(f);
+    }
+    // Let the builder do its job.
+    buildFromBuffer(p_pointDeque, p_faceDeque);
+
+    // Free the memory.
+    for (unsigned i = 0; i < p_faceDeque->size(); ++i) {
+        delete[] p_faceDeque->at(i);
+    }
+    delete p_faceDeque;
+    delete p_pointDeque;
+}
+
+void HiMesh::buildFromBuffer(std::deque<MCGAL::Point>* p_pointDeque, std::deque<uint32_t*>* p_faceDeque) {
+    this->vertices.clear();
+    // this->halfedges.clear();
+    // used to create faces
+    std::vector<MCGAL::Vertex*> vertices;
+    // add vertex to Mesh
+    for (std::size_t i = 0; i < p_pointDeque->size(); ++i) {
+        MCGAL::Point p = p_pointDeque->at(i);
+        MCGAL::Vertex* vt = MCGAL::contextPool.allocateVertexFromPool(p);
+        vt->setId(i);
+        this->vertices.push_back(vt);
+        vertices.push_back(vt);
+    }
+    this->vh_departureConquest[0] = vertices[0];
+    this->vh_departureConquest[1] = vertices[1];
+    // read face and add to Mesh
+    for (int i = 0; i < p_faceDeque->size(); ++i) {
+        uint32_t* ptr = p_faceDeque->at(i);
+        int num_face_vertices = ptr[0];
+        std::vector<MCGAL::Vertex*> vts;
+        for (int j = 0; j < num_face_vertices; ++j) {
+            int vertex_index = ptr[j + 1];
+            vts.push_back(vertices[vertex_index]);
+        }
+        MCGAL::Facet* face = MCGAL::contextPool.allocateFaceFromPool(vts);
+        this->add_face(face);
+        // this->faces
+    }
+    // clear vector
+    vertices.clear();
 }

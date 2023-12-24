@@ -18,7 +18,6 @@ const int DECOMPRESSION_MODE_ID = 1;
 
 #define PPMC_RANDOM_CONSTANT 0315
 
-
 class HiMesh : public MCGAL::Mesh {
     // Gate queues
     std::queue<MCGAL::Halfedge*> gateQueue;
@@ -35,7 +34,7 @@ class HiMesh : public MCGAL::Mesh {
     int splitable_count = 0;
     int inserted_edgecount = 0;
     int cur_offset = 0;
-    int cur_total = 0;
+    int cur_header = 0;
 
     // The vertices of the edge that is the departure of the coding and decoding conquests.
     MCGAL::Vertex* vh_departureConquest[2];
@@ -57,7 +56,13 @@ class HiMesh : public MCGAL::Mesh {
     // The compressed data;
     char* p_data;
     size_t dataOffset = 0;  // the offset to read and write.
-
+    // cuda
+    char* dbuffer;
+    int* dcur_offset;
+    int* dinserted_edgecount;
+    int* dsplitable_count;
+    int origin = 0;
+    // int* d_dataOffset;
     // Store the maximum Hausdorf Distance
     std::vector<MCGAL::Point> removedPoints;
 
@@ -121,7 +126,14 @@ class HiMesh : public MCGAL::Mesh {
     // cuda
     void insertRemovedVerticesOnCuda();
     void removeInsertedEdgesOnCuda();
-
+    void RemovedVerticesDecodingStepOnCuda();
+    void InsertedEdgeDecodingStepOnCuda();
+    __device__ float readFloatOnCuda(char* buffer, int offset);
+    __device__ int16_t readInt16OnCuda(char* buffer, int offset);
+    __device__ uint16_t readuInt16OnCuda(char* buffer, int offset);
+    __device__ int readIntOnCuda(char* buffer, int offset);
+    __device__ unsigned char readCharOnCuda(char* buffer, int offset);
+    __device__ MCGAL::Point readPointOnCuda(char* buffer, int offset);
     // IOs
     void writeFloat(float f);
     float readFloat();

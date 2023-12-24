@@ -16,7 +16,7 @@ class Facet {
     enum RemovedFlag { NotRemoved, Removed };
     enum VisitedFlag { NotVisited, Visited };
 
-    Flag flag = Unknown;
+    int flag = Unknown;
     ProcessedFlag processedFlag = NotProcessed;
     RemovedFlag removedFlag = NotRemoved;
     VisitedFlag visitedFlag = NotVisited;
@@ -89,6 +89,37 @@ class Facet {
         processedFlag = NotProcessed;
         removedFlag = NotRemoved;
         visitedFlag = NotVisited;
+    }
+
+    __device__ inline bool isConqueredOnCuda() const {
+        // return (flag == Splittable || flag == Unsplittable || removedFlag == Removed);
+        return (flag == Splittable || flag == Unsplittable);
+    }
+
+    __device__ inline void setSplittableOnCuda() {
+        // assert(flag == Unknown);
+        // flag = Splittable;
+        atomicExch(&flag, 1);
+    }
+
+    __device__ inline void setUnsplittableOnCuda() {
+        // assert(flag == Unknown);
+        // if (flag != Unknown) {
+        //     printf("%d\n", poolId);
+        // }
+        // assert(flag == Unknown);
+        // flag = Unsplittable;
+        atomicExch(&flag, 2);
+    }
+
+    __device__ inline void setRemovedVertexPosOnCuda(float* p) {
+        removedVertexPos.v[0] = p[0];
+        removedVertexPos.v[1] = p[1];
+        removedVertexPos.v[2] = p[2];
+    }
+
+    __device__ inline void setRemovedVertexPosOnCuda(Point p) {
+        removedVertexPos = p;
     }
 
     // override
