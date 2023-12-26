@@ -51,8 +51,8 @@ Halfedge* Mesh::split_facet(Halfedge* h, Halfedge* g) {
     // create new halfedge
     Halfedge* hnew = contextPool.allocateHalfedgeFromPool(h->end_vertex(), g->end_vertex());
     Halfedge* oppo_hnew = contextPool.allocateHalfedgeFromPool(g->end_vertex(), h->end_vertex());
-    this->halfedges.push_back(hnew);
-    this->halfedges.push_back(oppo_hnew);
+    // this->halfedges.push_back(hnew);
+    // this->halfedges.push_back(oppo_hnew);
     // set the opposite
     // set the connect information
     // hnew->setNext(g->next_);

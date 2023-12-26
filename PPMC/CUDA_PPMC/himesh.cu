@@ -112,9 +112,6 @@ void HiMesh::pushHehInit() {
 
 MCGAL::Facet* HiMesh::add_face_by_pool(std::vector<MCGAL::Vertex*>& vs) {
     MCGAL::Facet* f = MCGAL::contextPool.allocateFaceFromPool(vs);
-    // for (MCGAL::Halfedge* hit : f->halfedges) {
-    //     this->halfedges.insert(hit);
-    // }
     faces.push_back(f);
     return f;
 }
