@@ -25,12 +25,6 @@ void HiMesh::startNextCompresssionOp() {
         vit->resetState();
     }
 
-    // for (MCGAL::Facet* fit : faces) {
-    //     fit->resetState();
-    //     for (int i = 0; i < fit->halfedge_size; i++) {
-    //         fit->getHalfedgeByIndex(i)->resetState();
-    //     }
-    // }
     int cnt = 0;
     for (auto fit = faces.begin(); fit != faces.end();) {
         if ((*fit)->isRemoved()) {
@@ -74,10 +68,6 @@ void HiMesh::startNextCompresssionOp() {
         // TODO: wait
         // assert(!h->is_border());
         MCGAL::Facet* f = h->facet();
-        // if (h->isRemoved()) {
-        //     h->removeFromQueue();
-        //     continue;
-        // }
         // if the face is already processed, pick the next halfedge:
         if (f->isConquered()) {
             h->removeFromQueue();

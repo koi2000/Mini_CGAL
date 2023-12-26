@@ -80,6 +80,9 @@ Halfedge* Mesh::split_facet(Halfedge* h, Halfedge* g) {
     // create new face depend on vertexs
     origin->reset(hnew);
     fnew->reset(oppo_hnew);
+    fnew->flag = origin->flag;
+    fnew->processedFlag = origin->processedFlag;
+    fnew->removedFlag = origin->removedFlag;
     // add halfedge and face to mesh
     this->faces.push_back(fnew);
     return hnew;
@@ -92,24 +95,23 @@ Halfedge* Mesh::erase_center_vertex(Halfedge* h) {
     while (g != h) {
         Halfedge* gprev = find_prev(g);
         remove_tip(gprev);
-        g->face->setRemoved();
-        g->setRemoved();
-        g->opposite->setRemoved();
-        eraseFacetByPointer(g->face);
+        if (g->face != h->face) {
+            // eraseFacetByPointer(g->facet());
+            g->face->setRemoved();
+        }
         Halfedge* gnext = g->next->opposite;
         g->vertex->eraseHalfedgeByPointer(g);
+        g->setRemoved();
+        g->opposite->setRemoved();
         g = gnext;
     }
-    h->face->setRemoved();
-    eraseFacetByPointer(h->face);
-    remove_tip(hret);
-    h->vertex->eraseHalfedgeByPointer(h);
     h->setRemoved();
     h->opposite->setRemoved();
+    remove_tip(hret);
+    h->vertex->eraseHalfedgeByPointer(h);
     h->end_vertex->halfedges.clear();
     eraseVertexByPointer(h->end_vertex);
-    Facet* face = allocateFaceFromPool(hret);
-    faces.push_back(face);
+    h->face->reset(hret);
     return hret;
 }
 

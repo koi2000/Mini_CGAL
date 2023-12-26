@@ -12,43 +12,44 @@ void HiMesh::encode(int lod) {
 }
 
 void HiMesh::startNextCompresssionOp() {
-    for (auto it = halfedges.begin(); it != halfedges.end();) {
-        if ((*it)->isRemoved()) {
-            it = halfedges.erase(it);
-        } else {
-            it++;
-        }
-    }
+    // for (auto it = halfedges.begin(); it != halfedges.end();) {
+    //     if ((*it)->isRemoved()) {
+    //         it = halfedges.erase(it);
+    //     } else {
+    //         it++;
+    //     }
+    // }
     // 1. reset the stats
     for (MCGAL::Vertex* vit : vertices)
         vit->resetState();
-    for (MCGAL::Facet* fit : faces) {
-        fit->resetState();
-        for (MCGAL::Halfedge* hit : fit->halfedges) {
-            hit->resetState();
+    for (auto fit = faces.begin(); fit != faces.end();) {
+        if ((*fit)->isRemoved()) {
+            fit = faces.erase(fit);
+        } else {
+            (*fit)->resetState();
+            for (MCGAL::Halfedge* hit : (*fit)->halfedges) {
+                hit->resetState();
+            }
+            fit++;
         }
     }
     i_nbRemovedVertices = 0;  // Reset the number of removed vertices.
-    while (!gateQueue.empty()) {
-        gateQueue.pop();
-    }
-
     // 2. do one round of decimation
     // choose a halfedge that can be processed:
     if (i_curDecimationId < 10) {
-        // teng: we always start from the middle, DO NOT use the rand function
-        // size_t i_heInitId = (float)rand() / RAND_MAX * size_of_halfedges();
-
-        size_t i_heInitId = size_of_halfedges() / 2;
-        MCGAL::Halfedge* hitInit;
-        auto it = halfedges.begin();
-        while (i_heInitId--) {
-            it++;
-        }
-        hitInit = *it;
-        hitInit->setInQueue();
-        // MCGAL::Halfedge* hitInit = *vh_departureConquest[0]->halfedges.begin();
-        gateQueue.push(hitInit);
+        // size_t i_heInitId = size_of_halfedges() / 2;
+        // MCGAL::Halfedge* hitInit;
+        // auto it = halfedges.begin();
+        // while (i_heInitId--) {
+        //     it++;
+        // }
+        // hitInit = *it;
+        // hitInit->setInQueue();
+        // // MCGAL::Halfedge* hitInit = *vh_departureConquest[0]->halfedges.begin();
+        // gateQueue.push(hitInit);
+        MCGAL::Facet* fit = faces[faces.size()/2];
+        fit->halfedges[0]->setInQueue();
+        gateQueue.push(fit->halfedges[0]);
     }
     // bfs all the halfedge
     while (!gateQueue.empty()) {
@@ -68,7 +69,7 @@ void HiMesh::startNextCompresssionOp() {
         MCGAL::Halfedge* unconqueredVertexHE;
 
         for (MCGAL::Halfedge* hh = h->next; hh != h; hh = hh->next) {
-            if (isRemovable(hh->vertex)) {
+            if (isRemovable(hh->end_vertex)) {
                 hasRemovable = true;
                 unconqueredVertexHE = hh;
                 break;
@@ -124,20 +125,20 @@ void HiMesh::startNextCompresssionOp() {
 }
 
 MCGAL::Halfedge* HiMesh::vertexCut(MCGAL::Halfedge* startH) {
-    MCGAL::Vertex* v = startH->vertex;
+    MCGAL::Vertex* v = startH->end_vertex;
 
     // make sure that the center vertex can be removed
     assert(!v->isConquered());
     assert(v->vertex_degree() > 2);
 
-    MCGAL::Halfedge* h = find_prev(startH)->opposite;
+    MCGAL::Halfedge* h = startH->opposite;
     MCGAL::Halfedge* end(h);
     int removed = 0;
     do {
         // TODO: wait
         // assert(!h->is_border());
         MCGAL::Facet* f = h->face;
-        assert(!f->isConquered());  // we cannot cut again an already cut face, or a NULL patch
+        assert(!f->isConquered() && !f->isRemoved());  // we cannot cut again an already cut face, or a NULL patch
         /*
          * the old facets around the vertex will be removed in the vertex cut operation
          * and being replaced with a merged one. but the replacing group information
@@ -165,11 +166,11 @@ MCGAL::Halfedge* HiMesh::vertexCut(MCGAL::Halfedge* startH) {
     } while ((h = h->opposite->next) != end);
 
     // copy the position of the center vertex:
-    MCGAL::Point vPos = startH->vertex->point();
+    MCGAL::Point vPos = startH->end_vertex->point();
 
     int bf = size_of_facets();
     // remove the center vertex
-    MCGAL::Halfedge* hNewFace = erase_center_vertex(find_prev(startH));
+    MCGAL::Halfedge* hNewFace = erase_center_vertex(startH);
     MCGAL::Facet* added_face = hNewFace->face;
 
     // now mark the new face as having a removed vertex
