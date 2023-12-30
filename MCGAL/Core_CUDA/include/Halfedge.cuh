@@ -19,6 +19,7 @@ class Halfedge {
     BFSFlag bfsFlag = NotVisited;
 
   public:
+    int hid = -1;
     int meshId = -1;
     int lock = 0;
     int poolId;
@@ -61,6 +62,11 @@ class Halfedge {
     void setFacet(int facet);
 
     void reset(Vertex* v1, Vertex* v2);
+
+    void setHid(int id) {
+        hid = id;
+    }
+
     void setMeshId(int id) {
         this->meshId = id;
     }

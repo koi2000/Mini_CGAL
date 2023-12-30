@@ -103,6 +103,7 @@ class Vertex : public Point {
 
     int meshId = -1;
     int lock = 1;
+    int vid = -1;
     int poolId;
     int halfedges[HALFEDGE_IN_VERTEX];
     int halfedges_size = 0;
@@ -174,10 +175,8 @@ class Vertex : public Point {
         id = nId;
     }
 
-    void reset() {
-        // for (auto it = halfedges.begin();it!=halfedges.end();){
-        //     if((*it)->vertex!=this)
-        // }
+    void setVid(int id) {
+        vid = id;
     }
 };
 }  // namespace MCGAL

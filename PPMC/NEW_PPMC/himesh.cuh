@@ -1,5 +1,6 @@
-#ifndef CUDA_MYMESH
-#define CUDA_MYMESH
+#ifndef NEW_HIMESH
+#define NEW_HIMESH
+
 #include "../MCGAL/Core_CUDA/include/core.cuh"
 #include <algorithm>
 #include <boost/algorithm/string/replace.hpp>
@@ -163,4 +164,7 @@ class HiMesh : public MCGAL::Mesh {
 
     HiMesh* clone_mesh();
 };
+
+
+
 #endif

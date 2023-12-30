@@ -54,6 +54,7 @@ set(PPMC_SOURCE_DIR "PPMC/CGAL_PPMC")
 set(MINICGAL_PPMC_SOURCE_DIR "PPMC/MCGAL_PPMC")
 set(PPMC_CUDA_SOURCE_DIR "PPMC/CUDA_PPMC")
 set(BATCH_PPMC_SOURCE_DIR "PPMC/BATCH_PPMC")
+set(NEW_PPMC_SOURCE_DIR "PPMC/NEW_PPMC")
 
 include(${CGAL_USE_FILE})
 
@@ -78,6 +79,11 @@ file(GLOB_RECURSE MINICGAL_PPMC_FILES
 file(GLOB_RECURSE BATCH_PPMC_FILES
     "${BATCH_PPMC_SOURCE_DIR}/*.cuh"
     "${BATCH_PPMC_SOURCE_DIR}/*.cu"
+)
+
+file(GLOB_RECURSE NEW_PPMC_FILES
+    "${NEW_PPMC_SOURCE_DIR}/*.cuh"
+    "${NEW_PPMC_SOURCE_DIR}/*.cu"
 )
 
 # file(GLOB_RECURSE MINICGAL_CUDA_PPMC_FILES
@@ -141,6 +147,10 @@ target_link_libraries(MiniCGAL_CudaDecompress ${CUDA_LIBRARIES} OpenMP::OpenMP_C
 add_executable(MiniCGAL_CudaCompress tools/MCudaCompress_test.cu  ${CUDA_PPMC} ${MINICGAL_CUDA})
 set_target_properties(MiniCGAL_CudaCompress PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON)
 target_link_libraries(MiniCGAL_CudaCompress ${CUDA_LIBRARIES})
+
+add_executable(MiniCGAL_NewCompress tools/MNewCompress_test.cu  ${CUDA_PPMC} ${MINICGAL_CUDA})
+set_target_properties(MiniCGAL_NewCompress PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON)
+target_link_libraries(MiniCGAL_NewCompress ${CUDA_LIBRARIES})
 
 add_executable(Batch_Decompress tools/BatchDecompress_test.cu  ${BATCH_PPMC_FILES} ${MINICGAL_CUDA})
 set_target_properties(Batch_Decompress PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON)

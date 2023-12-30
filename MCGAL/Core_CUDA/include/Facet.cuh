@@ -28,6 +28,7 @@ class Facet {
     // std::vector<Halfedge*> halfedges;
     int halfedges[HALFEDGE_IN_FACE];
     int halfedge_size = 0;
+    int fid = -1;
     int poolId;
     int lock = 1;
     int count = 0;
@@ -58,6 +59,11 @@ class Facet {
     void reset(std::vector<Vertex*>& vs);
     void remove(Halfedge* h);
     int facet_degree();
+
+    void setFid(int id) {
+        fid = id;
+    }
+
     void setMeshId(int id) {
         this->meshId = id;
     }
