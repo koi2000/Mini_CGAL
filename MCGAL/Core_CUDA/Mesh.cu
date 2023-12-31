@@ -72,6 +72,29 @@ Halfedge* Mesh::split_facet(Halfedge* h, Halfedge* g) {
     return hnew;
 }
 
+void Mesh::pre_erase_center_vertex(Halfedge* h, std::vector<int>& encode) {
+    Halfedge* g = h->next()->opposite();
+    Halfedge* hret = find_prev(h);
+    encode.push_back(h->facet()->fid);
+    std::vector<int> hids;
+    hids.push_back(h->hid);
+    hids.push_back(h->opposite()->hid);
+    while (g != h) {
+        Halfedge* gprev = find_prev(g);
+        if (g->facet_ != h->facet_) {
+            encode.push_back(g->facet()->fid);
+        }
+        hids.push_back(g->hid);
+        hids.push_back(g->opposite()->hid);
+        Halfedge* gnext = g->next()->opposite();
+        g = gnext;
+    }
+    for (int id : hids) {
+        encode.push_back(id);
+    }
+    return;
+}
+
 Halfedge* Mesh::erase_center_vertex(Halfedge* h) {
     Halfedge* g = h->next()->opposite();
     Halfedge* hret = find_prev(h);

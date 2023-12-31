@@ -105,16 +105,27 @@ void HiMesh::startNextCompresssionOp() {
         int i_deci = i_curDecimationId;
         assert(i_deci >= 0);
         while (i_deci >= 0) {
-            // encodeHausdorff(i_deci);
+            int before = dataOffset;
             encodeRemovedVertices(i_deci);
             encodeInsertedEdges(i_deci);
+            int after = dataOffset;
+            // 分别是offset信息，加一个头信息
+            int cur_totalOffset = connectFaceOffset[i_deci].size() * sizeof(int) +
+                                  connectEdgeOffset[i_deci].size() * sizeof(int) + sizeof(int);
+            // 先拷贝
+            memcpy(p_data + before + cur_totalOffset, p_data + before, after - before);
+            dataOffset = before;
+            writeInt(cur_totalOffset);
+            encodeRemovedVerticesOffset(i_deci);
+            encodeInsertedEdgesOffset(i_deci);
             i_deci--;
+            dataOffset += after - before;
         }
     } else {
         // 3dpro: compute and encode the Hausdorff distance for all the facets in this LOD
         // computeHausdorfDistance();
         // HausdorffCodingStep();
-        RemovedVertexCodingStep();
+        // RemovedVertexCodingStep();
         InsertedEdgeCodingStep();
         // finish this round of decimation and start the next
         i_curDecimationId++;  // Increment the current decimation operation id.
@@ -131,18 +142,12 @@ MCGAL::Halfedge* HiMesh::vertexCut(MCGAL::Halfedge* startH) {
     MCGAL::Halfedge* h = startH->opposite();
     MCGAL::Halfedge* end(h);
     int removed = 0;
+    int count = 0;
     do {
         // TODO: wait
         // assert(!h->is_border());
         MCGAL::Facet* f = h->facet();
         assert(!f->isConquered() && !f->isRemoved());  // we cannot cut again an already cut face, or a NULL patch
-        /*
-         * the old facets around the vertex will be removed in the vertex cut operation
-         * and being replaced with a merged one. but the replacing group information
-         * will be inherited by the new facet.
-         *
-         */
-
         // if the face is not a triangle, cut the corner to make it a triangle
         if (f->facet_degree() > 3) {
             // loop around the face to find the appropriate other halfedge
@@ -160,10 +165,16 @@ MCGAL::Halfedge* HiMesh::vertexCut(MCGAL::Halfedge* startH) {
         h->end_vertex()->setConquered();
         // h->end_vertex->setConquered();
         removed++;
+        count++;
     } while ((h = h->opposite()->next()) != end);
 
     // copy the position of the center vertex:
     MCGAL::Point vPos = startH->end_vertex()->point();
+    // 记录所有需要被移除的信息
+    std::vector<int> encode;
+    encode.reserve(3 * count - 1);
+    pre_erase_center_vertex(startH, encode);
+    encodeQueue[i_curDecimationId].push_back(encode);
     // remove the center vertex
     MCGAL::Halfedge* hNewFace = erase_center_vertex(startH);
     MCGAL::Facet* added_face = hNewFace->facet();
@@ -172,7 +183,7 @@ MCGAL::Halfedge* HiMesh::vertexCut(MCGAL::Halfedge* startH) {
     added_face->setSplittable();
     // keep the removed vertex position.
     added_face->setRemovedVertexPos(vPos);
-
+    geometrySym[i_curDecimationId].push_back(vPos);
     // scan the outside halfedges of the new face and add them to
     // the queue if the state of its face is unknown. Also mark it as in_queue
     h = hNewFace;
@@ -265,14 +276,8 @@ void HiMesh::InsertedEdgeCodingStep() {
 
         // Determine the edge symbol.
         unsigned sym;
-        if (h->isOriginal())
-            sym = 0;
-        else
-            sym = 1;
-
-        // Store the symbol if needed.
-        if (b_toCode)
-            connectEdgeSym[i_curDecimationId].push_back(sym);
+        if (!h->isOriginal())
+            connectEdgeSym[i_curDecimationId].push_back(h->hid);
     }
 }
 
@@ -303,16 +308,18 @@ void HiMesh::writeBaseMesh() {
     // Write the base mesh face vertex indices.
     for (MCGAL::Facet* fit : faces) {
         unsigned i_faceDegree = fit->facet_degree();
+        writeInt(fit->fid);
         writeInt(i_faceDegree);
         MCGAL::Halfedge* st = fit->getHalfedgeByIndex(0);
         MCGAL::Halfedge* ed = st;
         do {
+            writeInt(st->hid);
+            st = st->next();
+        } while (st != ed);
+        do {
             writeInt(st->vertex()->getId());
             st = st->next();
         } while (st != ed);
-        // for (int i = 0; i < fit->halfedge_size; i++) {
-        //     writeInt(fit->getHalfedgeByIndex(i)->vertex()->getId());
-        // }
     }
 }
 
@@ -333,23 +340,44 @@ void HiMesh::encodeInsertedEdges(unsigned i_operationId) {
  * Encode the geometry and the connectivity of a removed vertex list.
  */
 void HiMesh::encodeRemovedVertices(unsigned i_operationId) {
-    std::deque<unsigned>& connSym = connectFaceSym[i_operationId];
+    std::deque<std::vector<int>>& encodeIds = encodeQueue[i_operationId];
     std::deque<MCGAL::Point>& geomSym = geometrySym[i_operationId];
-
+    std::deque<int>& faceOffset = connectFaceOffset[i_operationId];
     unsigned i_lenGeom = geomSym.size();
-    unsigned i_lenConn = connSym.size();
+    unsigned i_lenConn = encodeIds.size();
     assert(i_lenGeom > 0);
     assert(i_lenConn > 0);
-
     unsigned k = 0;
     for (unsigned i = 0; i < i_lenConn; ++i) {
+        faceOffset.push_back(dataOffset);
         // Encode the connectivity.
-        unsigned sym = connSym[i];
-        writeChar(sym);
-        // Encode the geometry if necessary.
-        if (sym) {
-            writePoint(geomSym[k]);
-            k++;
+        for (int j = 0; j < encodeIds[i].size(); j++) {
+            writeInt(encodeIds[i][j]);
         }
+        writePoint(geomSym[k]);
+        k++;
+    }
+}
+
+void HiMesh::encodeInsertedEdgesOffset(unsigned i_operationId) {
+    std::deque<int>& offsets = connectEdgeOffset[i_operationId];
+    assert(offsets.size() > 0);
+    unsigned i_len = offsets.size();
+    for (unsigned i = 0; i < i_len; ++i) {
+        writeInt(offsets[i]);
+    }
+}
+
+/**
+ * Encode the geometry and the connectivity of a removed vertex list.
+ */
+void HiMesh::encodeRemovedVerticesOffset(unsigned i_operationId) {
+    std::deque<int>& faceOffset = connectFaceOffset[i_operationId];
+    unsigned i_lenConn = faceOffset.size();
+    assert(i_lenConn > 0);
+    for (unsigned i = 0; i < i_lenConn; ++i) {
+        // Encode the connectivity.
+        unsigned sym = faceOffset[i];
+        writeInt(sym);
     }
 }

@@ -1,15 +1,15 @@
 #ifndef MESH_H
 #define MESH_H
-#include <vector>
-#include "Vertex.cuh"
-#include "Halfedge.cuh"
 #include "Facet.cuh"
+#include "Halfedge.cuh"
+#include "Vertex.cuh"
 #include "global.cuh"
 #include <assert.h>
 #include <fstream>
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <vector>
 
 namespace MCGAL {
 class Mesh {
@@ -46,6 +46,7 @@ class Mesh {
     Halfedge* merge_edges(Vertex* v);
     void eraseFacetByPointer(Facet* facet);
     void eraseVertexByPointer(Vertex* vertex);
+    void pre_erase_center_vertex(Halfedge* h, std::vector<int>& encode);
 
     /*
      * statistics
