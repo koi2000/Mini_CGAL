@@ -1,4 +1,8 @@
+//
+// Created by DELL on 2023/11/9.
+//
 #include "himesh.cuh"
+// #include "../MCGAL/Core_CUDA/global.cuh"
 #include "util.h"
 #include <algorithm>
 
@@ -18,6 +22,20 @@ HiMesh::HiMesh(string& str, bool completeop) : MCGAL::Mesh() {
         std::cerr << "failed to parse the OFF file into Polyhedron" << endl;
         exit(EXIT_FAILURE);
     }
+
+    // TODO: wait
+    // if (keep_largest_connected_components(1) != 0) {
+    //     std::cerr << "Can't compress the mesh." << std::endl;
+    //     std::cerr << "The codec doesn't handle meshes with several connected components." << std::endl;
+    //     exit(EXIT_FAILURE);
+    // }
+
+    // wait
+    // if (!is_closed()) {
+    //     std::cerr << "Can't compress the mesh." << std::endl;
+    //     std::cerr << "The codec doesn't handle meshes with borders." << std::endl;
+    //     exit(EXIT_FAILURE);
+    // }
 
     // Set the vertices of the edge that is the departure of the coding and decoding conquests.
     vh_departureConquest[0] = (*halfedges.begin())->vertex();

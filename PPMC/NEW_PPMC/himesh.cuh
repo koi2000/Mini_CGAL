@@ -1,6 +1,5 @@
-#ifndef NEW_HIMESH
-#define NEW_HIMESH
-
+#ifndef CUDA_MYMESH
+#define CUDA_MYMESH
 #include "../MCGAL/Core_CUDA/include/core.cuh"
 #include <algorithm>
 #include <boost/algorithm/string/replace.hpp>
@@ -39,7 +38,6 @@ class HiMesh : public MCGAL::Mesh {
     // The vertices of the edge that is the departure of the coding and decoding conquests.
     MCGAL::Vertex* vh_departureConquest[2];
     // Geometry symbol list.
-    std::deque<std::deque<std::vector<int>>> encodeQueue;
     std::deque<std::deque<MCGAL::Point>> geometrySym;
 
     std::deque<std::deque<unsigned char>> hausdorfSym;
@@ -51,8 +49,6 @@ class HiMesh : public MCGAL::Mesh {
     // Connectivity symbol list.
     std::deque<std::deque<unsigned>> connectFaceSym;
     std::deque<std::deque<unsigned>> connectEdgeSym;
-    std::deque<std::deque<int>> connectFaceOffset;
-    std::deque<std::deque<int>> connectEdgeOffset;
 
     // The compressed data;
     char* p_data;
@@ -102,8 +98,6 @@ class HiMesh : public MCGAL::Mesh {
     bool isPlanar(const std::vector<MCGAL::Vertex*>& polygon, float epsilon) const;
     bool willViolateManifold(const std::vector<MCGAL::Halfedge*>& polygon) const;
     float removalError(MCGAL::Vertex* v, const std::vector<MCGAL::Vertex*>& polygon) const;
-    void HiMesh::encodeInsertedEdgesOffset(unsigned i_operationId);
-    void HiMesh::encodeRemovedVerticesOffset(unsigned i_operationId);
 
     // Decompression
     void startNextDecompresssionOp();
@@ -169,7 +163,4 @@ class HiMesh : public MCGAL::Mesh {
 
     HiMesh* clone_mesh();
 };
-
-
-
 #endif
