@@ -47,16 +47,16 @@ uint32_t readBits(unsigned i_nbBits, char* p_src, unsigned& i_bitOffset, size_t&
 
 // Write a floating point number in the data buffer.
 void HiMesh::writeFloat(float f) {
-    *(float*)(p_data + dataOffset) = f;
-    dataOffset += sizeof(float);
+    *(float*)(p_data + *dataOffset) = f;
+    *dataOffset += sizeof(float);
 }
 
 /**
  * Read a floating point number in the data buffer.
  */
 float HiMesh::readFloat() {
-    float f = *(float*)(p_data + dataOffset);
-    dataOffset += sizeof(float);
+    float f = *(float*)(p_data + *dataOffset);
+    *dataOffset += sizeof(float);
     return f;
 }
 
@@ -81,58 +81,93 @@ MCGAL::Point HiMesh::readPoint() {
  * Read an integer in the data buffer.
  */
 int HiMesh::readInt() {
-    int i = *(int*)(p_data + dataOffset);
-    dataOffset += sizeof(int);
+    int i = *(int*)(p_data + *dataOffset);
+    *dataOffset += sizeof(int);
     return i;
 }
 
 // Write an integer in the data buffer
 void HiMesh::writeInt(int i) {
-    *(int*)(p_data + dataOffset) = i;
-    dataOffset += sizeof(int);
+    *(int*)(p_data + *dataOffset) = i;
+    *dataOffset += sizeof(int);
 }
 
 /**
  * Read a 16 bits integer in the data buffer.
  */
 int16_t HiMesh::readInt16() {
-    int16_t i = *(int16_t*)(p_data + dataOffset);
-    dataOffset += sizeof(int16_t);
+    int16_t i = *(int16_t*)(p_data + *dataOffset);
+    *dataOffset += sizeof(int16_t);
     return i;
 }
 
 // Write a 16 bits integer in the data buffer
 void HiMesh::writeInt16(int16_t i) {
-    *(int16_t*)(p_data + dataOffset) = i;
-    dataOffset += sizeof(int16_t);
+    *(int16_t*)(p_data + *dataOffset) = i;
+    *dataOffset += sizeof(int16_t);
 }
 
 /**
  * Read a 16 bits integer in the data buffer.
  */
 uint16_t HiMesh::readuInt16() {
-    uint16_t i = *(uint16_t*)(p_data + dataOffset);
-    dataOffset += sizeof(uint16_t);
+    uint16_t i = *(uint16_t*)(p_data + *dataOffset);
+    *dataOffset += sizeof(uint16_t);
     return i;
 }
 
 // Write a 16 bits integer in the data buffer
 void HiMesh::writeuInt16(uint16_t i) {
-    *(uint16_t*)(p_data + dataOffset) = i;
-    dataOffset += sizeof(uint16_t);
+    *(uint16_t*)(p_data + *dataOffset) = i;
+    *dataOffset += sizeof(uint16_t);
 }
 
 /**
  * Read a byte in the data buffer.
  */
 unsigned char HiMesh::readChar() {
-    unsigned char i = *(unsigned char*)(p_data + dataOffset);
-    dataOffset += sizeof(unsigned char);
+    unsigned char i = *(unsigned char*)(p_data + *dataOffset);
+    *dataOffset += sizeof(unsigned char);
     return i;
 }
 
 // Write a byte in the data buffer
 void HiMesh::writeChar(unsigned char i) {
-    *(unsigned char*)(p_data + dataOffset) = i;
-    dataOffset += sizeof(unsigned char);
+    *(unsigned char*)(p_data + *dataOffset) = i;
+    *dataOffset += sizeof(unsigned char);
+}
+
+float HiMesh::readFloatByOffset(int offset) {
+    float f = *(float*)(p_data + offset);
+    return f;
+}
+
+int16_t HiMesh::readInt16ByOffset(int offset) {
+    int16_t i = *(int16_t*)(p_data + offset);
+    return i;
+}
+
+uint16_t HiMesh::readuInt16ByOffset(int offset) {
+    uint16_t i = *(uint16_t*)(p_data + offset);
+    return i;
+}
+
+int HiMesh::readIntByOffset(int offset) {
+    int i = *(int*)(p_data + offset);
+    return i;
+}
+
+unsigned char HiMesh::readCharByOffset(int offset) {
+    unsigned char i = *(unsigned char*)(p_data + offset);
+    return i;
+}
+
+MCGAL::Point HiMesh::readPointByOffset(int offset) {
+    float coord[3];
+    for (unsigned i = 0; i < 3; ++i) {
+        coord[i] = readFloatByOffset(offset);
+        offset += sizeof(float);
+    }
+    MCGAL::Point pt(coord[0], coord[1], coord[2]);
+    return pt;
 }

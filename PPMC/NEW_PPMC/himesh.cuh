@@ -2,6 +2,7 @@
 #define NEW_HIMESH
 
 #include "../MCGAL/Core_CUDA/include/core.cuh"
+#include "cuda_function.cuh"
 #include <algorithm>
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/foreach.hpp>
@@ -18,7 +19,6 @@ const int DECOMPRESSION_MODE_ID = 1;
 #define INV_GAMMA 2
 
 #define PPMC_RANDOM_CONSTANT 0315
-
 
 class HiMesh : public MCGAL::Mesh {
     // Gate queues
@@ -49,14 +49,12 @@ class HiMesh : public MCGAL::Mesh {
     std::deque<std::deque<float>> proxyhausdorfSym_float;
 
     // Connectivity symbol list.
-    std::deque<std::deque<unsigned>> connectFaceSym;
-    std::deque<std::deque<unsigned>> connectEdgeSym;
-    std::deque<std::deque<int>> connectFaceOffset;
-    std::deque<std::deque<int>> connectEdgeOffset;
+    std::deque<std::deque<int>> encodeEdgeId;
+    std::deque<std::deque<int>> facetOffset;
 
     // The compressed data;
     char* p_data;
-    size_t dataOffset = 0;  // the offset to read and write.
+    int* dataOffset = 0;  // the offset to read and write.
 
     // Store the maximum Hausdorf Distance
     std::vector<MCGAL::Point> removedPoints;
@@ -66,6 +64,11 @@ class HiMesh : public MCGAL::Mesh {
     int* dvertexIndexes;
     int* dstHalfedgeIndexes;
     int* dstFacetIndexes;
+    // cuda
+    char* d_data;
+    int* hid2poolId;
+    int* fid2poolId;
+    int* d_dataOffset;
 
   public:
     int id = 0;
@@ -74,7 +77,7 @@ class HiMesh : public MCGAL::Mesh {
     HiMesh(std::string& str, bool completeop = false);
 
     // constructors for decoding
-    HiMesh(char* data, size_t dsize, bool own_data = true);
+    HiMesh(char* data, int* dsize, bool own_data = true);
     HiMesh(HiMesh* mesh) : HiMesh(mesh->p_data, mesh->dataOffset, true) {}
     ~HiMesh();
 
@@ -102,8 +105,7 @@ class HiMesh : public MCGAL::Mesh {
     bool isPlanar(const std::vector<MCGAL::Vertex*>& polygon, float epsilon) const;
     bool willViolateManifold(const std::vector<MCGAL::Halfedge*>& polygon) const;
     float removalError(MCGAL::Vertex* v, const std::vector<MCGAL::Vertex*>& polygon) const;
-    void HiMesh::encodeInsertedEdgesOffset(unsigned i_operationId);
-    void HiMesh::encodeRemovedVerticesOffset(unsigned i_operationId);
+    void encodeFacetOffset(unsigned i_operationId);
 
     // Decompression
     void startNextDecompresssionOp();
@@ -120,6 +122,14 @@ class HiMesh : public MCGAL::Mesh {
     // cuda
     void insertRemovedVerticesOnCuda();
     void removeInsertedEdgesOnCuda();
+    void insertRemovedVerticesOnCuda2();
+    void removeInsertedEdgesOnCuda2();
+    __device__ float readFloatOnCuda(char* buffer, int offset);
+    __device__ int16_t readInt16OnCuda(char* buffer, int offset);
+    __device__ uint16_t readuInt16OnCuda(char* buffer, int offset);
+    __device__ int readIntOnCuda(char* buffer, int offset);
+    __device__ unsigned char readCharOnCuda(char* buffer, int offset);
+    __device__ MCGAL::Point readPointOnCuda(char* buffer, int offset);
 
     // IOs
     void writeFloat(float f);
@@ -134,6 +144,13 @@ class HiMesh : public MCGAL::Mesh {
     void writeChar(unsigned char ch);
     void writePoint(MCGAL::Point& p);
     MCGAL::Point readPoint();
+
+    float readFloatByOffset(int offset);
+    int16_t readInt16ByOffset(int offset);
+    uint16_t readuInt16ByOffset(int offset);
+    int readIntByOffset(int offset);
+    unsigned char readCharByOffset(int offset);
+    MCGAL::Point readPointByOffset(int offset);
 
     void writeBaseMesh();
     void readBaseMesh();
@@ -158,18 +175,20 @@ class HiMesh : public MCGAL::Mesh {
         return i_mode == COMPRESSION_MODE_ID;
     }
     size_t get_data_size() {
-        return dataOffset;
+        return *dataOffset;
     }
     const char* get_data() {
         return p_data;
     }
     friend std::istream& operator>>(std::istream& in, HiMesh& A);
 
-    void buildFromBuffer(std::deque<MCGAL::Point>* p_pointDeque, std::deque<uint32_t*>* p_faceDeque);
+    void buildFromBuffer(std::deque<MCGAL::Point>* p_pointDeque,
+                                 std::deque<uint32_t*>* p_faceDeque,
+                                 std::deque<int>* p_faceIdDeque,
+                                 std::deque<int*>* p_halfedgeIdDeque,
+                                 int meshId = 0);
 
     HiMesh* clone_mesh();
 };
-
-
 
 #endif

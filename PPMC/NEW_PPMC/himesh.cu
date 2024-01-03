@@ -18,7 +18,9 @@ HiMesh::HiMesh(string& str, bool completeop) : MCGAL::Mesh() {
         std::cerr << "failed to parse the OFF file into Polyhedron" << endl;
         exit(EXIT_FAILURE);
     }
-
+    CHECK(cudaMallocManaged(&hid2poolId, sizeof(int) * HALFEDGE_POOL_SIZE));
+    CHECK(cudaMallocManaged(&fid2poolId, sizeof(int) * FACET_POOL_SIZE));
+    CHECK(cudaMallocManaged(&dataOffset, sizeof(int)));
     // Set the vertices of the edge that is the departure of the coding and decoding conquests.
     vh_departureConquest[0] = (*halfedges.begin())->vertex();
     vh_departureConquest[1] = (*halfedges.begin())->opposite()->vertex();
@@ -28,18 +30,23 @@ HiMesh::HiMesh(string& str, bool completeop) : MCGAL::Mesh() {
 }
 
 // in decompression mode
-HiMesh::HiMesh(char* data, size_t dsize, bool owndata) : MCGAL::Mesh() {
+HiMesh::HiMesh(char* data, int* dsize, bool owndata) : MCGAL::Mesh() {
     assert(dsize > 0);
     srand(PPMC_RANDOM_CONSTANT);
     own_data = owndata;
     i_mode = DECOMPRESSION_MODE_ID;
     if (owndata) {
-        p_data = new char[dsize];
-        memcpy(p_data, data, dsize);
+        // p_data = new char[*dsize];
+        // memcpy(p_data, data, *dsize);
+        CHECK(cudaMallocManaged(&p_data, sizeof(char) * (*dsize)));
+        CHECK(cudaMemcpy(p_data, data, *dsize, cudaMemcpyHostToDevice));
     } else {
         p_data = data;
     }
     MCGAL::contextPool.reset();
+    CHECK(cudaMallocManaged(&dataOffset, sizeof(int)));
+    CHECK(cudaMallocManaged(&hid2poolId, sizeof(int) * HALFEDGE_POOL_SIZE));
+    CHECK(cudaMallocManaged(&fid2poolId, sizeof(int) * FACET_POOL_SIZE));
     readBaseMesh();
     CHECK(cudaMalloc(&dfaceIndexes, SPLITABLE_SIZE * sizeof(int)));
     CHECK(cudaMalloc(&dvertexIndexes, SPLITABLE_SIZE * sizeof(int)));
@@ -68,6 +75,9 @@ HiMesh::HiMesh(char* path) : MCGAL::Mesh() {
     this->loadBuffer(path);
     // assert(dsize > 0);
     srand(PPMC_RANDOM_CONSTANT);
+    CHECK(cudaMallocManaged(&dataOffset, sizeof(int)));
+    CHECK(cudaMallocManaged(&hid2poolId, sizeof(int) * HALFEDGE_POOL_SIZE));
+    CHECK(cudaMallocManaged(&fid2poolId, sizeof(int) * FACET_POOL_SIZE));
     readBaseMesh();
     CHECK(cudaMalloc(&dfaceIndexes, SPLITABLE_SIZE * sizeof(int)));
     CHECK(cudaMalloc(&dvertexIndexes, SPLITABLE_SIZE * sizeof(int)));
@@ -227,7 +237,7 @@ void HiMesh::write_to_off(const char* path) {
 
 void HiMesh::dumpBuffer(char* path) {
     ofstream fout(path, ios::binary);
-    int len = dataOffset;
+    int len = *dataOffset;
     fout.write((char*)&len, sizeof(int));
     fout.write(p_data, len);
     fout.close();

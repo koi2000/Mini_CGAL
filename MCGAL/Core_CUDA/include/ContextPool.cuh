@@ -96,6 +96,13 @@ class ContextPool {
         return &vpool[vindex++];
     }
 
+    inline MCGAL::Vertex* allocateVertexFromPool(float* p) {
+        vpool[vindex].v[0] = p[0];
+        vpool[vindex].v[1] = p[1];
+        vpool[vindex].v[2] = p[2];
+        return &vpool[vindex++];
+    }
+
     inline MCGAL::Halfedge* allocateHalfedgeFromPool() {
         return &hpool[hindex++];
     }
