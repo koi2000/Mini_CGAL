@@ -232,6 +232,7 @@ class Halfedge {
     Halfedge(Vertex* v1, Vertex* v2);
     ~Halfedge();
     static int id;
+    u_int64_t horder;
     int poolId;
 
     void reset(Vertex* v1, Vertex* v2);
@@ -346,7 +347,7 @@ class Halfedge {
 
 class Mesh;
 class Facet {
-public:
+  public:
     typedef MCGAL::Point Point;
     enum Flag { Unknown = 0, Splittable = 1, Unsplittable = 2 };
     enum ProcessedFlag { NotProcessed, Processed };
@@ -356,24 +357,17 @@ public:
     ProcessedFlag processedFlag = NotProcessed;
     RemovedFlag removedFlag = NotRemoved;
     Point removedVertexPos;
+    u_int64_t forder;
 
   public:
     std::vector<Vertex*> vertices;
     std::vector<Halfedge*> halfedges;
-    // std::unordered_set<Vertex*> vertices;
-    // std::unordered_set<Halfedge*> halfedges;
-
-    // std::unordered_set<Vertex*, Vertex::Hash, Vertex::Equal> vertices;
-    // std::unordered_set<Halfedge*, Halfedge::Hash, Halfedge::Equal> halfedges;
 
   public:
     ~Facet();
 
     // constructor
-    Facet(){
-        // vertices.reserve(BUCKET_SIZE);
-        // halfedges.reserve(BUCKET_SIZE);
-    };
+    Facet(){};
     Facet(const Facet& face);
     Facet(Halfedge* hit);
     Facet(std::vector<Vertex*>& vs);
@@ -407,7 +401,7 @@ public:
     }
 
     inline bool isConquered() const {
-        return (flag == Splittable || flag == Unsplittable||removedFlag==Removed);
+        return (flag == Splittable || flag == Unsplittable || removedFlag == Removed);
     }
 
     inline bool isSplittable() const {
@@ -496,7 +490,19 @@ class Mesh {
     }
     ~Mesh();
 
-    // get from pool
+    inline MCGAL::Vertex* getVertexFromPool(int index) {
+        return vpool[index];
+    }
+
+    inline MCGAL::Halfedge* getHalfedgeFromPool(int index) {
+        return hpool[index];
+    }
+
+    inline MCGAL::Facet* getFacetFromPool(int index) {
+        return fpool[index];
+    }
+
+    // allocate from pool
     inline MCGAL::Vertex* allocateVertexFromPool() {
         return vpool[vindex++];
     }

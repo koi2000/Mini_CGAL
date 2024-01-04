@@ -179,7 +179,7 @@ MCGAL::Halfedge* DeCompressTool::pushHehInit(int meshId) {
     // Push it to the queue.
     return hehBegin;
 }
-void DeCompressTool::RemovedVerticesDecodingStep(int meshId) {
+void DeCompressTool:: RemovedVerticesDecodingStep(int meshId) {
     std::queue<MCGAL::Halfedge*> gateQueue;
     int splitable_count = 0;
     gateQueue.push(pushHehInit(meshId));
