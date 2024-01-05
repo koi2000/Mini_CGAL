@@ -1,5 +1,8 @@
 cmake -DTEST=ON -DGRID=1 -DBLOCK=512 .. && make -j32
 
+./BFSCompress /home/koi/mastercode/Mini_CGAL/static/fixed.OFF
+
+
 sudo ./MiniCGAL_Compress /home/koi/mastercode/Mini_CGAL/static/fixed.OFF
 ./Mini_CGAL_PPMC_test /home/koi/mastercode/Mini_CGAL/static/bun_zipper.off
 

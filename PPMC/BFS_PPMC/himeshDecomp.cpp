@@ -119,7 +119,13 @@ void HiMesh::buildFromBuffer(std::deque<MCGAL::Point>* p_pointDeque, std::deque<
     vertices.clear();
 }
 
-void computeNextQueue() {}
+bool cmpForder(MCGAL::Facet* f1, MCGAL::Facet* f2) {
+    return f1->forder < f2->forder;
+}
+
+bool cmpHorder(MCGAL::Halfedge* h1, MCGAL::Halfedge* h2) {
+    return h1->horder < h2->horder;
+}
 
 void HiMesh::RemovedVerticesDecodingStep() {
     int size = size_of_facets();
@@ -182,6 +188,41 @@ void HiMesh::RemovedVerticesDecodingStep() {
             h->face->setProcessedFlag();
         }
     }
+    // sort
+    sort(faces.begin(), faces.end(), cmpForder);
+    std::vector<int> offsets(faces.size());
+    // 并行读取
+    for (int i = 0; i < faces.size(); i++) {
+        char symbol = readCharByOffset(dataOffset + i);
+        if (symbol) {
+            faces[i]->setSplittable();
+            offsets[i] = 1;
+        } else {
+            faces[i]->setUnsplittable();
+        }
+    }
+
+    // scan
+#pragma omp parallel
+    {
+        for (int stride = 1; stride < size; stride *= 2) {
+#pragma omp for
+            for (int i = stride; i < size; i += 2 * stride) {
+                offsets[i] += offsets[i - stride];
+            }
+#pragma omp barrier
+        }
+    }
+    dataOffset += faces.size();
+    for (int i = 0; i < size; i++) {
+        if (faces[i]->isSplittable()) {
+            MCGAL::Point p = readPointByOffset(dataOffset + (offsets[i] - 1) * sizeof(float) * 3);
+            faces[i]->setRemovedVertexPos(p);
+        }
+    }
+    dataOffset += *offsets.rbegin() * 3 * sizeof(float);
+    free(firstQueue);
+    free(secondQueue);
 }
 
 /**
@@ -194,6 +235,11 @@ void HiMesh::InsertedEdgeDecodingStep() {
     int currentQueueSize = 1;
     int nextQueueSize = 1;
     int level = 0;
+    std::vector<MCGAL::Halfedge*> halfedges;
+    halfedges.reserve(size_of_facets() * 4);
+    for (auto fit = faces.begin(); fit != faces.end(); fit++) {
+        halfedges.insert(halfedges.end(), (*fit)->halfedges.begin(), (*fit)->halfedges.end());
+    }
 
     MCGAL::Halfedge* hehBegin;
     for (int i = 0; i < vh_departureConquest[1]->halfedges.size(); i++) {
@@ -248,6 +294,16 @@ void HiMesh::InsertedEdgeDecodingStep() {
             h->opposite->setProcessed();
         }
     }
+    sort(halfedges.begin(), halfedges.end(), cmpHorder);
+    // 并行读取
+    for (int i = 0; i < faces.size(); i++) {
+        char symbol = readCharByOffset(dataOffset + i);
+        if (symbol) {
+            halfedges[i]->setAdded();
+        }
+    }
+    free(firstQueue);
+    free(secondQueue);
 }
 
 /**

@@ -115,6 +115,12 @@ class HiMesh : public MCGAL::Mesh {
     void writePoint(MCGAL::Point& p);
     MCGAL::Point readPoint();
 
+    float readFloatByOffset(int offset);
+    int16_t readInt16ByOffset(int offset);
+    uint16_t readuInt16ByOffset(int offset);
+    int readIntByOffset(int offset);
+    unsigned char readCharByOffset(int offset);
+    MCGAL::Point readPointByOffset(int offset);
     void writeBaseMesh();
     void readBaseMesh();
 

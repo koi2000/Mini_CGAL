@@ -47,7 +47,7 @@ void HiMesh::startNextCompresssionOp() {
         // hitInit->setInQueue();
         // // MCGAL::Halfedge* hitInit = *vh_departureConquest[0]->halfedges.begin();
         // gateQueue.push(hitInit);
-        MCGAL::Facet* fit = faces[faces.size()/2];
+        MCGAL::Facet* fit = faces[faces.size() / 2];
         fit->halfedges[0]->setInQueue();
         gateQueue.push(fit->halfedges[0]);
     }
@@ -346,9 +346,13 @@ void HiMesh::encodeRemovedVertices(unsigned i_operationId) {
         unsigned sym = connSym[i];
         writeChar(sym);
         // Encode the geometry if necessary.
-        if (sym) {
-            writePoint(geomSym[k]);
-            k++;
-        }
+    }
+    for (unsigned i = 0; i < i_lenConn; ++i) {
+        // Encode the connectivity.
+        unsigned sym = connSym[i];
+        writeChar(sym);
+    }
+    for (unsigned i = 0; i < i_lenGeom; ++i) {
+        writePoint(geomSym[i]);
     }
 }

@@ -88,6 +88,28 @@
 			]
 		},
 		{
+			"name": "BFSCompress",
+			"type": "cppdbg",
+			"request": "launch",
+			"program": "/home/koi/mastercode/Mini_CGAL/build/BFSCompress",
+			"args": [
+				"/home/koi/mastercode/Mini_CGAL/static/fixed.OFF"
+			],
+			"stopAtEntry": false,
+			"cwd": "${fileDirname}",
+			"environment": [],
+			"externalConsole": false,
+			"MIMode": "gdb",
+			"preLaunchTask": "CMake Build",
+			"setupCommands": [
+				{
+					"description": "Enable pretty-printing for gdb",
+					"text": "-enable-pretty-printing",
+					"ignoreFailures": true
+				}
+			]
+		},
+		{
 			"name": "MiniCGAL_Decompress",
 			"type": "cppdbg",
 			"request": "launch",
