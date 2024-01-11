@@ -20,6 +20,9 @@ void HiMesh::startNextDecompresssionOp() {
         b_jobCompleted = true;
         return;
     }
+    halfedges.clear();
+    halfedges.shrink_to_fit();
+    halfedges.reserve(size_of_facets() * 4);
     // 1. reset the states. note that the states of the vertices need not to be reset
     for (auto fit = faces.begin(); fit != faces.end();) {
         if ((*fit)->isRemoved()) {
@@ -28,6 +31,7 @@ void HiMesh::startNextDecompresssionOp() {
             (*fit)->resetState();
             for (MCGAL::Halfedge* hit : (*fit)->halfedges) {
                 hit->resetState();
+                halfedges.push_back(hit);
             }
             fit++;
         }
@@ -41,6 +45,18 @@ void HiMesh::startNextDecompresssionOp() {
     // 3. decoding the inserted edge and marking the ones added
     InsertedEdgeDecodingStep();
     logt("%d InsertedEdgeDecodingStep", start, i_curDecimationId);
+    for (auto fit = faces.begin(); fit != faces.end();) {
+        if ((*fit)->isRemoved()) {
+            fit = faces.erase(fit);
+        } else {
+            (*fit)->setUnProcessed();
+            for (MCGAL::Halfedge* hit : (*fit)->halfedges) {
+                hit->setUnProcessed();
+                // halfedges.push_back(hit);
+            }
+            fit++;
+        }
+    }
     // 4. truly insert the removed vertices
     insertRemovedVertices();
     logt("%d insertRemovedVertices", start, i_curDecimationId);
@@ -127,12 +143,56 @@ bool cmpHorder(MCGAL::Halfedge* h1, MCGAL::Halfedge* h2) {
     return h1->horder < h2->horder;
 }
 
+// void HiMesh::RemovedVerticesDecodingStep() {
+//     //
+//     pushHehInit();
+//     std::ofstream offFile("./decode.txt");
+//     while (!gateQueue.empty()) {
+//         MCGAL::Halfedge* h = gateQueue.front();
+//         gateQueue.pop();
+//         MCGAL::Facet* f = h->face;
+//         // If the face is already processed, pick the next halfedge:
+//         if (f->isConquered())
+//             continue;
+//         std::vector<float> fts;
+//         for (int j = 0; j < f->vertices.size(); j++) {
+//             fts.push_back(f->vertices[j]->x());
+//             fts.push_back(f->vertices[j]->y());
+//             fts.push_back(f->vertices[j]->z());
+//         }
+//         sort(fts.begin(), fts.end());
+//         for (int i = 0; i < fts.size(); i++) {
+//             offFile << fts[i] << " ";
+//         }
+//         offFile << "\n";
+//         // Add the other halfedges to the queue
+//         MCGAL::Halfedge* hIt = h;
+//         do {
+//             MCGAL::Halfedge* hOpp = hIt->opposite;
+//             // TODO: wait
+//             // assert(!hOpp->is_border());
+//             if (!hOpp->face->isConquered())
+//                 gateQueue.push(hOpp);
+//             hIt = hIt->next;
+//         } while (hIt != h);
+//         // Decode the face symbol.
+//         unsigned sym = readChar();
+//         if (sym == 1) {
+//             MCGAL::Point rmved = readPoint();
+//             f->setSplittable();
+//             f->setRemovedVertexPos(rmved);
+//         } else {
+//             f->setUnsplittable();
+//         }
+//     }
+// }
+
 void HiMesh::RemovedVerticesDecodingStep() {
     int size = size_of_facets();
     int* firstQueue = new int[size];
     int* secondQueue = new int[size];
     int currentQueueSize = 1;
-    int nextQueueSize = 1;
+    int nextQueueSize = 0;
     int level = 0;
 
     MCGAL::Halfedge* hehBegin;
@@ -144,6 +204,8 @@ void HiMesh::RemovedVerticesDecodingStep() {
         }
     }
     firstQueue[0] = hehBegin->poolId;
+    int startFPooId = getHalfedgeFromPool(hehBegin->poolId)->face->poolId;
+    // getHalfedgeFromPool(hehBegin->poolId)->face->forder =
     while (currentQueueSize > 0) {
         int* currentQueue;
         int* nextQueue;
@@ -154,7 +216,7 @@ void HiMesh::RemovedVerticesDecodingStep() {
             currentQueue = secondQueue;
             nextQueue = firstQueue;
         }
-#pragma omp parallel
+        // #pragma omp parallel
         for (int i = 0; i < currentQueueSize; i++) {
             int current = currentQueue[i];
             MCGAL::Halfedge* h = getHalfedgeFromPool(current);
@@ -163,16 +225,19 @@ void HiMesh::RemovedVerticesDecodingStep() {
                 continue;
             }
             MCGAL::Halfedge* hIt = h;
-            uint idx = 0;
+            uint16_t idx = 1;
             do {
                 MCGAL::Halfedge* hOpp = hIt->opposite;
-                int order = f->forder | (idx << ((15 - level) * 4));
-                idx++;
-#pragma omp atomic update
-                hOpp->face->forder = (order < f->forder) ? order : f->forder;
-                if (hOpp->face->forder == order) {
+                u_int64_t order = f->forder | (idx << (level * 4));
+                // #pragma omp atomic compare
+                if ((hOpp->face->forder == 0 && hOpp->face->poolId != startFPooId) || order < hOpp->face->forder) {
+                    hOpp->face->forder = order;
+                }
+
+                if (hOpp->face->forder == order && !hOpp->face->isProcessed()) {
+                    idx++;
                     int position = nextQueueSize;
-#pragma omp atomic
+                    // #pragma omp atomic
                     nextQueueSize++;
                     nextQueue[position] = hOpp->poolId;
                 }
@@ -180,16 +245,40 @@ void HiMesh::RemovedVerticesDecodingStep() {
             } while (hIt != h);
         }
         ++level;
-        currentQueueSize = nextQueueSize;
-        nextQueueSize = 0;
-#pragma omp parallel
+        // #pragma omp parallel
         for (int i = 0; i < currentQueueSize; i++) {
             MCGAL::Halfedge* h = getHalfedgeFromPool(currentQueue[i]);
             h->face->setProcessedFlag();
         }
+        currentQueueSize = nextQueueSize;
+        nextQueueSize = 0;
     }
     // sort
     sort(faces.begin(), faces.end(), cmpForder);
+
+    std::ofstream offFile("./decode.txt");
+    // for (int i = 0; i < faces.size(); i++) {
+    //     for (int j = 0; j < faces[i]->halfedges.size(); j++) {
+    //         offFile << faces[i]->halfedges[j]->vertex->x() << " " << faces[i]->halfedges[j]->vertex->y() << " "
+    //                 << faces[i]->halfedges[j]->vertex->z() << " " << faces[i]->halfedges[j]->end_vertex->x() << "
+    //                 << faces[i]->halfedges[j]->end_vertex->y() << " " << faces[i]->halfedges[j]->end_vertex->z();
+    //         offFile << "\n";
+    //     }
+    // }
+
+    for (int i = 0; i < faces.size(); i++) {
+        std::vector<float> fts;
+        for (int j = 0; j < faces[i]->vertices.size(); j++) {
+            fts.push_back(faces[i]->vertices[j]->x());
+            fts.push_back(faces[i]->vertices[j]->y());
+            fts.push_back(faces[i]->vertices[j]->z());
+        }
+        sort(fts.begin(), fts.end());
+        for (int j = 0; j < fts.size(); j++) {
+            offFile << fts[j] << " ";
+        }
+        offFile << "\n";
+    }
     std::vector<int> offsets(faces.size());
     // 并行读取
     for (int i = 0; i < faces.size(); i++) {
@@ -203,16 +292,20 @@ void HiMesh::RemovedVerticesDecodingStep() {
     }
 
     // scan
-#pragma omp parallel
-    {
-        for (int stride = 1; stride < size; stride *= 2) {
-#pragma omp for
-            for (int i = stride; i < size; i += 2 * stride) {
-                offsets[i] += offsets[i - stride];
-            }
-#pragma omp barrier
-        }
+    // #pragma omp parallel
+    // {
+    //     for (int stride = 1; stride < size; stride *= 2) {
+    //         // #pragma omp for
+    //         for (int i = stride; i < size; i += 2 * stride) {
+    //             offsets[i] += offsets[i - stride];
+    //         }
+    //         // #pragma omp barrier
+    //     }
+    // }
+    for (int i = 1; i < size; i++) {
+        offsets[i] += offsets[i - 1];
     }
+
     dataOffset += faces.size();
     for (int i = 0; i < size; i++) {
         if (faces[i]->isSplittable()) {
@@ -221,8 +314,8 @@ void HiMesh::RemovedVerticesDecodingStep() {
         }
     }
     dataOffset += *offsets.rbegin() * 3 * sizeof(float);
-    free(firstQueue);
-    free(secondQueue);
+    delete firstQueue;
+    delete secondQueue;
 }
 
 /**
@@ -230,16 +323,11 @@ void HiMesh::RemovedVerticesDecodingStep() {
  */
 void HiMesh::InsertedEdgeDecodingStep() {
     int size = size_of_facets();
-    int* firstQueue = new int[size];
-    int* secondQueue = new int[size];
+    int* firstQueue = new int[4 * size];
+    int* secondQueue = new int[4 * size];
     int currentQueueSize = 1;
-    int nextQueueSize = 1;
+    int nextQueueSize = 0;
     int level = 0;
-    std::vector<MCGAL::Halfedge*> halfedges;
-    halfedges.reserve(size_of_facets() * 4);
-    for (auto fit = faces.begin(); fit != faces.end(); fit++) {
-        halfedges.insert(halfedges.end(), (*fit)->halfedges.begin(), (*fit)->halfedges.end());
-    }
 
     MCGAL::Halfedge* hehBegin;
     for (int i = 0; i < vh_departureConquest[1]->halfedges.size(); i++) {
@@ -250,6 +338,7 @@ void HiMesh::InsertedEdgeDecodingStep() {
         }
     }
     firstQueue[0] = hehBegin->poolId;
+    // int startFPooId = getHalfedgeFromPool(hehBegin->poolId)->face->poolId;
     while (currentQueueSize > 0) {
         int* currentQueue;
         int* nextQueue;
@@ -260,50 +349,62 @@ void HiMesh::InsertedEdgeDecodingStep() {
             currentQueue = secondQueue;
             nextQueue = firstQueue;
         }
-#pragma omp parallel
+        // #pragma omp parallel
         for (int i = 0; i < currentQueueSize; i++) {
             int current = currentQueue[i];
             MCGAL::Halfedge* h = getHalfedgeFromPool(current);
             if (h->isProcessed()) {
                 continue;
             }
-            MCGAL::Halfedge* hIt = h;
-            uint idx = 0;
-            do {
-                MCGAL::Halfedge* hOpp = hIt->opposite;
-                int order = hOpp->horder | (idx << ((15 - level) * 4));
-                idx++;
-#pragma omp atomic update
-                hOpp->horder = (order < hOpp->horder) ? order : hOpp->horder;
-                if (hOpp->horder == order) {
+            MCGAL::Halfedge* hIt = h->next;
+            uint16_t idx = 1;
+            while (hIt->opposite != h) {
+                // MCGAL::Halfedge* hOpp = hIt->opposite;
+                int order = h->horder | (idx << level * 4);
+
+                // #pragma omp atomic compare
+                if ((hIt->horder == 0 && hIt->poolId != hehBegin->poolId) || order < hIt->horder) {
+                    hIt->horder = order;
+                }
+                if (hIt->horder == order) {
+                    idx++;
                     int position = nextQueueSize;
-#pragma omp atomic
+                    // #pragma omp atomic
                     nextQueueSize++;
-                    nextQueue[position] = hOpp->poolId;
+                    nextQueue[position] = hIt->poolId;
                 }
                 hIt = hIt->opposite->next;
-            } while (hIt != h);
+            };
         }
         ++level;
-        currentQueueSize = nextQueueSize;
-        nextQueueSize = 0;
-#pragma omp parallel
+        // #pragma omp parallel
         for (int i = 0; i < currentQueueSize; i++) {
             MCGAL::Halfedge* h = getHalfedgeFromPool(currentQueue[i]);
             h->setProcessed();
-            h->opposite->setProcessed();
+            // h->opposite->setProcessed();
         }
+        currentQueueSize = nextQueueSize;
+        nextQueueSize = 0;
     }
+    // std::vector<MCGAL::Halfedge*> halfedges;
+    // // halfedges.reserve(size_of_facets() * 4);
+    // for (auto fit = faces.begin(); fit != faces.end(); fit++) {
+    //     // halfedges.insert(halfedges.end(), (*fit)->halfedges.begin(), (*fit)->halfedges.end());
+    //     for (int i = 0; i < (*fit)->halfedges.size(); i++) {
+    //         halfedges.push_back((*fit)->halfedges[i]);
+    //     }
+    // }
     sort(halfedges.begin(), halfedges.end(), cmpHorder);
     // 并行读取
-    for (int i = 0; i < faces.size(); i++) {
+    for (int i = 0; i < halfedges.size(); i++) {
         char symbol = readCharByOffset(dataOffset + i);
         if (symbol) {
             halfedges[i]->setAdded();
         }
     }
-    free(firstQueue);
-    free(secondQueue);
+    dataOffset += halfedges.size();
+    delete firstQueue;
+    delete secondQueue;
 }
 
 /**

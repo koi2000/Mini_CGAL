@@ -129,15 +129,33 @@ void Facet::reset(Halfedge* h) {
     reset(edges);
 }
 
+// void Facet::reset(Halfedge* h) {
+//     Halfedge* st = h;
+//     Halfedge* ed = h;
+//     std::vector<Halfedge*> edges;
+//     this->halfedges.clear();
+//     this->vertices.clear();
+//     do {
+//         // edges.push_back(st);
+//         this->halfedges.push_back(st);
+//         this->vertices.push_back(st->vertex);
+//         st->face = this;
+//         st = st->next;
+//     } while (st != ed);
+//     // reset(edges);
+// }
+
 void Facet::reset(std::vector<Halfedge*>& hs) {
-    this->halfedges.clear();
-    // this->halfedges.reserve(SMALL_BUCKET_SIZE);
+    this->halfedges = hs;
+    // this->halfedges.shrink_to_fit();
+    // this->halfedges.reserve(10);
     this->vertices.clear();
-    // this->vertices.reserve(SMALL_BUCKET_SIZE);
+    this->vertices.shrink_to_fit();
+    this->vertices.reserve(10);
     for (int i = 0; i < hs.size(); i++) {
         // hs[i]->next = hs[(i + 1) % hs.size()];
         // hs[i]->face = this;
-        this->halfedges.push_back(hs[i]);
+        // this->halfedges.push_back(hs[i]);
         this->vertices.push_back(hs[i]->vertex);
         hs[i]->face = this;
     }

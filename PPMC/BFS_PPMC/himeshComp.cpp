@@ -203,6 +203,7 @@ void HiMesh::RemovedVertexCodingStep() {
 
     // Add the first halfedge to the queue.
     pushHehInit();
+    std::ofstream offFile("./encode.txt");
     // bfs to add all the point
     while (!gateQueue.empty()) {
         MCGAL::Halfedge* h = gateQueue.front();
@@ -213,6 +214,17 @@ void HiMesh::RemovedVertexCodingStep() {
         // If the face is already processed, pick the next halfedge:
         if (f->isProcessed())
             continue;
+        std::vector<float> fts;
+        for (int j = 0; j < f->vertices.size(); j++) {
+            fts.push_back(f->vertices[j]->x());
+            fts.push_back(f->vertices[j]->y());
+            fts.push_back(f->vertices[j]->z());
+        }
+        sort(fts.begin(), fts.end());
+        for (int i = 0; i < fts.size(); i++) {
+            offFile << fts[i] << " ";
+        }
+        offFile << "\n";
 
         // Determine face symbol.
         unsigned sym = f->isSplittable();
@@ -254,19 +266,19 @@ void HiMesh::InsertedEdgeCodingStep() {
         }
         // Mark the halfedge as processed.
         h->setProcessed();
-        h->opposite->setProcessed();
+        // h->opposite->setProcessed();
 
         // Add the other halfedges to the queue
         MCGAL::Halfedge* hIt = h->next;
         while (hIt->opposite != h) {
-            if (!hIt->isProcessed())
-                gateQueue.push(hIt);
+            // if (!hIt->isProcessed())
+            gateQueue.push(hIt);
             hIt = hIt->opposite->next;
         }
 
         // Don't write a symbol if the two faces of an edgde are unsplitable.
         // this can help to save some space, since it is guaranteed that the edge is not inserted
-        bool b_toCode = h->face->isUnsplittable() && h->opposite->face->isUnsplittable() ? false : true;
+        bool b_toCode = true;  // h->face->isUnsplittable() && h->opposite->face->isUnsplittable() ? false : true;
 
         // Determine the edge symbol.
         unsigned sym;
@@ -276,8 +288,8 @@ void HiMesh::InsertedEdgeCodingStep() {
             sym = 1;
 
         // Store the symbol if needed.
-        if (b_toCode)
-            connectEdgeSym[i_curDecimationId].push_back(sym);
+        // if (b_toCode)
+        connectEdgeSym[i_curDecimationId].push_back(sym);
     }
 }
 
@@ -346,11 +358,6 @@ void HiMesh::encodeRemovedVertices(unsigned i_operationId) {
         unsigned sym = connSym[i];
         writeChar(sym);
         // Encode the geometry if necessary.
-    }
-    for (unsigned i = 0; i < i_lenConn; ++i) {
-        // Encode the connectivity.
-        unsigned sym = connSym[i];
-        writeChar(sym);
     }
     for (unsigned i = 0; i < i_lenGeom; ++i) {
         writePoint(geomSym[i]);

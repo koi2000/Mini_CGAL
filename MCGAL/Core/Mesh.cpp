@@ -91,7 +91,7 @@ Halfedge* Mesh::split_facet(Halfedge* h, Halfedge* g) {
 Halfedge* Mesh::erase_center_vertex(Halfedge* h) {
     Halfedge* g = h->next->opposite;
     Halfedge* hret = find_prev(h);
-    
+
     while (g != h) {
         Halfedge* gprev = find_prev(g);
         remove_tip(gprev);
@@ -207,6 +207,7 @@ Halfedge* Mesh::join_face(Halfedge* h) {
     // this->faces.erase(gprev->face);
     gprev->face->setRemoved();
     // delete gprev->face;
+    int size = hprev->face->halfedges.size() + gprev->face->halfedges.size() - 2;
     hprev->face->reset(hprev);
     return hprev;
 }
@@ -300,7 +301,7 @@ std::istream& operator>>(std::istream& input, Mesh& mesh) {
 void Mesh::dumpto(std::string path) {
     for (auto fit = faces.begin(); fit != faces.end();) {
         if ((*fit)->isRemoved()) {
-            delete *fit;
+            // delete *fit;
             fit = faces.erase(fit);
         } else {
             fit++;
@@ -335,7 +336,6 @@ void Mesh::dumpto(std::string path) {
         } while (hst != hed);
         offFile << "\n";
     }
-
     offFile.close();
 }
 

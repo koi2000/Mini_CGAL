@@ -14,13 +14,13 @@ void compress(int argc, char** argv) {
     HiMesh* hm = new HiMesh(mesh);
     int lod = 100;
     char path[256];
-    sprintf(path, "./gisdata2/compressed_0.mesh.off");
+    sprintf(path, "./gisdata1/compressed_0.mesh.off");
     hm->write_to_off(path);
-    for (uint i = 20; i <= lod; i += 20) {
+    for (uint i = 10; i <= lod; i += 10) {
         hm->decode(i);
         logt("decode to %d", start, i);
         // log("%d %f", i, HiMesh->getHausdorfDistance());
-        sprintf(path, "./gisdata2/compressed_%d.mesh.off", i);
+        sprintf(path, "./gisdata1/compressed_%d.mesh.off", i);
         hm->write_to_off(path);
     }
 

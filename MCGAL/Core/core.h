@@ -6,9 +6,9 @@
 #include <vector>
 namespace MCGAL {
 
-#define VERTEX_POOL_SIZE 500 * 1024
+#define VERTEX_POOL_SIZE 100 * 1024
 #define HALFEDGE_POOL_SIZE 500 * 1024
-#define FACET_POOL_SIZE 500 * 1024
+#define FACET_POOL_SIZE 100 * 1024
 
 #define BUCKET_SIZE 4096
 #define SMALL_BUCKET_SIZE 32
@@ -109,6 +109,7 @@ class Vertex : public Point {
     }
 
     int vid_ = 0;
+    int poolId = -1;
     std::vector<Halfedge*> halfedges;
     // std::set<Halfedge*> opposite_half_edges;
     // std::unordered_set<Halfedge*> halfedges;
@@ -231,9 +232,8 @@ class Halfedge {
     Halfedge* opposite = nullptr;
     Halfedge(Vertex* v1, Vertex* v2);
     ~Halfedge();
-    static int id;
-    u_int64_t horder;
-    int poolId;
+    u_int64_t horder = 0;
+    int poolId = -1;
 
     void reset(Vertex* v1, Vertex* v2);
 
@@ -268,6 +268,10 @@ class Halfedge {
 
     inline void setProcessed() {
         processedFlag = Processed;
+    }
+
+    inline void setUnProcessed() {
+        processedFlag = NotProcessed;
     }
 
     inline bool isProcessed() const {
@@ -357,7 +361,8 @@ class Facet {
     ProcessedFlag processedFlag = NotProcessed;
     RemovedFlag removedFlag = NotRemoved;
     Point removedVertexPos;
-    u_int64_t forder;
+    u_int64_t forder = 0;
+    int poolId = -1;
 
   public:
     std::vector<Vertex*> vertices;
@@ -426,6 +431,10 @@ class Facet {
         processedFlag = Processed;
     }
 
+    inline void setUnProcessed() {
+        processedFlag = NotProcessed;
+    }
+
     inline bool isProcessed() const {
         return (processedFlag == Processed);
     }
@@ -476,12 +485,15 @@ class Mesh {
         fpool = new MCGAL::Facet*[FACET_POOL_SIZE];
         for (int i = 0; i < VERTEX_POOL_SIZE; i++) {
             vpool[i] = new MCGAL::Vertex();
+            vpool[i]->poolId = i;
         }
         for (int i = 0; i < HALFEDGE_POOL_SIZE; i++) {
             hpool[i] = new MCGAL::Halfedge();
+            hpool[i]->poolId = i;
         }
         for (int i = 0; i < FACET_POOL_SIZE; i++) {
             fpool[i] = new MCGAL::Facet();
+            fpool[i]->poolId = i;
         }
         // vertices.reserve(FACET_POOL_SIZE);
         // faces.reserve(FACET_POOL_SIZE);

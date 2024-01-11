@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/foreach.hpp>
+#include <fstream>
 #include <deque>
 #include <queue>
 #define BUFFER_SIZE 10 * 1024 * 1024
