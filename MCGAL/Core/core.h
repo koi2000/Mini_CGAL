@@ -232,7 +232,7 @@ class Halfedge {
     Halfedge* opposite = nullptr;
     Halfedge(Vertex* v1, Vertex* v2);
     ~Halfedge();
-    u_int64_t horder = 0;
+    __uint128_t horder = 0;
     int poolId = -1;
 
     void reset(Vertex* v1, Vertex* v2);
@@ -361,7 +361,7 @@ class Facet {
     ProcessedFlag processedFlag = NotProcessed;
     RemovedFlag removedFlag = NotRemoved;
     Point removedVertexPos;
-    u_int64_t forder = 0;
+    __uint128_t forder = 0;
     int poolId = -1;
 
   public:

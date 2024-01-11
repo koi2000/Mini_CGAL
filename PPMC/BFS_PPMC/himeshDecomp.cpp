@@ -136,7 +136,43 @@ void HiMesh::buildFromBuffer(std::deque<MCGAL::Point>* p_pointDeque, std::deque<
 }
 
 bool cmpForder(MCGAL::Facet* f1, MCGAL::Facet* f2) {
-    return f1->forder < f2->forder;
+    for (int i = 31; i >= 0; --i) {
+        // 获取当前四个bit
+        uint8_t a_part = (uint8_t)(f1->forder >> (i * 4)) & 0xF;
+        uint8_t b_part = (uint8_t)(f2->forder >> (i * 4)) & 0xF;
+        if (a_part == 0 && b_part != 0) {
+            return true;
+        } else if (a_part != 0 && b_part == 0) {
+            return false;
+        } else if (a_part == 0 && b_part == 0) {
+            return f1->forder < f2->forder;
+        }
+    }
+
+    // 如果所有四个bit都相同，则两者相等
+    return 0;
+
+    // return f1->forder < f2->forder;
+}
+
+bool cmpforder(__uint128_t f1, __uint128_t f2) {
+    for (int i = 31; i >= 0; --i) {
+        // 获取当前四个bit
+        uint8_t a_part = (uint8_t)(f1 >> (i * 4)) & 0xF;
+        uint8_t b_part = (uint8_t)(f2 >> (i * 4)) & 0xF;
+        if (a_part == 0 && b_part != 0) {
+            return true;
+        } else if (a_part != 0 && b_part == 0) {
+            return false;
+        } else if (a_part == 0 && b_part == 0) {
+            return f1 < f2;
+        }
+    }
+
+    // 如果所有四个bit都相同，则两者相等
+    return 0;
+
+    // return f1->forder < f2->forder;
 }
 
 bool cmpHorder(MCGAL::Halfedge* h1, MCGAL::Halfedge* h2) {
@@ -205,6 +241,7 @@ void HiMesh::RemovedVerticesDecodingStep() {
     }
     firstQueue[0] = hehBegin->poolId;
     int startFPooId = getHalfedgeFromPool(hehBegin->poolId)->face->poolId;
+    std::ofstream offFile("./decode.txt");
     // getHalfedgeFromPool(hehBegin->poolId)->face->forder =
     while (currentQueueSize > 0) {
         int* currentQueue;
@@ -225,12 +262,13 @@ void HiMesh::RemovedVerticesDecodingStep() {
                 continue;
             }
             MCGAL::Halfedge* hIt = h;
-            uint16_t idx = 1;
+            __uint128_t idx = 1;
             do {
                 MCGAL::Halfedge* hOpp = hIt->opposite;
-                u_int64_t order = f->forder | (idx << (level * 4));
+                __uint128_t order = f->forder | (idx << ((31 - level) * 4));
                 // #pragma omp atomic compare
-                if ((hOpp->face->forder == 0 && hOpp->face->poolId != startFPooId) || order < hOpp->face->forder) {
+                if ((hOpp->face->forder == 0 && hOpp->face->poolId != startFPooId) ||
+                    cmpforder(order, hOpp->face->forder)) {
                     hOpp->face->forder = order;
                 }
 
@@ -246,25 +284,19 @@ void HiMesh::RemovedVerticesDecodingStep() {
         }
         ++level;
         // #pragma omp parallel
+        // std::set<int> st;
         for (int i = 0; i < currentQueueSize; i++) {
             MCGAL::Halfedge* h = getHalfedgeFromPool(currentQueue[i]);
+            // offFile << h->face->poolId << " ";
+            // offFile << to_string(h->face->forder) << " ";
             h->face->setProcessedFlag();
         }
+        // offFile << "\n";
         currentQueueSize = nextQueueSize;
         nextQueueSize = 0;
     }
     // sort
     sort(faces.begin(), faces.end(), cmpForder);
-
-    std::ofstream offFile("./decode.txt");
-    // for (int i = 0; i < faces.size(); i++) {
-    //     for (int j = 0; j < faces[i]->halfedges.size(); j++) {
-    //         offFile << faces[i]->halfedges[j]->vertex->x() << " " << faces[i]->halfedges[j]->vertex->y() << " "
-    //                 << faces[i]->halfedges[j]->vertex->z() << " " << faces[i]->halfedges[j]->end_vertex->x() << "
-    //                 << faces[i]->halfedges[j]->end_vertex->y() << " " << faces[i]->halfedges[j]->end_vertex->z();
-    //         offFile << "\n";
-    //     }
-    // }
 
     for (int i = 0; i < faces.size(); i++) {
         std::vector<float> fts;
@@ -360,7 +392,7 @@ void HiMesh::InsertedEdgeDecodingStep() {
             uint16_t idx = 1;
             while (hIt->opposite != h) {
                 // MCGAL::Halfedge* hOpp = hIt->opposite;
-                int order = h->horder | (idx << level * 4);
+                __uint128_t order = h->horder | (idx << level * 4);
 
                 // #pragma omp atomic compare
                 if ((hIt->horder == 0 && hIt->poolId != hehBegin->poolId) || order < hIt->horder) {

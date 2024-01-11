@@ -196,6 +196,49 @@ MCGAL::Halfedge* HiMesh::vertexCut(MCGAL::Halfedge* startH) {
     return hNewFace;
 }
 
+// void HiMesh::RemovedVertexCodingStep() {
+//     geometrySym.push_back(std::deque<MCGAL::Point>());
+//     connectFaceSym.push_back(std::deque<unsigned>());
+//     pushHehInit();
+//     while (!gateQueue.empty()) {
+//         MCGAL::Halfedge* h = gateQueue.front();
+//         gateQueue.pop();
+
+//         MCGAL::Facet* f = h->face;
+
+//         // If the face is already processed, pick the next halfedge:
+//         if (f->isProcessed())
+//             continue;
+
+//         // Determine face symbol.
+//         unsigned sym = f->isSplittable();
+
+//         // Push the symbols.
+//         connectFaceSym[i_curDecimationId].push_back(sym);
+
+//         // Determine the geometry symbol.
+//         if (sym) {
+//             MCGAL::Point rmved = f->getRemovedVertexPos();
+//             geometrySym[i_curDecimationId].push_back(rmved);
+//             // record the removed points during compressing.
+//         }
+
+//         // Mark the face as processed.
+//         f->setProcessedFlag();
+
+//         // Add the other halfedges to the queue
+//         MCGAL::Halfedge* hIt = h;
+//         do {
+//             MCGAL::Halfedge* hOpp = hIt->opposite;
+//             // TODO: wait
+//             // assert(!hOpp->is_border());
+//             if (!hOpp->face->isProcessed())
+//                 gateQueue.push(hOpp);
+//             hIt = hIt->next;
+//         } while (hIt != h);
+//     }
+// }
+
 void HiMesh::RemovedVertexCodingStep() {
     // resize the vectors to add the current conquest symbols
     geometrySym.push_back(std::deque<MCGAL::Point>());
