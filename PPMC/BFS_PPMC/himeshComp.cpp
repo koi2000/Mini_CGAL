@@ -257,17 +257,17 @@ void HiMesh::RemovedVertexCodingStep() {
         // If the face is already processed, pick the next halfedge:
         if (f->isProcessed())
             continue;
-        std::vector<float> fts;
-        for (int j = 0; j < f->vertices.size(); j++) {
-            fts.push_back(f->vertices[j]->x());
-            fts.push_back(f->vertices[j]->y());
-            fts.push_back(f->vertices[j]->z());
-        }
-        sort(fts.begin(), fts.end());
-        for (int i = 0; i < fts.size(); i++) {
-            offFile << fts[i] << " ";
-        }
-        offFile << "\n";
+        // std::vector<float> fts;
+        // for (int j = 0; j < f->vertices.size(); j++) {
+        //     fts.push_back(f->vertices[j]->x());
+        //     fts.push_back(f->vertices[j]->y());
+        //     fts.push_back(f->vertices[j]->z());
+        // }
+        // sort(fts.begin(), fts.end());
+        // for (int i = 0; i < fts.size(); i++) {
+        //     offFile << fts[i] << " ";
+        // }
+        // offFile << "\n";
 
         // Determine face symbol.
         unsigned sym = f->isSplittable();

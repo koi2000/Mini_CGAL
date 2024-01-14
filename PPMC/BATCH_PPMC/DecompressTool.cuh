@@ -61,6 +61,9 @@ class DeCompressTool {
     void decode(int lod);
     void RemovedVerticesDecodingStep(int meshId);
     void InsertedEdgeDecodingStep(int meshId);
+    void BatchRemovedVerticesDecodingStep();
+    void BatchInsertedEdgeDecodingStep();
+
     void insertRemovedVertices();
     void removeInsertedEdges(int meshId);
     void readBaseMesh(int meshId, int* offset);

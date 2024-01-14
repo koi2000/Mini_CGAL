@@ -179,7 +179,107 @@ MCGAL::Halfedge* DeCompressTool::pushHehInit(int meshId) {
     // Push it to the queue.
     return hehBegin;
 }
-void DeCompressTool:: RemovedVerticesDecodingStep(int meshId) {
+
+// void DeCompressTool::BatchRemovedVerticesDecodingStep() {
+//     int size = MCGAL::contextPool.findex;
+//     int* firstQueue = new int[size];
+//     int* secondQueue = new int[size];
+//     int currentQueueSize = batch_size;
+//     int nextQueueSize = 0;
+//     int level = 0;
+
+//     MCGAL::Halfedge* hehBegin;
+
+//     for (int i = 0; i < batch_size; i++) {
+//         firstQueue[i] = pushHehInit(i)->poolId;
+//     }
+//     int startFPooId = getHalfedgeFromPool(hehBegin->poolId)->face->poolId;
+//     while (currentQueueSize > 0) {
+//         int* currentQueue;
+//         int* nextQueue;
+//         if (level % 2 == 0) {
+//             currentQueue = firstQueue;
+//             nextQueue = secondQueue;
+//         } else {
+//             currentQueue = secondQueue;
+//             nextQueue = firstQueue;
+//         }
+// #pragma omp parallel schedule(dynamic)
+//         for (int i = 0; i < currentQueueSize; i++) {
+//             int current = currentQueue[i];
+//             MCGAL::Halfedge* h = getHalfedgeFromPool(current);
+//             MCGAL::Facet* f = h->face;
+//             if (f->isProcessed()) {
+//                 continue;
+//             }
+//             MCGAL::Halfedge* hIt = h;
+//             __uint128_t idx = 1;
+//             do {
+//                 MCGAL::Halfedge* hOpp = hIt->opposite;
+//                 __uint128_t order = f->forder | (idx << ((41 - level) * 3));
+//                 // __uint128_t order = f->forder | (idx << ((31 - level) * 4));
+// #pragma omp atomic compare
+//                 if ((hOpp->face->forder == 0 && hOpp->face->poolId != startFPooId) ||
+//                     cmpforder(order, hOpp->face->forder)) {
+//                     hOpp->face->forder = order;
+//                 }
+
+//                 if (hOpp->face->forder == order && !hOpp->face->isProcessed()) {
+//                     idx++;
+//                     int position = nextQueueSize;
+// #pragma omp atomic
+//                     nextQueueSize++;
+//                     nextQueue[position] = hOpp->poolId;
+//                 }
+//                 hIt = hIt->next;
+//             } while (hIt != h);
+//         }
+//         ++level;
+//         // #pragma omp parallel
+//         // std::set<int> st;
+//         for (int i = 0; i < currentQueueSize; i++) {
+//             MCGAL::Halfedge* h = getHalfedgeFromPool(currentQueue[i]);
+//             h->face->setProcessedFlag();
+//         }
+//         currentQueueSize = nextQueueSize;
+//         nextQueueSize = 0;
+//     }
+//     // sort
+//     sort(faces.begin(), faces.end(), cmpForder);
+//     std::vector<int> offsets(faces.size());
+// // 并行读取
+// #pragma omp parallel schedule(dynamic)
+//     for (int i = 0; i < faces.size(); i++) {
+//         char symbol = readCharByOffset(dataOffset + i);
+//         if (symbol) {
+//             faces[i]->setSplittable();
+//             offsets[i] = 1;
+//         } else {
+//             faces[i]->setUnsplittable();
+//         }
+//     }
+
+//     // scan
+//     for (int i = 1; i < size; i++) {
+//         offsets[i] += offsets[i - 1];
+//     }
+
+//     dataOffset += faces.size();
+// #pragma omp parallel schedule(dynamic)
+//     for (int i = 0; i < size; i++) {
+//         if (faces[i]->isSplittable()) {
+//             MCGAL::Point p = readPointByOffset(dataOffset + (offsets[i] - 1) * sizeof(float) * 3);
+//             faces[i]->setRemovedVertexPos(p);
+//         }
+//     }
+//     dataOffset += *offsets.rbegin() * 3 * sizeof(float);
+//     delete firstQueue;
+//     delete secondQueue;
+// }
+
+void DeCompressTool::BatchInsertedEdgeDecodingStep() {}
+
+void DeCompressTool::RemovedVerticesDecodingStep(int meshId) {
     std::queue<MCGAL::Halfedge*> gateQueue;
     int splitable_count = 0;
     gateQueue.push(pushHehInit(meshId));
@@ -339,8 +439,8 @@ void DeCompressTool::insertRemovedVertices() {
     cudaGetDeviceProperties(&prop, 0);
     double clockRate = prop.clockRate;
     int findex = MCGAL::contextPool.findex;
-    //
-    #pragma omp parallel for num_threads(50) schedule(dynamic)
+//
+#pragma omp parallel for num_threads(50) schedule(dynamic)
     for (int i = 0; i < findex; i++) {
         MCGAL::Facet* fit = MCGAL::contextPool.getFacetByIndex(i);
         if (fit->meshId != -1 && fit->isSplittable()) {
