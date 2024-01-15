@@ -33,6 +33,7 @@ class Facet {
     int lock = 1;
     int count = 0;
     int meshId = -1;
+    __uint128_t forder = ~(__uint128_t)0;
 
   public:
     ~Facet();

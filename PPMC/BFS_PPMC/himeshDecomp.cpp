@@ -79,7 +79,6 @@ void HiMesh::readBaseMesh() {
         MCGAL::Point pos = readPoint();
         p_pointDeque->push_back(pos);
     }
-    // read the face vertex indices
     // Read the face vertex indices.
     for (unsigned i = 0; i < i_nbFacesBaseMesh; ++i) {
         int nv = readInt();
@@ -317,6 +316,9 @@ void HiMesh::RemovedVerticesDecodingStep() {
     }
     hehBegin->face->forder = 0;
     firstQueue[0] = hehBegin->poolId;
+    char path[256];
+    sprintf(path, "./RemovedVerticesDecodingStep%d.txt", i_curDecimationId);
+    std::ofstream offFile(path);
     // int startFPooId = getHalfedgeFromPool(hehBegin->poolId)->face->poolId;
     while (currentQueueSize > 0) {
         int* currentQueue;
@@ -363,14 +365,39 @@ void HiMesh::RemovedVerticesDecodingStep() {
         for (int i = 0; i < currentQueueSize; i++) {
             MCGAL::Halfedge* h = getHalfedgeFromPool(currentQueue[i]);
             h->face->setProcessedFlag();
+            offFile << h->face->poolId << " ";
         }
+        offFile << "\n";
         currentQueueSize = nextQueueSize;
         nextQueueSize = 0;
     }
     // sort
     sort(faces.begin(), faces.end(), cmpForder);
+
+    // for (int i = 0; i < faces.size(); i++) {
+    //     for (int j = 0; j < faces[i]->halfedges.size(); j++) {
+    //         offFile << faces[i]->halfedges[j]->vertex->x() << " " << faces[i]->halfedges[j]->vertex->y() << " "
+    //                 << faces[i]->halfedges[j]->vertex->z() << " " << faces[i]->halfedges[j]->end_vertex->x() << "
+    //                 << faces[i]->halfedges[j]->end_vertex->y() << " " << faces[i]->halfedges[j]->end_vertex->z();
+    //         offFile << "\n";
+    //     }
+    // }
+
+    // for (int i = 0; i < faces.size(); i++) {
+    //     std::vector<float> fts;
+    //     for (int j = 0; j < faces[i]->vertices.size(); j++) {
+    //         fts.push_back(faces[i]->vertices[j]->x());
+    //         fts.push_back(faces[i]->vertices[j]->y());
+    //         fts.push_back(faces[i]->vertices[j]->z());
+    //     }
+    //     sort(fts.begin(), fts.end());
+    //     for (int j = 0; j < fts.size(); j++) {
+    //         offFile << fts[j] << " ";
+    //     }
+    //     offFile << "\n";
+    // }
     std::vector<int> offsets(faces.size());
-// 并行读取
+    // 并行读取
 #pragma omp parallel schedule(dynamic)
     for (int i = 0; i < faces.size(); i++) {
         char symbol = readCharByOffset(dataOffset + i);
@@ -421,7 +448,9 @@ void HiMesh::InsertedEdgeDecodingStep() {
     }
     hehBegin->horder = 0;
     firstQueue[0] = hehBegin->poolId;
-    // int startFPooId = getHalfedgeFromPool(hehBegin->poolId)->face->poolId;
+    char path[256];
+    sprintf(path, "./InsertedEdgeDecodingStep%d.txt", i_curDecimationId);
+    std::ofstream offFile(path);
     while (currentQueueSize > 0) {
         int* currentQueue;
         int* nextQueue;
@@ -465,7 +494,9 @@ void HiMesh::InsertedEdgeDecodingStep() {
         for (int i = 0; i < currentQueueSize; i++) {
             MCGAL::Halfedge* h = getHalfedgeFromPool(currentQueue[i]);
             h->setProcessed();
+            offFile << h->poolId << " ";
         }
+        offFile << "\n";
         currentQueueSize = nextQueueSize;
         nextQueueSize = 0;
     }

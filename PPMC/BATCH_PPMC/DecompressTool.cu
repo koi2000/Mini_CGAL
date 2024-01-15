@@ -180,6 +180,66 @@ MCGAL::Halfedge* DeCompressTool::pushHehInit(int meshId) {
     return hehBegin;
 }
 
+bool cmpForder(MCGAL::Facet* f1, MCGAL::Facet* f2) {
+    for (int i = 31; i >= 0; --i) {
+        uint8_t a_part = (uint8_t)(f1->forder >> (i * 4)) & 0xF;
+        uint8_t b_part = (uint8_t)(f2->forder >> (i * 4)) & 0xF;
+        if (a_part == 0 && b_part != 0) {
+            return true;
+        } else if (a_part != 0 && b_part == 0) {
+            return false;
+        } else if (a_part == 0 && b_part == 0) {
+            return f1->forder < f2->forder;
+        }
+    }
+    return 0;
+}
+
+bool cmpforder(__uint128_t f1, __uint128_t f2) {
+    for (int i = 31; i >= 0; --i) {
+        uint8_t a_part = (uint8_t)(f1 >> (i * 4)) & 0xF;
+        uint8_t b_part = (uint8_t)(f2 >> (i * 4)) & 0xF;
+        if (a_part == 0 && b_part != 0) {
+            return true;
+        } else if (a_part != 0 && b_part == 0) {
+            return false;
+        } else if (a_part == 0 && b_part == 0) {
+            return f1 < f2;
+        }
+    }
+    return 0;
+}
+
+bool cmpHorder(MCGAL::Halfedge* f1, MCGAL::Halfedge* f2) {
+    for (int i = 31; i >= 0; --i) {
+        uint8_t a_part = (uint8_t)(f1->horder >> (i * 4)) & 0xF;
+        uint8_t b_part = (uint8_t)(f2->horder >> (i * 4)) & 0xF;
+        if (a_part == 0 && b_part != 0) {
+            return true;
+        } else if (a_part != 0 && b_part == 0) {
+            return false;
+        } else if (a_part == 0 && b_part == 0) {
+            return f1->horder < f2->horder;
+        }
+    }
+    return 0;
+}
+
+bool cmphorder(__uint128_t f1, __uint128_t f2) {
+    for (int i = 31; i >= 0; --i) {
+        uint8_t a_part = (uint8_t)(f1 >> (i * 4)) & 0xF;
+        uint8_t b_part = (uint8_t)(f2 >> (i * 4)) & 0xF;
+        if (a_part == 0 && b_part != 0) {
+            return true;
+        } else if (a_part != 0 && b_part == 0) {
+            return false;
+        } else if (a_part == 0 && b_part == 0) {
+            return f1 < f2;
+        }
+    }
+    return 0;
+}
+
 // void DeCompressTool::BatchRemovedVerticesDecodingStep() {
 //     int size = MCGAL::contextPool.findex;
 //     int* firstQueue = new int[size];
@@ -193,7 +253,6 @@ MCGAL::Halfedge* DeCompressTool::pushHehInit(int meshId) {
 //     for (int i = 0; i < batch_size; i++) {
 //         firstQueue[i] = pushHehInit(i)->poolId;
 //     }
-//     int startFPooId = getHalfedgeFromPool(hehBegin->poolId)->face->poolId;
 //     while (currentQueueSize > 0) {
 //         int* currentQueue;
 //         int* nextQueue;
@@ -207,55 +266,61 @@ MCGAL::Halfedge* DeCompressTool::pushHehInit(int meshId) {
 // #pragma omp parallel schedule(dynamic)
 //         for (int i = 0; i < currentQueueSize; i++) {
 //             int current = currentQueue[i];
-//             MCGAL::Halfedge* h = getHalfedgeFromPool(current);
-//             MCGAL::Facet* f = h->face;
+//             MCGAL::Halfedge* h = MCGAL::contextPool.getHalfedgeByIndex(current);
+//             MCGAL::Facet* f = h->facet();
 //             if (f->isProcessed()) {
 //                 continue;
 //             }
 //             MCGAL::Halfedge* hIt = h;
 //             __uint128_t idx = 1;
 //             do {
-//                 MCGAL::Halfedge* hOpp = hIt->opposite;
+//                 MCGAL::Halfedge* hOpp = hIt->opposite();
 //                 __uint128_t order = f->forder | (idx << ((41 - level) * 3));
 //                 // __uint128_t order = f->forder | (idx << ((31 - level) * 4));
 // #pragma omp atomic compare
-//                 if ((hOpp->face->forder == 0 && hOpp->face->poolId != startFPooId) ||
-//                     cmpforder(order, hOpp->face->forder)) {
-//                     hOpp->face->forder = order;
+//                 if (cmpforder(order, hOpp->facet()->forder)) {
+//                     hOpp->facet()->forder = order;
 //                 }
 
-//                 if (hOpp->face->forder == order && !hOpp->face->isProcessed()) {
+//                 if (hOpp->facet()->forder == order && !hOpp->facet()->isProcessed()) {
 //                     idx++;
 //                     int position = nextQueueSize;
 // #pragma omp atomic
 //                     nextQueueSize++;
 //                     nextQueue[position] = hOpp->poolId;
 //                 }
-//                 hIt = hIt->next;
+//                 hIt = hIt->next();
 //             } while (hIt != h);
 //         }
 //         ++level;
 //         // #pragma omp parallel
 //         // std::set<int> st;
 //         for (int i = 0; i < currentQueueSize; i++) {
-//             MCGAL::Halfedge* h = getHalfedgeFromPool(currentQueue[i]);
-//             h->face->setProcessedFlag();
+//             MCGAL::Halfedge* h = MCGAL::contextPool.getHalfedgeByIndex(currentQueue[i]);
+//             h->facet()->setProcessedFlag();
 //         }
 //         currentQueueSize = nextQueueSize;
 //         nextQueueSize = 0;
 //     }
-//     // sort
-//     sort(faces.begin(), faces.end(), cmpForder);
-//     std::vector<int> offsets(faces.size());
-// // 并行读取
+//     // sort(faces.begin(), faces.end(), cmpForder);
+//     sort(MCGAL::contextPool.fpool, MCGAL::contextPool.fpool + MCGAL::contextPool.findex, cmpForder);
+//     std::vector<int> batchIdx(batch_size);
+//     std::vector<std::vector<int>>
+//     // 需要处理meshId为-1的面
+//     // 并行读取
 // #pragma omp parallel schedule(dynamic)
-//     for (int i = 0; i < faces.size(); i++) {
-//         char symbol = readCharByOffset(dataOffset + i);
-//         if (symbol) {
-//             faces[i]->setSplittable();
-//             offsets[i] = 1;
-//         } else {
-//             faces[i]->setUnsplittable();
+//     for (int i = 0; i < MCGAL::contextPool.findex; i++) {
+//         MCGAL::Facet* face = MCGAL::contextPool.getFacetByIndex(i);
+//         if (face->meshId != -1) {
+// #pragma omp atomic
+//             stOffsets[face->meshId]++;
+//             char symbol = readCharByOffset(stOffsets[face->meshId] + i);
+//             if (symbol) {
+//                 face->setSplittable();
+//                 offsets[i] = 1;
+//             } else {
+//                 face->setUnsplittable();
+//             }
 //         }
 //     }
 
@@ -264,7 +329,7 @@ MCGAL::Halfedge* DeCompressTool::pushHehInit(int meshId) {
 //         offsets[i] += offsets[i - 1];
 //     }
 
-//     dataOffset += faces.size();
+//     // dataOffset += faces.size();
 // #pragma omp parallel schedule(dynamic)
 //     for (int i = 0; i < size; i++) {
 //         if (faces[i]->isSplittable()) {

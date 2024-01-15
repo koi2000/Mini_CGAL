@@ -136,3 +136,38 @@ void DeCompressTool::writeChar(unsigned char i,int* offset) {
     *(unsigned char*)(buffer + *offset) = i;
     *offset += sizeof(unsigned char);
 }
+
+float DeCompressTool::readFloatByOffset(int offset) {
+    float f = *(float*)(buffer + offset);
+    return f;
+}
+
+int16_t DeCompressTool::readInt16ByOffset(int offset) {
+    int16_t i = *(int16_t*)(buffer + offset);
+    return i;
+}
+
+uint16_t DeCompressTool::readuInt16ByOffset(int offset) {
+    uint16_t i = *(uint16_t*)(buffer + offset);
+    return i;
+}
+
+int DeCompressTool::readIntByOffset(int offset) {
+    int i = *(int*)(buffer + offset);
+    return i;
+}
+
+unsigned char DeCompressTool::readCharByOffset(int offset) {
+    unsigned char i = *(unsigned char*)(buffer + offset);
+    return i;
+}
+
+MCGAL::Point DeCompressTool::readPointByOffset(int offset) {
+    float coord[3];
+    for (unsigned i = 0; i < 3; ++i) {
+        coord[i] = readFloatByOffset(offset);
+        offset += sizeof(float);
+    }
+    MCGAL::Point pt(coord[0], coord[1], coord[2]);
+    return pt;
+}

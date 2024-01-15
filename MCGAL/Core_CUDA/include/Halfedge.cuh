@@ -29,6 +29,7 @@ class Halfedge {
     int next_ = -1;
     int opposite_ = -1;
     int count = 0;
+    __uint128_t horder = ~(__uint128_t)0;
     Halfedge() {
         vertex_ = -1;
         end_vertex_ = -1;

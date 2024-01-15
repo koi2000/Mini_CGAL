@@ -4,6 +4,7 @@
 #include "util.h"
 #include <deque>
 #include <fstream>
+#include <algorithm>
 #include <omp.h>
 #include <queue>
 #define BUFFER_SIZE 10 * 10 * 1024 * 1024
@@ -97,5 +98,12 @@ class DeCompressTool {
     void writeChar(unsigned char ch, int* offset);
     void writePoint(MCGAL::Point& p, int* offset);
     MCGAL::Point readPoint(int* offset);
+
+    float readFloatByOffset(int offset);
+    int16_t readInt16ByOffset(int offset);
+    uint16_t readuInt16ByOffset(int offset);
+    int readIntByOffset(int offset);
+    unsigned char readCharByOffset(int offset);
+    MCGAL::Point readPointByOffset(int offset);
 };
 #endif

@@ -8,7 +8,7 @@ namespace MCGAL {
 
 #define VERTEX_POOL_SIZE 100 * 1024
 #define HALFEDGE_POOL_SIZE 500 * 1024
-#define FACET_POOL_SIZE 100 * 1024
+#define FACET_POOL_SIZE 200 * 1024
 
 #define BUCKET_SIZE 4096
 #define SMALL_BUCKET_SIZE 32
@@ -243,6 +243,7 @@ class Halfedge {
         processedFlag = NotProcessed;
         removedFlag = NotRemoved;
         bfsFlag = NotVisited;
+        horder = ~(__uint128_t)0;
     }
 
     /* Flag 1 */
@@ -399,6 +400,7 @@ class Facet {
         flag = Unknown;
         processedFlag = NotProcessed;
         removedFlag = NotRemoved;
+        forder = ~(__uint128_t)0;
     }
 
     inline void resetProcessedFlag() {
