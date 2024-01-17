@@ -1,5 +1,6 @@
 #include "../PPMC/MCGAL_PPMC/himesh.h"
 #include "../PPMC/MCGAL_PPMC/util.h"
+#include "omp.h"
 using namespace std;
 HiMesh* read_mesh(char* path, bool complete_compression) {
     string mesh_str = read_file(path);
@@ -13,6 +14,7 @@ void compress(int argc, char** argv) {
     logt("compress", start);
     HiMesh* hm = new HiMesh(mesh);
     int lod = 100;
+    omp_set_nested(1);
     char path[256];
     sprintf(path, "./gisdata1/compressed_0.mesh.off");
     hm->write_to_off(path);

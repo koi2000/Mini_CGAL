@@ -251,7 +251,15 @@ void HiMesh::insertRemovedVertices() {
  * Remove all the marked edges
  */
 void HiMesh::removeInsertedEdges() {
+    for (auto fit = faces.begin(); fit != faces.end();) {
+        if ((*fit)->isRemoved()) {
+            fit = faces.erase(fit);
+        } else {
+            fit++;
+        }
+    }
     pushHehInit();
+
     while (!gateQueue.empty()) {
         MCGAL::Halfedge* h = gateQueue.front();
         gateQueue.pop();

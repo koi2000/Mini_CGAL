@@ -4,6 +4,7 @@
 #include "Halfedge.cuh"
 #include "Vertex.cuh"
 #include <vector>
+#include "stdint.h"
 
 namespace MCGAL {
 class replacing_group;

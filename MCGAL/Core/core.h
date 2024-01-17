@@ -232,8 +232,9 @@ class Halfedge {
     Halfedge* opposite = nullptr;
     Halfedge(Vertex* v1, Vertex* v2);
     ~Halfedge();
-    __uint128_t horder = ~(__uint128_t)0;
+    uint64_t horder = ~(uint64_t)0;
     int poolId = -1;
+    int indexInQueue = -1;
 
     void reset(Vertex* v1, Vertex* v2);
 
@@ -243,7 +244,7 @@ class Halfedge {
         processedFlag = NotProcessed;
         removedFlag = NotRemoved;
         bfsFlag = NotVisited;
-        horder = ~(__uint128_t)0;
+        horder = ~(uint64_t)0;
     }
 
     /* Flag 1 */
@@ -362,12 +363,13 @@ class Facet {
     ProcessedFlag processedFlag = NotProcessed;
     RemovedFlag removedFlag = NotRemoved;
     Point removedVertexPos;
-    __uint128_t forder = ~(__uint128_t)0;
+    uint64_t forder = ~(uint64_t)0;
     int poolId = -1;
 
   public:
     std::vector<Vertex*> vertices;
     std::vector<Halfedge*> halfedges;
+    int indexInQueue = -1;
 
   public:
     ~Facet();
@@ -400,7 +402,7 @@ class Facet {
         flag = Unknown;
         processedFlag = NotProcessed;
         removedFlag = NotRemoved;
-        forder = ~(__uint128_t)0;
+        forder = ~(uint64_t)0;
     }
 
     inline void resetProcessedFlag() {

@@ -93,7 +93,8 @@
 			"request": "launch",
 			"program": "/home/koi/mastercode/Mini_CGAL/build/BFSCompress",
 			"args": [
-				"/home/koi/mastercode/Mini_CGAL/static/fixed.OFF"
+				// "/home/koi/mastercode/Mini_CGAL/static/fixed.OFF"
+				"/home/koi/mastercode/Mini_CGAL/static/compressed_100.mesh.off"
 			],
 			"stopAtEntry": false,
 			"cwd": "${workspaceFolder}/build",

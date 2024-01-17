@@ -203,29 +203,22 @@ MCGAL::Halfedge* HiMesh::vertexCut(MCGAL::Halfedge* startH) {
 //     while (!gateQueue.empty()) {
 //         MCGAL::Halfedge* h = gateQueue.front();
 //         gateQueue.pop();
-
 //         MCGAL::Facet* f = h->face;
-
 //         // If the face is already processed, pick the next halfedge:
 //         if (f->isProcessed())
 //             continue;
-
 //         // Determine face symbol.
 //         unsigned sym = f->isSplittable();
-
 //         // Push the symbols.
 //         connectFaceSym[i_curDecimationId].push_back(sym);
-
 //         // Determine the geometry symbol.
 //         if (sym) {
 //             MCGAL::Point rmved = f->getRemovedVertexPos();
 //             geometrySym[i_curDecimationId].push_back(rmved);
 //             // record the removed points during compressing.
 //         }
-
 //         // Mark the face as processed.
 //         f->setProcessedFlag();
-
 //         // Add the other halfedges to the queue
 //         MCGAL::Halfedge* hIt = h;
 //         do {
@@ -246,7 +239,9 @@ void HiMesh::RemovedVertexCodingStep() {
 
     // Add the first halfedge to the queue.
     pushHehInit();
-    std::ofstream offFile("./encode.txt");
+    char path[256];
+    sprintf(path, "./encodeRemovedVerticesDecodingStep2%d.txt", i_curDecimationId);
+    std::ofstream offFile(path);
     // bfs to add all the point
     while (!gateQueue.empty()) {
         MCGAL::Halfedge* h = gateQueue.front();
@@ -257,17 +252,18 @@ void HiMesh::RemovedVertexCodingStep() {
         // If the face is already processed, pick the next halfedge:
         if (f->isProcessed())
             continue;
-        // std::vector<float> fts;
-        // for (int j = 0; j < f->vertices.size(); j++) {
-        //     fts.push_back(f->vertices[j]->x());
-        //     fts.push_back(f->vertices[j]->y());
-        //     fts.push_back(f->vertices[j]->z());
-        // }
-        // sort(fts.begin(), fts.end());
-        // for (int i = 0; i < fts.size(); i++) {
-        //     offFile << fts[i] << " ";
-        // }
-        // offFile << "\n";
+        std::vector<float> fts;
+        for (int j = 0; j < f->vertices.size(); j++) {
+            fts.push_back(f->vertices[j]->x());
+            fts.push_back(f->vertices[j]->y());
+            fts.push_back(f->vertices[j]->z());
+        }
+        sort(fts.begin(), fts.end());
+        for (int i = 0; i < fts.size(); i++) {
+            offFile << fts[i] << " ";
+        }
+        offFile << "\n";
+        // offFile << f->poolId << " ";
 
         // Determine face symbol.
         unsigned sym = f->isSplittable();
