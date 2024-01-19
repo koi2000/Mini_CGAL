@@ -164,6 +164,7 @@ target_link_libraries(Batch_Decompress ${CUDA_LIBRARIES} OpenMP::OpenMP_CXX)
 
 add_executable(BFSCompress tools/BFSCompress_test.cpp  ${BFS_PPMC} ${MINI_CGAL_FILES})
 set_target_properties(BFSCompress PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON)
+target_compile_definitions(BFSCompress PRIVATE _OPENMP=202011)
 target_link_libraries(BFSCompress ${CUDA_LIBRARIES} OpenMP::OpenMP_CXX)
 # target_link_libraries(BFSCompress ${CUDA_LIBRARIES})
 # message(STATUS "list = ${CUDA_PPMC}" )

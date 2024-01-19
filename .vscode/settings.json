@@ -82,6 +82,7 @@
         "locale": "cpp",
         "queue": "cpp",
         "*.ipp": "cpp",
-        "stack": "cpp"
+        "stack": "cpp",
+        "__memory": "cpp"
     }
 }

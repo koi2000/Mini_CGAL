@@ -149,7 +149,7 @@ bool cmpForder(MCGAL::Facet* f1, MCGAL::Facet* f2) {
     return f1->forder < f2->forder;
 }
 
-bool cmpforder(uint64_t f1, uint64_t f2) {
+bool cmpforder(unsigned long long f1, unsigned long long f2) {
     for (int i = 31; i >= 0; --i) {
         uint8_t a_part = (uint8_t)(f1 >> (i * 4)) & 0xF;
         uint8_t b_part = (uint8_t)(f2 >> (i * 4)) & 0xF;
@@ -179,7 +179,7 @@ bool cmpHorder(MCGAL::Halfedge* f1, MCGAL::Halfedge* f2) {
     return f1->horder < f2->horder;
 }
 
-bool cmphorder(uint64_t f1, uint64_t f2) {
+bool cmphorder(unsigned long long f1, unsigned long long f2) {
     for (int i = 31; i >= 0; --i) {
         uint8_t a_part = (uint8_t)(f1 >> (i * 4)) & 0xF;
         uint8_t b_part = (uint8_t)(f2 >> (i * 4)) & 0xF;
@@ -209,7 +209,7 @@ bool cmphorder(uint64_t f1, uint64_t f2) {
 //     return 0;
 // }
 
-// bool cmpforder(uint64_t f1, uint64_t f2) {
+// bool cmpforder(unsigned long long f1, unsigned long long f2) {
 //     for (int i = 41; i >= 0; --i) {
 //         uint8_t a_part = (uint8_t)(f1 >> (i * 3)) & 0x7;
 //         uint8_t b_part = (uint8_t)(f2 >> (i * 3)) & 0x7;
@@ -239,7 +239,7 @@ bool cmphorder(uint64_t f1, uint64_t f2) {
 //     return 0;
 // }
 
-// bool cmphorder(uint64_t f1, uint64_t f2) {
+// bool cmphorder(unsigned long long f1, unsigned long long f2) {
 //     for (int i = 41; i >= 0; --i) {
 //         uint8_t a_part = (uint8_t)(f1 >> (i * 3)) & 0x7;
 //         uint8_t b_part = (uint8_t)(f2 >> (i * 3)) & 0x7;
@@ -332,7 +332,7 @@ void HiMesh::RemovedVerticesDecodingStep() {
             currentQueue = secondQueue;
             nextQueue = firstQueue;
         }
-        // #pragma omp parallel for num_threads(128) schedule(dynamic)
+#pragma omp parallel for num_threads(128)
         for (int i = 0; i < currentQueueSize; i++) {
             int current = currentQueue[i];
             MCGAL::Halfedge* h = getHalfedgeFromPool(current);
@@ -341,47 +341,37 @@ void HiMesh::RemovedVerticesDecodingStep() {
                 continue;
             }
             MCGAL::Halfedge* hIt = h;
-            uint64_t idx = 1;
+            // if (f->forder == (~(unsigned long long)0)) {
+            //     secondCount = secondCount + 1;
+            // }
+            // #pragma omp atomic
+            //                 secondCount = secondCount + 1;
+            unsigned long long idx = 1;
             do {
                 MCGAL::Halfedge* hOpp = hIt->opposite;
-                uint64_t order = f->forder << 4 | idx;
-                if (hOpp->face->forder == (~(uint64_t)0)) {
-#pragma omp atomic write
-                    secondCount = secondCount + 1;
-                }
+                unsigned long long order = f->forder << 4 | idx;
+// #pragma omp critical
+//                 {
+//                     if (hOpp->face->forder == (~(unsigned long long)0)) {
+//                         secondCount = secondCount + 1;
+//                     }
+//                 }
+#pragma omp atomic compare
+                hOpp->face->forder = order < hOpp->face->forder ? order : hOpp->face->forder;
 
-                if (order < hOpp->face->forder) {
-                    // 仅能在队列里保留一个
-
-                    // if (hOpp->face->forder != (~(uint64_t)0) && !hOpp->face->isProcessed()) {
-                    //     nextQueue[hOpp->face->indexInQueue] = hOpp->poolId;
-                    //     idx++;
-                    //     hOpp->face->forder = order;
-                    //     hIt = hIt->next;
-                    //     continue;
-                    // }
-
-                    hOpp->face->forder = order;
-                }
                 if (hOpp->face->forder == order && !hOpp->face->isProcessed()) {
                     idx++;
-                    int position;
-                    // 只应该保留order低的那条边，不应该两个都进队列
-                    // #pragma omp atomic read
-                    position = nextQueueSize;
-                    // #pragma omp atomic write
                     if (hOpp->face->indexInQueue != -1) {
                         nextQueue[hOpp->face->indexInQueue] = hOpp->poolId;
                     } else {
-                        nextQueueSize = nextQueueSize + 1;
+                        int position;
+#pragma omp critical
+                        { position = nextQueueSize++; }
+                        // #pragma omp atomic read
                         hOpp->face->indexInQueue = position;
                         // #pragma omp atomic write
                         nextQueue[position] = hOpp->poolId;
                     }
-                    // nextQueueSize = nextQueueSize + 1;
-                    // hOpp->face->indexInQueue = position;
-                    // // #pragma omp atomic write
-                    // nextQueue[position] = hOpp->poolId;
                 }
                 hIt = hIt->next;
             } while (hIt != h);
@@ -391,9 +381,11 @@ void HiMesh::RemovedVerticesDecodingStep() {
         if (level == threshold) {
             // sort(faces.begin() + firstCount, faces.begin() + secondCount, cmpForder);
             sort(faces.begin(), faces.end(), cmpForder);
-            firstCount = secondCount;
-            for (int i = 0; i < secondCount + 1; i++) {
-                faces[i]->forder = i;
+            for (int i = 0; i < faces.size(); i++) {
+                if (faces[i]->forder != (~(unsigned long long)0)) {
+                    faces[i]->forder = i;
+                    secondCount = i;
+                }
             }
             int power = 1;
             int x = secondCount + 1;
@@ -404,7 +396,7 @@ void HiMesh::RemovedVerticesDecodingStep() {
             threshold += (64 - power) / 4 - 1;
         }
 
-        // #pragma omp parallel num_threads(128)
+#pragma omp parallel num_threads(128)
         for (int i = 0; i < currentQueueSize; i++) {
             MCGAL::Halfedge* h = getHalfedgeFromPool(currentQueue[i]);
             h->face->indexInQueue = -1;
@@ -415,7 +407,7 @@ void HiMesh::RemovedVerticesDecodingStep() {
         nextQueueSize = 0;
     }
     // sort
-    sort(faces.begin(), faces.end(), cmpForder);
+    sort(faces.begin() + firstCount, faces.end(), cmpForder);
 
     for (int i = 0; i < faces.size(); i++) {
         std::vector<float> fts;
@@ -504,14 +496,14 @@ void HiMesh::RemovedVerticesDecodingStep() {
 //                 continue;
 //             }
 //             MCGAL::Halfedge* hIt = h;
-//             uint64_t idx = 1;
+//             unsigned long long idx = 1;
 //             do {
 //                 MCGAL::Halfedge* hOpp = hIt->opposite;
-//                 // uint64_t order = f->forder | (idx << ((41 - level) * 3));
-//                 uint64_t order = f->forder << 3 | idx;
+//                 // unsigned long long order = f->forder | (idx << ((41 - level) * 3));
+//                 unsigned long long order = f->forder << 3 | idx;
 // #pragma omp atomic compare
 //                 if (order < hOpp->face->forder) {
-//                     if (hOpp->face->forder == (~(uint64_t)0)) {
+//                     if (hOpp->face->forder == (~(unsigned long long)0)) {
 // #pragma omp atomic
 //                         secondCount++;
 //                     }
@@ -626,40 +618,39 @@ void HiMesh::InsertedEdgeDecodingStep() {
                 continue;
             }
             MCGAL::Halfedge* hIt = h->next;
-            uint64_t idx = 1;
+            unsigned long long idx = 1;
             while (hIt->opposite != h) {
-                uint64_t order = h->horder << 4 | idx;
-                if (hIt->horder == (~(uint64_t)0)) {
-#pragma omp atomic write
+                unsigned long long order = h->horder << 4 | idx;
+                if (hIt->horder == (~(unsigned long long)0)) {
+#pragma omp atomic
                     secondCount = secondCount + 1;
                 }
-#pragma omp critical
-                {
-                    if (order < hIt->horder) {
-                        hIt->horder = order;
-                    }
+
+                // if (order < hIt->horder) {
+                //     hIt->horder = order;
+                // }
+                // #pragma omp atomic
+                hIt->horder = (hIt->horder < order) ? hIt->horder : order;
+
+                if (hIt->horder == order) {
+                    idx++;
+                    int position;
+                    // #pragma omp atomic
+                    position = nextQueueSize;
+
+#pragma omp atomic
+                    nextQueueSize = nextQueueSize + 1;
+                    // #pragma omp atomic
+                    nextQueue[position] = hIt->poolId;
                 }
-#pragma omp critical
-                {
-                    if (hIt->horder == order) {
-                        idx++;
-                        int position;
-                        // #pragma omp atomic read
-                        position = nextQueueSize;
-                        // #pragma omp atomic write
-                        nextQueueSize = nextQueueSize + 1;
-                        // #pragma omp atomic write
-                        nextQueue[position] = hIt->poolId;
-                    }
-                    hIt = hIt->opposite->next;
-                };
-            }
+                hIt = hIt->opposite->next;
+            };
         }
         ++level;
         // 到达阈值后开始compact
         if (level == threshold) {
             // sort(halfedges.begin() + firstCount, halfedges.begin() + secondCount, cmpHorder);
-            sort(halfedges.begin(), halfedges.end(), cmpHorder);
+            sort(halfedges.begin() + firstCount, halfedges.end(), cmpHorder);
             firstCount = secondCount;
             for (int i = 0; i < secondCount + 1; i++) {
                 halfedges[i]->horder = i;
@@ -676,8 +667,8 @@ void HiMesh::InsertedEdgeDecodingStep() {
         currentQueueSize = nextQueueSize;
         nextQueueSize = 0;
     }
-    sort(halfedges.begin(), halfedges.end(), cmpHorder);
-// 并行读取
+    sort(halfedges.begin() + firstCount, halfedges.end(), cmpHorder);
+    // 并行读取
 #pragma omp parallel for num_threads(128)
     for (int i = 0; i < halfedges.size(); i++) {
         char symbol = readCharByOffset(dataOffset + i);

@@ -4,6 +4,8 @@
 #include <string>
 #include <unordered_set>
 #include <vector>
+#include <mutex>
+#include <stdexcept>
 namespace MCGAL {
 
 #define VERTEX_POOL_SIZE 100 * 1024
@@ -232,9 +234,10 @@ class Halfedge {
     Halfedge* opposite = nullptr;
     Halfedge(Vertex* v1, Vertex* v2);
     ~Halfedge();
-    uint64_t horder = ~(uint64_t)0;
+    unsigned long long horder = ~(unsigned long long)0;
     int poolId = -1;
     int indexInQueue = -1;
+    std::mutex latch;
 
     void reset(Vertex* v1, Vertex* v2);
 
@@ -244,7 +247,7 @@ class Halfedge {
         processedFlag = NotProcessed;
         removedFlag = NotRemoved;
         bfsFlag = NotVisited;
-        horder = ~(uint64_t)0;
+        horder = ~(unsigned long long)0;
     }
 
     /* Flag 1 */
@@ -363,13 +366,14 @@ class Facet {
     ProcessedFlag processedFlag = NotProcessed;
     RemovedFlag removedFlag = NotRemoved;
     Point removedVertexPos;
-    uint64_t forder = ~(uint64_t)0;
+    unsigned long long forder = ~(unsigned long long)0;
     int poolId = -1;
 
   public:
     std::vector<Vertex*> vertices;
     std::vector<Halfedge*> halfedges;
     int indexInQueue = -1;
+    std::mutex latch;
 
   public:
     ~Facet();
@@ -402,7 +406,7 @@ class Facet {
         flag = Unknown;
         processedFlag = NotProcessed;
         removedFlag = NotRemoved;
-        forder = ~(uint64_t)0;
+        forder = ~(unsigned long long)0;
     }
 
     inline void resetProcessedFlag() {
