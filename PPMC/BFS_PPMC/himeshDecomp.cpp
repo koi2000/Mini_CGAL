@@ -380,13 +380,14 @@ void HiMesh::RemovedVerticesDecodingStep() {
         // 到达阈值后开始compact
         if (level == threshold) {
             // sort(faces.begin() + firstCount, faces.begin() + secondCount, cmpForder);
-            sort(faces.begin(), faces.end(), cmpForder);
-            for (int i = 0; i < faces.size(); i++) {
+            sort(faces.begin() + firstCount, faces.end(), cmpForder);
+            for (int i = firstCount; i < faces.size(); i++) {
                 if (faces[i]->forder != (~(unsigned long long)0)) {
                     faces[i]->forder = i;
                     secondCount = i;
                 }
             }
+            firstCount = secondCount;
             int power = 1;
             int x = secondCount + 1;
             while (x > 1) {
@@ -409,19 +410,19 @@ void HiMesh::RemovedVerticesDecodingStep() {
     // sort
     sort(faces.begin() + firstCount, faces.end(), cmpForder);
 
-    for (int i = 0; i < faces.size(); i++) {
-        std::vector<float> fts;
-        for (int j = 0; j < faces[i]->vertices.size(); j++) {
-            fts.push_back(faces[i]->vertices[j]->x());
-            fts.push_back(faces[i]->vertices[j]->y());
-            fts.push_back(faces[i]->vertices[j]->z());
-        }
-        sort(fts.begin(), fts.end());
-        for (int j = 0; j < fts.size(); j++) {
-            offFile << fts[j] << " ";
-        }
-        offFile << "\n";
-    }
+    // for (int i = 0; i < faces.size(); i++) {
+    //     std::vector<float> fts;
+    //     for (int j = 0; j < faces[i]->vertices.size(); j++) {
+    //         fts.push_back(faces[i]->vertices[j]->x());
+    //         fts.push_back(faces[i]->vertices[j]->y());
+    //         fts.push_back(faces[i]->vertices[j]->z());
+    //     }
+    //     sort(fts.begin(), fts.end());
+    //     for (int j = 0; j < fts.size(); j++) {
+    //         offFile << fts[j] << " ";
+    //     }
+    //     offFile << "\n";
+    // }
 
     std::vector<int> offsets(faces.size());
 // 并行读取
@@ -610,7 +611,7 @@ void HiMesh::InsertedEdgeDecodingStep() {
             currentQueue = secondQueue;
             nextQueue = firstQueue;
         }
-        // #pragma omp parallel for num_threads(128)
+#pragma omp parallel for num_threads(128)
         for (int i = 0; i < currentQueueSize; i++) {
             int current = currentQueue[i];
             MCGAL::Halfedge* h = getHalfedgeFromPool(current);
@@ -621,26 +622,14 @@ void HiMesh::InsertedEdgeDecodingStep() {
             unsigned long long idx = 1;
             while (hIt->opposite != h) {
                 unsigned long long order = h->horder << 4 | idx;
-                if (hIt->horder == (~(unsigned long long)0)) {
-#pragma omp atomic
-                    secondCount = secondCount + 1;
-                }
-
-                // if (order < hIt->horder) {
-                //     hIt->horder = order;
-                // }
-                // #pragma omp atomic
-                hIt->horder = (hIt->horder < order) ? hIt->horder : order;
+#pragma omp atomic compare
+                hIt->horder = order < hIt->horder ? order : hIt->horder;
 
                 if (hIt->horder == order) {
                     idx++;
                     int position;
-                    // #pragma omp atomic
-                    position = nextQueueSize;
-
-#pragma omp atomic
-                    nextQueueSize = nextQueueSize + 1;
-                    // #pragma omp atomic
+#pragma omp critical
+                    { position = nextQueueSize++; }
                     nextQueue[position] = hIt->poolId;
                 }
                 hIt = hIt->opposite->next;
@@ -651,10 +640,13 @@ void HiMesh::InsertedEdgeDecodingStep() {
         if (level == threshold) {
             // sort(halfedges.begin() + firstCount, halfedges.begin() + secondCount, cmpHorder);
             sort(halfedges.begin() + firstCount, halfedges.end(), cmpHorder);
-            firstCount = secondCount;
-            for (int i = 0; i < secondCount + 1; i++) {
-                halfedges[i]->horder = i;
+            for (int i = firstCount; i < halfedges.size(); i++) {
+                if (halfedges[i]->horder != (~(unsigned long long)0)) {
+                    halfedges[i]->horder = i;
+                    secondCount = i;
+                }
             }
+            firstCount = secondCount;
             int power = 1;
             int x = secondCount + 1;
             while (x > 1) {

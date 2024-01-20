@@ -34,7 +34,8 @@ class Facet {
     int lock = 1;
     int count = 0;
     int meshId = -1;
-    __uint128_t forder = ~(__uint128_t)0;
+    int indexInQueue = -1;
+    unsigned long long forder = ~(unsigned long long)0;
 
   public:
     ~Facet();
@@ -97,6 +98,7 @@ class Facet {
         processedFlag = NotProcessed;
         removedFlag = NotRemoved;
         visitedFlag = NotVisited;
+        forder = ~(unsigned long long)0;
     }
 
     // override
@@ -113,6 +115,7 @@ class Facet {
         processedFlag = NotProcessed;
         removedFlag = NotRemoved;
         visitedFlag = NotVisited;
+        forder = ~(unsigned long long)0;
     }
 
     inline void resetProcessedFlag() {

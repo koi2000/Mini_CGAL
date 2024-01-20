@@ -181,78 +181,189 @@ MCGAL::Halfedge* DeCompressTool::pushHehInit(int meshId) {
 }
 
 bool cmpForder(MCGAL::Facet* f1, MCGAL::Facet* f2) {
-    for (int i = 31; i >= 0; --i) {
-        uint8_t a_part = (uint8_t)(f1->forder >> (i * 4)) & 0xF;
-        uint8_t b_part = (uint8_t)(f2->forder >> (i * 4)) & 0xF;
-        if (a_part == 0 && b_part != 0) {
-            return true;
-        } else if (a_part != 0 && b_part == 0) {
-            return false;
-        } else if (a_part == 0 && b_part == 0) {
-            return f1->forder < f2->forder;
-        }
-    }
-    return 0;
+    return f1->forder < f2->forder;
 }
 
-bool cmpforder(__uint128_t f1, __uint128_t f2) {
-    for (int i = 31; i >= 0; --i) {
-        uint8_t a_part = (uint8_t)(f1 >> (i * 4)) & 0xF;
-        uint8_t b_part = (uint8_t)(f2 >> (i * 4)) & 0xF;
-        if (a_part == 0 && b_part != 0) {
-            return true;
-        } else if (a_part != 0 && b_part == 0) {
-            return false;
-        } else if (a_part == 0 && b_part == 0) {
-            return f1 < f2;
-        }
-    }
-    return 0;
+bool cmpHorder(MCGAL::Halfedge* h1, MCGAL::Halfedge* h2) {
+    return h1->horder < h2->horder;
 }
 
-bool cmpHorder(MCGAL::Halfedge* f1, MCGAL::Halfedge* f2) {
-    for (int i = 31; i >= 0; --i) {
-        uint8_t a_part = (uint8_t)(f1->horder >> (i * 4)) & 0xF;
-        uint8_t b_part = (uint8_t)(f2->horder >> (i * 4)) & 0xF;
-        if (a_part == 0 && b_part != 0) {
-            return true;
-        } else if (a_part != 0 && b_part == 0) {
-            return false;
-        } else if (a_part == 0 && b_part == 0) {
-            return f1->horder < f2->horder;
+/**
+ * 不考虑meshId为-1的情况，会找个时候把meshId为-1的清理掉。这里需要注意很多东西，因为三个数据结构都在互相持有
+ * 如果直接compact的话不是很好，基本就是reorganize了
+ * 直接就需要创建一个拷贝
+ * 是否可以使用 统一内存分配？ 需要考虑缺页中断的数量
+ * 先尝试使用，有问题再说
+ */
+void DeCompressTool::BatchRemovedVerticesDecodingStep() {
+    int size = MCGAL::contextPool.findex;
+    int* fids = new int[size];
+    // 将信息拷贝过来
+    int index = 0;
+    int* fsizes = new int[batch_size];
+    int* fsizesSum = new int[batch_size];
+    for (int i = 0; i < size; i++) {
+        if (MCGAL::contextPool.fpool[i].meshId != -1) {
+            fids[index++] = i;
+            fsizes[MCGAL::contextPool.fpool[i].meshId]++;
         }
     }
-    return 0;
-}
 
-bool cmphorder(__uint128_t f1, __uint128_t f2) {
-    for (int i = 31; i >= 0; --i) {
-        uint8_t a_part = (uint8_t)(f1 >> (i * 4)) & 0xF;
-        uint8_t b_part = (uint8_t)(f2 >> (i * 4)) & 0xF;
-        if (a_part == 0 && b_part != 0) {
-            return true;
-        } else if (a_part != 0 && b_part == 0) {
-            return false;
-        } else if (a_part == 0 && b_part == 0) {
-            return f1 < f2;
+    for (int i = 1; i <= batch_size; i++) {
+        fsizesSum[i] = fsizesSum[i - 1] + fsizes[i];
+    }
+
+    int* firstQueue = new int[size];
+    int* secondQueue = new int[size];
+    int currentQueueSize = 1;
+    int nextQueueSize = 0;
+    int level = 0;
+    for (int i = 0; i < batch_size; i++) {
+        MCGAL::Halfedge* hit = pushHehInit(i);
+        hit->facet()->forder = 0;
+        firstQueue[i] = hit->poolId;
+    }
+    int threshold = 64 / 4 - 1;
+    int firstCount = 0;
+    int secondCount = 0;
+    while (currentQueueSize > 0) {
+        int* currentQueue;
+        int* nextQueue;
+        if (level % 2 == 0) {
+            currentQueue = firstQueue;
+            nextQueue = secondQueue;
+        } else {
+            currentQueue = secondQueue;
+            nextQueue = firstQueue;
+        }
+#pragma omp parallel for num_threads(128)
+        for (int i = 0; i < currentQueueSize; i++) {
+            int current = currentQueue[i];
+            MCGAL::Halfedge* h = MCGAL::contextPool.getHalfedgeByIndex(current);
+            MCGAL::Facet* f = h->facet();
+            if (f->isProcessed()) {
+                continue;
+            }
+            MCGAL::Halfedge* hIt = h;
+            unsigned long long idx = 1;
+            do {
+                MCGAL::Halfedge* hOpp = hIt->opposite();
+                unsigned long long order = f->forder << 4 | idx;
+#pragma omp atomic compare
+                hOpp->facet()->forder = order < hOpp->facet()->forder ? order : hOpp->facet()->forder;
+
+                if (hOpp->facet()->forder == order && !hOpp->facet()->isProcessed()) {
+                    idx++;
+                    if (hOpp->facet()->indexInQueue != -1) {
+                        nextQueue[hOpp->facet()->indexInQueue] = hOpp->poolId;
+                    } else {
+                        int position;
+#pragma omp critical
+                        { position = nextQueueSize++; }
+                        // #pragma omp atomic read
+                        hOpp->facet()->indexInQueue = position;
+                        // #pragma omp atomic write
+                        nextQueue[position] = hOpp->poolId;
+                    }
+                }
+                hIt = hIt->next();
+            } while (hIt != h);
+        }
+        ++level;
+        // 到达阈值后开始compact
+        if (level == threshold) {
+            // sort(faces.begin() + firstCount, faces.begin() + secondCount, cmpForder);
+            // 需要一个新的临时的array，以order进行排序
+            sort(fids + firstCount, fids + index, cmpForder);
+            for (int i = firstCount; i < index; i++) {
+                if (MCGAL::contextPool.fpool[fids[i]].forder != (~(unsigned long long)0)) {
+                    MCGAL::contextPool.fpool[fids[i]].forder = i;
+                    secondCount = i;
+                }
+            }
+            int power = 1;
+            int x = secondCount + 1;
+            while (x > 1) {
+                x /= 2;
+                power++;
+            }
+            threshold += (64 - power) / 4 - 1;
+        }
+
+#pragma omp parallel num_threads(128)
+        for (int i = 0; i < currentQueueSize; i++) {
+            MCGAL::Halfedge* h = MCGAL::contextPool.getHalfedgeByIndex(currentQueue[i]);
+            h->facet()->indexInQueue = -1;
+            h->facet()->setProcessedFlag();
+        }
+
+        currentQueueSize = nextQueueSize;
+        nextQueueSize = 0;
+    }
+    // sort
+    sort(fids + firstCount, fids + index, cmpForder);
+    // 用一个变量记录一下每个mesh的面数量
+
+    // 需要计算前缀和
+    std::vector<int> offsets(size);
+    // 并行读取
+#pragma omp parallel for num_threads(128) schedule(dynamic)
+    for (int i = 0; i < size; i++) {
+        MCGAL::Facet* facet = MCGAL::contextPool.getFacetByIndex(fids[i]);
+
+        int offset =
+            facet->meshId == 0 ? stOffsets[facet->meshId] + i : stOffsets[facet->meshId] + i - fsizesSum[facet->meshId];
+        char symbol = readCharByOffset(offset);
+        if (symbol) {
+            facet->setSplittable();
+            offsets[i] = 1;
+        } else {
+            facet->setUnsplittable();
         }
     }
-    return 0;
+    // scan
+    for (int i = 1; i < size; i++) {
+        offsets[i] += offsets[i - 1];
+    }
+    // 偏移所有的offset
+    for (int i = 0; i < batch_size; i++) {
+        stOffsets[i] += fsizes[i];
+    }
+#pragma omp parallel for num_threads(128) schedule(dynamic)
+    for (int i = 0; i < index; i++) {
+        MCGAL::Facet* facet = MCGAL::contextPool.getFacetByIndex(fids[i]);
+        if (facet->isSplittable()) {
+            int offset = stOffsets[facet->meshId] + offsets[i] - offsets[fsizesSum[facet->meshId]];
+            MCGAL::Point p = readPointByOffset(offset * sizeof(float) * 3);
+            facet->setRemovedVertexPos(p);
+        }
+    }
+    for (int i = 0; i < batch_size; i++) {
+        stOffsets[i] += (offsets[i] - offsets[fsizesSum[i]]) * sizeof(float) * 3;
+    }
+    delete firstQueue;
+    delete secondQueue;
 }
 
-// void DeCompressTool::BatchRemovedVerticesDecodingStep() {
-//     int size = MCGAL::contextPool.findex;
+// void DeCompressTool::BatchInsertedEdgeDecodingStep() {
+//     int size = MCGAL::contextPool.hindex;
 //     int* firstQueue = new int[size];
 //     int* secondQueue = new int[size];
-//     int currentQueueSize = batch_size;
+//     int currentQueueSize = 1;
 //     int nextQueueSize = 0;
 //     int level = 0;
-
+//     int threshold = 64 / 4 - 1;
+//     int firstCount = 0;
+//     int secondCount = 0;
 //     MCGAL::Halfedge* hehBegin;
 
 //     for (int i = 0; i < batch_size; i++) {
-//         firstQueue[i] = pushHehInit(i)->poolId;
+//         MCGAL::Halfedge* hit = pushHehInit(i);
+//         hit->horder = 0;
+//         firstQueue[i] = hit->poolId;
 //     }
+//     hehBegin->horder = 0;
+//     firstQueue[0] = hehBegin->poolId;
 //     while (currentQueueSize > 0) {
 //         int* currentQueue;
 //         int* nextQueue;
@@ -263,86 +374,76 @@ bool cmphorder(__uint128_t f1, __uint128_t f2) {
 //             currentQueue = secondQueue;
 //             nextQueue = firstQueue;
 //         }
-// #pragma omp parallel schedule(dynamic)
+//         // #pragma omp parallel for num_threads(128)
 //         for (int i = 0; i < currentQueueSize; i++) {
 //             int current = currentQueue[i];
 //             MCGAL::Halfedge* h = MCGAL::contextPool.getHalfedgeByIndex(current);
-//             MCGAL::Facet* f = h->facet();
-//             if (f->isProcessed()) {
+//             if (h->isProcessed()) {
 //                 continue;
 //             }
-//             MCGAL::Halfedge* hIt = h;
-//             __uint128_t idx = 1;
-//             do {
-//                 MCGAL::Halfedge* hOpp = hIt->opposite();
-//                 __uint128_t order = f->forder | (idx << ((41 - level) * 3));
-//                 // __uint128_t order = f->forder | (idx << ((31 - level) * 4));
-// #pragma omp atomic compare
-//                 if (cmpforder(order, hOpp->facet()->forder)) {
-//                     hOpp->facet()->forder = order;
+//             MCGAL::Halfedge* hIt = h->next();
+//             unsigned long long idx = 1;
+//             while (hIt->opposite() != h) {
+//                 unsigned long long order = h->horder << 4 | idx;
+//                 if (hIt->horder == (~(unsigned long long)0)) {
+// #pragma omp atomic
+//                     secondCount = secondCount + 1;
 //                 }
 
-//                 if (hOpp->facet()->forder == order && !hOpp->facet()->isProcessed()) {
+//                 // if (order < hIt->horder) {
+//                 //     hIt->horder = order;
+//                 // }
+//                 // #pragma omp atomic
+//                 hIt->horder = (hIt->horder < order) ? hIt->horder : order;
+
+//                 if (hIt->horder == order) {
 //                     idx++;
-//                     int position = nextQueueSize;
+//                     int position;
+//                     // #pragma omp atomic
+//                     position = nextQueueSize;
+
 // #pragma omp atomic
-//                     nextQueueSize++;
-//                     nextQueue[position] = hOpp->poolId;
+//                     nextQueueSize = nextQueueSize + 1;
+//                     // #pragma omp atomic
+//                     nextQueue[position] = hIt->poolId;
 //                 }
-//                 hIt = hIt->next();
-//             } while (hIt != h);
+//                 hIt = hIt->opposite->next;
+//             };
 //         }
 //         ++level;
-//         // #pragma omp parallel
-//         // std::set<int> st;
-//         for (int i = 0; i < currentQueueSize; i++) {
-//             MCGAL::Halfedge* h = MCGAL::contextPool.getHalfedgeByIndex(currentQueue[i]);
-//             h->facet()->setProcessedFlag();
+//         // 到达阈值后开始compact
+//         if (level == threshold) {
+//             // sort(halfedges.begin() + firstCount, halfedges.begin() + secondCount, cmpHorder);
+//             sort(halfedges.begin() + firstCount, halfedges.end(), cmpHorder);
+//             firstCount = secondCount;
+//             for (int i = 0; i < secondCount + 1; i++) {
+//                 halfedges[i]->horder = i;
+//             }
+//             int power = 1;
+//             int x = secondCount + 1;
+//             while (x > 1) {
+//                 x /= 2;
+//                 power++;
+//             }
+//             threshold += (64 - power) / 4 - 1;
 //         }
+//         // offFile << "\n";
 //         currentQueueSize = nextQueueSize;
 //         nextQueueSize = 0;
 //     }
-//     // sort(faces.begin(), faces.end(), cmpForder);
-//     sort(MCGAL::contextPool.fpool, MCGAL::contextPool.fpool + MCGAL::contextPool.findex, cmpForder);
-//     std::vector<int> batchIdx(batch_size);
-//     std::vector<std::vector<int>>
-//     // 需要处理meshId为-1的面
+//     sort(halfedges.begin() + firstCount, halfedges.end(), cmpHorder);
 //     // 并行读取
-// #pragma omp parallel schedule(dynamic)
-//     for (int i = 0; i < MCGAL::contextPool.findex; i++) {
-//         MCGAL::Facet* face = MCGAL::contextPool.getFacetByIndex(i);
-//         if (face->meshId != -1) {
-// #pragma omp atomic
-//             stOffsets[face->meshId]++;
-//             char symbol = readCharByOffset(stOffsets[face->meshId] + i);
-//             if (symbol) {
-//                 face->setSplittable();
-//                 offsets[i] = 1;
-//             } else {
-//                 face->setUnsplittable();
-//             }
+// #pragma omp parallel for num_threads(128)
+//     for (int i = 0; i < halfedges.size(); i++) {
+//         char symbol = readCharByOffset(dataOffset + i);
+//         if (symbol) {
+//             halfedges[i]->setAdded();
 //         }
 //     }
-
-//     // scan
-//     for (int i = 1; i < size; i++) {
-//         offsets[i] += offsets[i - 1];
-//     }
-
-//     // dataOffset += faces.size();
-// #pragma omp parallel schedule(dynamic)
-//     for (int i = 0; i < size; i++) {
-//         if (faces[i]->isSplittable()) {
-//             MCGAL::Point p = readPointByOffset(dataOffset + (offsets[i] - 1) * sizeof(float) * 3);
-//             faces[i]->setRemovedVertexPos(p);
-//         }
-//     }
-//     dataOffset += *offsets.rbegin() * 3 * sizeof(float);
+//     dataOffset += halfedges.size();
 //     delete firstQueue;
 //     delete secondQueue;
 // }
-
-void DeCompressTool::BatchInsertedEdgeDecodingStep() {}
 
 void DeCompressTool::RemovedVerticesDecodingStep(int meshId) {
     std::queue<MCGAL::Halfedge*> gateQueue;
@@ -495,7 +596,6 @@ void DeCompressTool::insertRemovedVertices() {
     }
 
     std::vector<int> faceIndexes(splitable_count);
-    // int* faceIndexes = new int[splitable_count];
     std::vector<int> vertexIndexes(splitable_count);
     std::vector<int> stHalfedgeIndexes(splitable_count);
     std::vector<int> stFacetIndexes(splitable_count);

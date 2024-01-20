@@ -29,7 +29,7 @@ class Halfedge {
     int next_ = -1;
     int opposite_ = -1;
     int count = 0;
-    __uint128_t horder = ~(__uint128_t)0;
+    unsigned long long horder = ~(unsigned long long)0;
     Halfedge() {
         vertex_ = -1;
         end_vertex_ = -1;
@@ -97,6 +97,7 @@ class Halfedge {
         processedFlag = NotProcessed;
         removedFlag = NotRemoved;
         bfsFlag = NotVisited;
+        horder = ~(unsigned long long)0;
     }
 
     inline void resetState() {
@@ -105,6 +106,7 @@ class Halfedge {
         processedFlag = NotProcessed;
         removedFlag = NotRemoved;
         bfsFlag = NotVisited;
+        horder = ~(unsigned long long)0;
     }
 
     /* Flag 1 */
