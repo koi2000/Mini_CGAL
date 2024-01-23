@@ -72,6 +72,10 @@ class Halfedge {
         this->meshId = id;
     }
 
+    __device__ void setMeshIdOnCuda(int id) {
+        this->meshId = id;
+    }
+
     // gpu
     __device__ void setOppositeOnCuda(Halfedge* opposite);
     __device__ void setOppositeOnCuda(int opposite);
@@ -172,6 +176,10 @@ class Halfedge {
     }
 
     inline bool isRemoved() {
+        return removedFlag == Removed;
+    }
+
+    __device__ inline bool isRemovedOnCuda() {
         return removedFlag == Removed;
     }
 

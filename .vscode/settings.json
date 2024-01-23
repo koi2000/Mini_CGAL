@@ -85,6 +85,8 @@
         "stack": "cpp",
         "__memory": "cpp",
         "span": "cpp",
-        "format": "cpp"
+        "format": "cpp",
+        "compare": "cpp",
+        "concepts": "cpp"
     }
 }

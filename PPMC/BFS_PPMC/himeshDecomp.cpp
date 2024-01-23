@@ -307,7 +307,7 @@ void HiMesh::RemovedVerticesDecodingStep() {
     int level = 0;
     char path[256];
     sprintf(path, "./RemovedVerticesDecodingStep2%d.txt", i_curDecimationId);
-    std::ofstream offFile(path);
+    // std::ofstream offFile(path);
 
     MCGAL::Halfedge* hehBegin;
     for (int i = 0; i < vh_departureConquest[1]->halfedges.size(); i++) {

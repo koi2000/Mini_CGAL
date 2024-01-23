@@ -95,10 +95,21 @@ __global__ void resetStateOnCuda(MCGAL::Halfedge* hpool, MCGAL::Facet* fpool, in
         MCGAL::Facet* fit = &fpool[tid];
         if (fit->isRemovedOnCuda()) {
             fit->setMeshIdOnCuda(-1);
+            for (int i = 0; i < fit->halfedge_size; i++) {
+                MCGAL::Halfedge* hit = fit->getHalfedgeByIndexOnCuda(hpool, i);
+                if (hit->isRemovedOnCuda()) {
+                    hit->setMeshIdOnCuda(-1);
+                }
+                hit->resetStateOnCuda();
+            }
         } else {
             fit->resetStateOnCuda();
             for (int i = 0; i < fit->halfedge_size; i++) {
-                fit->getHalfedgeByIndexOnCuda(hpool, i)->resetStateOnCuda();
+                MCGAL::Halfedge* hit = fit->getHalfedgeByIndexOnCuda(hpool, i);
+                if (hit->isRemovedOnCuda()) {
+                    hit->setMeshIdOnCuda(-1);
+                }
+                hit->resetStateOnCuda();
             }
         }
     }
@@ -141,17 +152,18 @@ void DeCompressTool::startNextDecompresssionOp() {
     i_curDecimationId++;  // increment the current decimation operation id.
     // 2. decoding the removed vertices and add to target facets
     struct timeval start = get_cur_time();
-#pragma omp parallel for num_threads(batch_size)
-    for (int i = 0; i < batch_size; i++) {
-        RemovedVerticesDecodingStep(i);
-    }
-
+    // #pragma omp parallel for num_threads(batch_size)
+    //     for (int i = 0; i < batch_size; i++) {
+    //         RemovedVerticesDecodingStep(i);
+    //     }
+    BatchRemovedVerticesDecodingStep();
     logt("%d RemovedVerticesDecodingStep", start, i_curDecimationId);
-    // 3. decoding the inserted edge and marking the ones added
+// 3. decoding the inserted edge and marking the ones added
 #pragma omp parallel for num_threads(batch_size)
     for (int i = 0; i < batch_size; i++) {
         InsertedEdgeDecodingStep(i);
     }
+    // BatchInsertedEdgeDecodingStep();
     logt("%d InsertedEdgeDecodingStep", start, i_curDecimationId);
     // 4. truly insert the removed vertices
     insertRemovedVertices();
@@ -180,12 +192,40 @@ MCGAL::Halfedge* DeCompressTool::pushHehInit(int meshId) {
     return hehBegin;
 }
 
-bool cmpForder(MCGAL::Facet* f1, MCGAL::Facet* f2) {
-    return f1->forder < f2->forder;
+// bool cmpForder(MCGAL::Facet* f1, MCGAL::Facet* f2) {
+//     return f1->forder < f2->forder;
+// }
+
+// bool cmpHorder(MCGAL::Halfedge* h1, MCGAL::Halfedge* h2) {
+//     return h1->horder < h2->horder;
+// }
+
+bool cmpForder(int fid1, int fid2) {
+    MCGAL::Facet* f1 = MCGAL::contextPool.getFacetByIndex(fid1);
+    MCGAL::Facet* f2 = MCGAL::contextPool.getFacetByIndex(fid2);
+    if (f1->forder == ~(unsigned long long)0) {
+        return false;
+    } else if (f2->forder == ~(unsigned long long)0) {
+        return true;
+    }
+    if (f1->meshId == f2->meshId) {
+        return f1->forder < f2->forder;
+    }
+    return f1->meshId < f2->meshId;
 }
 
-bool cmpHorder(MCGAL::Halfedge* h1, MCGAL::Halfedge* h2) {
-    return h1->horder < h2->horder;
+bool cmpHorder(int hid1, int hid2) {
+    MCGAL::Halfedge* h1 = MCGAL::contextPool.getHalfedgeByIndex(hid1);
+    MCGAL::Halfedge* h2 = MCGAL::contextPool.getHalfedgeByIndex(hid2);
+    if (h1->horder == ~(unsigned long long)0) {
+        return false;
+    } else if (h2->horder == ~(unsigned long long)0) {
+        return true;
+    }
+    if (h1->meshId == h2->meshId) {
+        return h1->horder < h2->horder;
+    }
+    return h1->meshId < h2->meshId;
 }
 
 /**
@@ -201,7 +241,9 @@ void DeCompressTool::BatchRemovedVerticesDecodingStep() {
     // 将信息拷贝过来
     int index = 0;
     int* fsizes = new int[batch_size];
-    int* fsizesSum = new int[batch_size];
+    int* fsizesSum = new int[batch_size + 1];
+    memset(fsizes, 0, batch_size * sizeof(int));
+    memset(fsizesSum, 0, (batch_size + 1) * sizeof(int));
     for (int i = 0; i < size; i++) {
         if (MCGAL::contextPool.fpool[i].meshId != -1) {
             fids[index++] = i;
@@ -209,13 +251,14 @@ void DeCompressTool::BatchRemovedVerticesDecodingStep() {
         }
     }
 
-    for (int i = 1; i <= batch_size; i++) {
+    for (int i = 1; i < batch_size; i++) {
         fsizesSum[i] = fsizesSum[i - 1] + fsizes[i];
     }
+    fsizesSum[batch_size] = index;
 
     int* firstQueue = new int[size];
     int* secondQueue = new int[size];
-    int currentQueueSize = 1;
+    int currentQueueSize = batch_size;
     int nextQueueSize = 0;
     int level = 0;
     for (int i = 0; i < batch_size; i++) {
@@ -236,7 +279,7 @@ void DeCompressTool::BatchRemovedVerticesDecodingStep() {
             currentQueue = secondQueue;
             nextQueue = firstQueue;
         }
-#pragma omp parallel for num_threads(128)
+        // #pragma omp parallel for num_threads(128)
         for (int i = 0; i < currentQueueSize; i++) {
             int current = currentQueue[i];
             MCGAL::Halfedge* h = MCGAL::contextPool.getHalfedgeByIndex(current);
@@ -275,12 +318,16 @@ void DeCompressTool::BatchRemovedVerticesDecodingStep() {
             // sort(faces.begin() + firstCount, faces.begin() + secondCount, cmpForder);
             // 需要一个新的临时的array，以order进行排序
             sort(fids + firstCount, fids + index, cmpForder);
+            std::vector<int> ids(batch_size);
             for (int i = firstCount; i < index; i++) {
                 if (MCGAL::contextPool.fpool[fids[i]].forder != (~(unsigned long long)0)) {
-                    MCGAL::contextPool.fpool[fids[i]].forder = i;
+                    MCGAL::Facet* facet = &MCGAL::contextPool.fpool[fids[i]];
+                    // facet->forder = ids[facet->meshId]++;
+                    facet->forder = i;
                     secondCount = i;
                 }
             }
+            firstCount = secondCount;
             int power = 1;
             int x = secondCount + 1;
             while (x > 1) {
@@ -301,18 +348,33 @@ void DeCompressTool::BatchRemovedVerticesDecodingStep() {
         nextQueueSize = 0;
     }
     // sort
-    sort(fids + firstCount, fids + index, cmpForder);
-    // 用一个变量记录一下每个mesh的面数量
+    sort(fids, fids + index, cmpForder);
+    char path[256];
+    sprintf(path, "./BatchRemovedVerticesDecodingStep2%d.txt", i_curDecimationId);
+    std::ofstream offFile(path);
+    for (int i = 0; i < index; i++) {
+        std::vector<float> fts;
+        MCGAL::Facet* facet = MCGAL::contextPool.getFacetByIndex(fids[i]);
+        for (int j = 0; j < facet->vertex_size; j++) {
+            fts.push_back(MCGAL::contextPool.getVertexByIndex(facet->vertices[j])->x());
+            fts.push_back(MCGAL::contextPool.getVertexByIndex(facet->vertices[j])->y());
+            fts.push_back(MCGAL::contextPool.getVertexByIndex(facet->vertices[j])->z());
+        }
+        sort(fts.begin(), fts.end());
+        for (int j = 0; j < fts.size(); j++) {
+            offFile << fts[j] << " ";
+        }
+        offFile << "\n";
+    }
 
     // 需要计算前缀和
-    std::vector<int> offsets(size);
+    std::vector<int> offsets(index);
     // 并行读取
 #pragma omp parallel for num_threads(128) schedule(dynamic)
-    for (int i = 0; i < size; i++) {
+    for (int i = 0; i < index; i++) {
         MCGAL::Facet* facet = MCGAL::contextPool.getFacetByIndex(fids[i]);
-
-        int offset =
-            facet->meshId == 0 ? stOffsets[facet->meshId] + i : stOffsets[facet->meshId] + i - fsizesSum[facet->meshId];
+        // 需要知道自己在自己这个mesh中是第几个
+        int offset = stOffsets[facet->meshId] + i - fsizesSum[facet->meshId];
         char symbol = readCharByOffset(offset);
         if (symbol) {
             facet->setSplittable();
@@ -322,7 +384,7 @@ void DeCompressTool::BatchRemovedVerticesDecodingStep() {
         }
     }
     // scan
-    for (int i = 1; i < size; i++) {
+    for (int i = 1; i < index; i++) {
         offsets[i] += offsets[i - 1];
     }
     // 偏移所有的offset
@@ -333,117 +395,135 @@ void DeCompressTool::BatchRemovedVerticesDecodingStep() {
     for (int i = 0; i < index; i++) {
         MCGAL::Facet* facet = MCGAL::contextPool.getFacetByIndex(fids[i]);
         if (facet->isSplittable()) {
-            int offset = stOffsets[facet->meshId] + offsets[i] - offsets[fsizesSum[facet->meshId]];
-            MCGAL::Point p = readPointByOffset(offset * sizeof(float) * 3);
+            int st = facet->meshId == 0 ? 0 : offsets[fsizesSum[facet->meshId] - 1];
+            int offset = offsets[i] - 1 - st;
+            MCGAL::Point p = readPointByOffset(stOffsets[facet->meshId] + offset * sizeof(float) * 3);
             facet->setRemovedVertexPos(p);
         }
     }
     for (int i = 0; i < batch_size; i++) {
-        stOffsets[i] += (offsets[i] - offsets[fsizesSum[i]]) * sizeof(float) * 3;
+        int ed = offsets[fsizesSum[i + 1] - 1];
+        int st = fsizesSum[i] == 0 ? 0 : offsets[fsizesSum[i] - 1];
+        splitableCounts[i] = ed - st;
+        stOffsets[i] += (splitableCounts[i]) * sizeof(float) * 3;
     }
     delete firstQueue;
     delete secondQueue;
 }
 
-// void DeCompressTool::BatchInsertedEdgeDecodingStep() {
-//     int size = MCGAL::contextPool.hindex;
-//     int* firstQueue = new int[size];
-//     int* secondQueue = new int[size];
-//     int currentQueueSize = 1;
-//     int nextQueueSize = 0;
-//     int level = 0;
-//     int threshold = 64 / 4 - 1;
-//     int firstCount = 0;
-//     int secondCount = 0;
-//     MCGAL::Halfedge* hehBegin;
+void DeCompressTool::BatchInsertedEdgeDecodingStep() {
+    int size = MCGAL::contextPool.hindex;
+    int* firstQueue = new int[size];
+    int* secondQueue = new int[size];
+    int currentQueueSize = batch_size;
+    int nextQueueSize = 0;
+    int level = 0;
+    int threshold = 64 / 4 - 1;
+    int firstCount = 0;
+    int secondCount = 0;
+    int* hids = new int[size];
+    // 将信息拷贝过来
+    int index = 0;
+    int* hsizes = new int[batch_size];
+    int* hsizesSum = new int[batch_size + 1];
+    memset(hsizes, 0, batch_size * sizeof(int));
+    memset(hsizesSum, 0, (batch_size + 1) * sizeof(int));
+    for (int i = 0; i < size; i++) {
+        MCGAL::Halfedge* halfedge = &MCGAL::contextPool.hpool[i];
+        if (halfedge->meshId != -1) {
+            hids[index++] = i;
+            hsizes[halfedge->facet()->meshId]++;
+        }
+    }
+    for (int i = 1; i < batch_size; i++) {
+        hsizesSum[i] = hsizesSum[i - 1] + hsizes[i];
+    }
+    hsizesSum[batch_size] = index;
 
-//     for (int i = 0; i < batch_size; i++) {
-//         MCGAL::Halfedge* hit = pushHehInit(i);
-//         hit->horder = 0;
-//         firstQueue[i] = hit->poolId;
-//     }
-//     hehBegin->horder = 0;
-//     firstQueue[0] = hehBegin->poolId;
-//     while (currentQueueSize > 0) {
-//         int* currentQueue;
-//         int* nextQueue;
-//         if (level % 2 == 0) {
-//             currentQueue = firstQueue;
-//             nextQueue = secondQueue;
-//         } else {
-//             currentQueue = secondQueue;
-//             nextQueue = firstQueue;
-//         }
-//         // #pragma omp parallel for num_threads(128)
-//         for (int i = 0; i < currentQueueSize; i++) {
-//             int current = currentQueue[i];
-//             MCGAL::Halfedge* h = MCGAL::contextPool.getHalfedgeByIndex(current);
-//             if (h->isProcessed()) {
-//                 continue;
-//             }
-//             MCGAL::Halfedge* hIt = h->next();
-//             unsigned long long idx = 1;
-//             while (hIt->opposite() != h) {
-//                 unsigned long long order = h->horder << 4 | idx;
-//                 if (hIt->horder == (~(unsigned long long)0)) {
-// #pragma omp atomic
-//                     secondCount = secondCount + 1;
-//                 }
+    for (int i = 0; i < batch_size; i++) {
+        MCGAL::Halfedge* hit = pushHehInit(i);
+        hit->horder = 0;
+        firstQueue[i] = hit->poolId;
+    }
 
-//                 // if (order < hIt->horder) {
-//                 //     hIt->horder = order;
-//                 // }
-//                 // #pragma omp atomic
-//                 hIt->horder = (hIt->horder < order) ? hIt->horder : order;
+    while (currentQueueSize > 0) {
+        int* currentQueue;
+        int* nextQueue;
+        if (level % 2 == 0) {
+            currentQueue = firstQueue;
+            nextQueue = secondQueue;
+        } else {
+            currentQueue = secondQueue;
+            nextQueue = firstQueue;
+        }
+        // #pragma omp parallel for num_threads(128)
+        for (int i = 0; i < currentQueueSize; i++) {
+            int current = currentQueue[i];
+            MCGAL::Halfedge* h = MCGAL::contextPool.getHalfedgeByIndex(current);
+            if (h->isProcessed()) {
+                continue;
+            }
+            MCGAL::Halfedge* hIt = h->next();
+            unsigned long long idx = 1;
+            while (hIt->opposite() != h) {
+                unsigned long long order = h->horder << 4 | idx;
 
-//                 if (hIt->horder == order) {
-//                     idx++;
-//                     int position;
-//                     // #pragma omp atomic
-//                     position = nextQueueSize;
+#pragma omp atomic compare
+                hIt->horder = order < hIt->horder ? order : hIt->horder;
 
-// #pragma omp atomic
-//                     nextQueueSize = nextQueueSize + 1;
-//                     // #pragma omp atomic
-//                     nextQueue[position] = hIt->poolId;
-//                 }
-//                 hIt = hIt->opposite->next;
-//             };
-//         }
-//         ++level;
-//         // 到达阈值后开始compact
-//         if (level == threshold) {
-//             // sort(halfedges.begin() + firstCount, halfedges.begin() + secondCount, cmpHorder);
-//             sort(halfedges.begin() + firstCount, halfedges.end(), cmpHorder);
-//             firstCount = secondCount;
-//             for (int i = 0; i < secondCount + 1; i++) {
-//                 halfedges[i]->horder = i;
-//             }
-//             int power = 1;
-//             int x = secondCount + 1;
-//             while (x > 1) {
-//                 x /= 2;
-//                 power++;
-//             }
-//             threshold += (64 - power) / 4 - 1;
-//         }
-//         // offFile << "\n";
-//         currentQueueSize = nextQueueSize;
-//         nextQueueSize = 0;
-//     }
-//     sort(halfedges.begin() + firstCount, halfedges.end(), cmpHorder);
-//     // 并行读取
-// #pragma omp parallel for num_threads(128)
-//     for (int i = 0; i < halfedges.size(); i++) {
-//         char symbol = readCharByOffset(dataOffset + i);
-//         if (symbol) {
-//             halfedges[i]->setAdded();
-//         }
-//     }
-//     dataOffset += halfedges.size();
-//     delete firstQueue;
-//     delete secondQueue;
-// }
+                if (hIt->horder == order) {
+                    idx++;
+                    int position;
+#pragma omp critical
+                    { position = nextQueueSize++; }
+                    nextQueue[position] = hIt->poolId;
+                }
+                hIt = hIt->opposite()->next();
+            };
+        }
+        ++level;
+        // 到达阈值后开始compact
+        if (level == threshold) {
+            // sort(halfedges.begin() + firstCount, halfedges.begin() + secondCount, cmpHorder);
+            sort(hids + firstCount, hids + index, cmpHorder);
+
+            for (int i = firstCount; i < index; i++) {
+                if (MCGAL::contextPool.hpool[hids[i]].horder != (~(unsigned long long)0)) {
+                    MCGAL::contextPool.hpool[hids[i]].horder = i;
+                    secondCount = i;
+                }
+            }
+            firstCount = secondCount;
+
+            int power = 1;
+            int x = secondCount + 1;
+            while (x > 1) {
+                x /= 2;
+                power++;
+            }
+            threshold += (64 - power) / 4 - 1;
+        }
+        // offFile << "\n";
+        currentQueueSize = nextQueueSize;
+        nextQueueSize = 0;
+    }
+    sort(hids, hids + index, cmpHorder);
+    // 并行读取
+#pragma omp parallel for num_threads(128)
+    for (int i = 0; i < index; i++) {
+        MCGAL::Halfedge* halfedge = MCGAL::contextPool.getHalfedgeByIndex(hids[i]);
+        int offset = stOffsets[halfedge->meshId] + i - hsizesSum[halfedge->meshId];
+        char symbol = readCharByOffset(offset);
+        if (symbol) {
+            halfedge->setAdded();
+        }
+    }
+    for (int i = 0; i < batch_size; i++) {
+        stOffsets[i] += hsizes[i];
+    }
+    delete firstQueue;
+    delete secondQueue;
+}
 
 void DeCompressTool::RemovedVerticesDecodingStep(int meshId) {
     std::queue<MCGAL::Halfedge*> gateQueue;
@@ -498,19 +578,14 @@ void DeCompressTool::InsertedEdgeDecodingStep(int meshId) {
 
         // Mark the halfedge as processed.
         h->setProcessed();
-        h->opposite()->setProcessed();
+        // h->opposite()->setProcessed();
 
-        // Test if there is a symbol for this edge.
-        // There is no symbol if the two faces of an edge are unsplitable.
-        if (h->facet()->isSplittable() || h->opposite()->facet()->isSplittable()) {
-            // Decode the edge symbol.
-            unsigned sym = readChar(&stOffsets[meshId]);
-            // Determine if the edge is original or not.
-            // Mark the edge to be removed.
-            if (sym != 0) {
-                h->setAdded();
-                inserted_edgecount++;
-            }
+        unsigned sym = readChar(&stOffsets[meshId]);
+        // Determine if the edge is original or not.
+        // Mark the edge to be removed.
+        if (sym != 0) {
+            h->setAdded();
+            inserted_edgecount++;
         }
 
         // Add the other halfedges to the queue
@@ -626,6 +701,10 @@ void DeCompressTool::insertRemovedVertices() {
                 hindex = MCGAL::contextPool.preAllocHalfedge(hcount);
                 stHalfedgeIndexes[index] = hindex;
             }
+            for (int j = 0; j < hcount; j++) {
+                MCGAL::Halfedge* h = MCGAL::contextPool.getHalfedgeByIndex(hindex + j);
+                h->setMeshId(fit->meshId);
+            }
             MCGAL::Vertex* vnew;
 #pragma omp critical
             {
@@ -636,10 +715,10 @@ void DeCompressTool::insertRemovedVertices() {
             vnew->setMeshId(fit->meshId);
 #pragma omp atomic
             index++;
-            for (int i = 0; i < fit->halfedge_size; i++) {
-                MCGAL::Halfedge* h = fit->getHalfedgeByIndex(i);
-                h->end_vertex()->addHalfedge(hindex + i * 2);
-                vnew->addHalfedge(hindex + i * 2 + 1);
+            for (int k = 0; k < fit->halfedge_size; k++) {
+                MCGAL::Halfedge* h = fit->getHalfedgeByIndex(k);
+                h->end_vertex()->addHalfedge(hindex + k * 2);
+                vnew->addHalfedge(hindex + k * 2 + 1);
             }
         }
     }
@@ -751,6 +830,9 @@ MCGAL::Halfedge* DeCompressTool::join_facet(MCGAL::Halfedge* h) {
     remove_tip(hprev);
     remove_tip(gprev);
     h->opposite()->setRemoved();
+    h->setRemoved();
+    h->setMeshId(-1);
+    h->opposite()->setMeshId(-1);
     h->vertex()->eraseHalfedgeByPointer(h);
     h->opposite()->vertex()->eraseHalfedgeByPointer(h->opposite());
     gprev->facet()->setRemoved();
@@ -820,6 +902,10 @@ void DeCompressTool::buildFromBuffer(int meshId,
         }
         MCGAL::Facet* face = MCGAL::contextPool.allocateFaceFromPool(vts);
         face->setMeshId(meshId);
+        for (int k = 0; k < face->halfedge_size; k++) {
+            MCGAL::Halfedge* hit = face->getHalfedgeByIndex(k);
+            hit->setMeshId(face->meshId);
+        }
     }
     // clear vector
     vertices.clear();
