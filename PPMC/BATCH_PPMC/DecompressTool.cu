@@ -55,6 +55,7 @@ DeCompressTool::DeCompressTool(char** path, int number, bool is_base) {
     CHECK(cudaMalloc((int**)&dstFacetIndexes, SPLITABLE_SIZE * sizeof(int)));
     CHECK(cudaMalloc(&dbuffer, dataOffset));
     CHECK(cudaMalloc(&dstOffsets, stOffsets.size() * sizeof(int)));
+    CHECK(cudaMalloc(&dSplittabelCount, stOffsets.size() * sizeof(int)));
     CHECK(cudaMemcpy(dbuffer, buffer, dataOffset, cudaMemcpyHostToDevice));
     CHECK(cudaMemcpy(dstOffsets, stOffsets.data(), stOffsets.size() * sizeof(int), cudaMemcpyHostToDevice));
     cudaError_t error = cudaGetLastError();
@@ -158,11 +159,11 @@ void DeCompressTool::startNextDecompresssionOp() {
     //     }
     BatchRemovedVerticesDecodingStep();
     logt("%d RemovedVerticesDecodingStep", start, i_curDecimationId);
-// 3. decoding the inserted edge and marking the ones added
-// #pragma omp parallel for num_threads(batch_size)
-//     for (int i = 0; i < batch_size; i++) {
-//         InsertedEdgeDecodingStep(i);
-//     }
+    // 3. decoding the inserted edge and marking the ones added
+    // #pragma omp parallel for num_threads(batch_size)
+    //     for (int i = 0; i < batch_size; i++) {
+    //         InsertedEdgeDecodingStep(i);
+    //     }
     BatchInsertedEdgeDecodingStep();
     logt("%d InsertedEdgeDecodingStep", start, i_curDecimationId);
     // 4. truly insert the removed vertices
@@ -228,17 +229,9 @@ bool cmpHorder(int hid1, int hid2) {
     return h1->meshId < h2->meshId;
 }
 
-/**
- * 不考虑meshId为-1的情况，会找个时候把meshId为-1的清理掉。这里需要注意很多东西，因为三个数据结构都在互相持有
- * 如果直接compact的话不是很好，基本就是reorganize了
- * 直接就需要创建一个拷贝
- * 是否可以使用 统一内存分配？ 需要考虑缺页中断的数量
- * 先尝试使用，有问题再说
- */
-void DeCompressTool::BatchRemovedVerticesDecodingStep() {
+void DeCompressTool::RemovedVerticesDecodingOnCuda() {
     int size = MCGAL::contextPool.findex;
     int* fids = new int[size];
-    // 将信息拷贝过来
     int index = 0;
     int* fsizes = new int[batch_size];
     int* fsizesSum = new int[batch_size + 1];
@@ -250,12 +243,10 @@ void DeCompressTool::BatchRemovedVerticesDecodingStep() {
             fsizes[MCGAL::contextPool.fpool[i].meshId]++;
         }
     }
-
     for (int i = 1; i < batch_size; i++) {
         fsizesSum[i] = fsizesSum[i - 1] + fsizes[i];
     }
     fsizesSum[batch_size] = index;
-
     int* firstQueue = new int[size];
     int* secondQueue = new int[size];
     int currentQueueSize = batch_size;
@@ -266,63 +257,247 @@ void DeCompressTool::BatchRemovedVerticesDecodingStep() {
         hit->facet()->forder = 0;
         firstQueue[i] = hit->poolId;
     }
+}
+
+__global__ void initForder(MCGAL::Facet* fpool, int* ids, int num) {
+    int tid = blockIdx.x * (blockDim.x * blockDim.y) + blockDim.x * threadIdx.y + threadIdx.x;
+    if (tid < num) {
+        int fid = ids[tid];
+        fpool[fid].forder = 0;
+    }
+}
+
+void DeCompressTool::InsertedEdgeDecodingOnCuda() {}
+
+__global__ void computeNextQueue(MCGAL::Vertex* vpool,
+                                 MCGAL::Halfedge* hpool,
+                                 MCGAL::Facet* fpool,
+                                 int* currentQueue,
+                                 int* nextQueue,
+                                 int* nextQueueSize,
+                                 int currentQueueSize) {
+    int tid = blockIdx.x * (blockDim.x * blockDim.y) + blockDim.x * threadIdx.y + threadIdx.x;
+    if (tid < currentQueueSize) {
+        int current = currentQueue[tid];
+        MCGAL::Halfedge* h = &hpool[current];
+        MCGAL::Facet* f = h->dfacet(fpool);
+        if (f->isProcessedOnCuda()) {
+            return;
+        }
+        MCGAL::Halfedge* hIt = h;
+        unsigned long long idx = 1;
+        do {
+            MCGAL::Halfedge* hOpp = hIt->dopposite(hpool);
+            unsigned long long order = f->forder << 4 | idx;
+            atomicMin(&hOpp->dfacet(fpool)->forder, order);
+            if (hOpp->dfacet(fpool)->forder == order && !hOpp->dfacet(fpool)->isProcessedOnCuda()) {
+                idx++;
+                if (hOpp->dfacet(fpool)->indexInQueue != -1) {
+                    nextQueue[hOpp->dfacet(fpool)->indexInQueue] = hOpp->poolId;
+                } else {
+                    int position = atomicAdd(nextQueueSize, 1);
+                    hOpp->dfacet(fpool)->indexInQueue = position;
+                    nextQueue[position] = hOpp->poolId;
+                }
+            }
+            hIt = hIt->dnext(hpool);
+        } while (hIt != h);
+    }
+}
+
+__global__ void
+setProcessedProcessedFlagOnCuda(MCGAL::Halfedge* hpool, MCGAL::Facet* fpool, int* currentQueue, int currentQueueSize) {
+    int tid = blockIdx.x * (blockDim.x * blockDim.y) + blockDim.x * threadIdx.y + threadIdx.x;
+    if (tid < currentQueueSize) {
+        MCGAL::Halfedge* h = &hpool[currentQueue[tid]];
+        h->dfacet(fpool)->indexInQueue = -1;
+        h->dfacet(fpool)->setProcessedFlagOnCuda();
+    }
+}
+
+// 函数对象用于提取结构体中的 member2
+struct ExtractFacetPoolId {
+    __host__ __device__ int operator()(const MCGAL::Facet& f) const {
+        return f.poolId;
+    }
+};
+
+struct FilterByMeshId {
+    MCGAL::Facet* fpool;  // 外部变量
+
+    // 构造函数
+    FilterByMeshId(MCGAL::Facet* _fpool) : fpool(_fpool) {}
+    __host__ __device__ bool operator()(const int& a) const {
+        // 根据第三个成员是否为-1作为条件
+        return fpool[a].meshId != -1;
+    }
+};
+
+struct SortByForder {
+    MCGAL::Facet* fpool;  // 外部变量
+
+    // 构造函数
+    SortByForder(MCGAL::Facet* _fpool) : fpool(_fpool) {}
+    __host__ __device__ bool operator()(const int& fid1, const int& fid2) const {
+        MCGAL::Facet* f1 = &fpool[fid1];
+        MCGAL::Facet* f2 = &fpool[fid2];
+        if (f1->forder == ~(unsigned long long)0) {
+            return false;
+        } else if (f2->forder == ~(unsigned long long)0) {
+            return true;
+        }
+        if (f1->meshId == f2->meshId) {
+            return f1->forder < f2->forder;
+        }
+        return f1->meshId < f2->meshId;
+    }
+};
+
+__global__ void meshIdCount(MCGAL::Facet* fpool, int* fsizes, int num) {
+    int tid = blockIdx.x * (blockDim.x * blockDim.y) + blockDim.x * threadIdx.y + threadIdx.x;
+    if (tid < num) {
+        atomicAdd(&(fpool[tid].meshId), 1);
+    }
+}
+
+__global__ void readFacetSymbolOnCuda(MCGAL::Facet* fpool,
+                                      int* fids,
+                                      int* fsizesSum,
+                                      int* stOffsets,
+                                      int* offsets,
+                                      char* buffer,
+                                      int num) {
+    int tid = blockIdx.x * (blockDim.x * blockDim.y) + blockDim.x * threadIdx.y + threadIdx.x;
+    if (tid < num) {
+        MCGAL::Facet* facet = &fpool[fids[tid]];
+        // 需要知道自己在自己这个mesh中是第几个
+        int offset = stOffsets[facet->meshId] + tid - fsizesSum[facet->meshId];
+        char symbol = readCharOnCuda(buffer, offset);
+        if (symbol) {
+            facet->setSplittableOnCuda();
+            offsets[tid] = 1;
+        } else {
+            facet->setUnsplittableOnCuda();
+        }
+    }
+}
+
+__global__ void
+readPointOnCuda(MCGAL::Facet* fpool, int* fids, int* fsizesSum, int* stOffsets, int* offsets, char* buffer, int num) {
+    int tid = blockIdx.x * (blockDim.x * blockDim.y) + blockDim.x * threadIdx.y + threadIdx.x;
+    if (tid < num) {
+        MCGAL::Facet* facet = &fpool[fids[tid]];
+        if (facet->isSplittableOnCuda()) {
+            int st = facet->meshId == 0 ? 0 : offsets[fsizesSum[facet->meshId] - 1];
+            int offset = offsets[tid] - 1 - st;
+            float* p = readPointOnCuda(buffer, stOffsets[facet->meshId] + offset * sizeof(float) * 3);
+            facet->setRemovedVertexPosOnCuda(p);
+        }
+    }
+}
+
+__global__ void arrayAdd(int* arr1, int* arr2, int num) {
+    int tid = blockIdx.x * (blockDim.x * blockDim.y) + blockDim.x * threadIdx.y + threadIdx.x;
+    if (tid < num) {
+        arr1[tid] += arr2[tid];
+    }
+}
+
+__global__ void calSplitableCounts(int* stOffsets, int* splitableCounts, int* offsets, int* fsizesSum, int num) {
+    int tid = blockIdx.x * (blockDim.x * blockDim.y) + blockDim.x * threadIdx.y + threadIdx.x;
+    if (tid < num) {
+        int ed = offsets[fsizesSum[tid + 1] - 1];
+        int st = fsizesSum[tid] == 0 ? 0 : offsets[fsizesSum[tid] - 1];
+        splitableCounts[tid] = ed - st;
+        stOffsets[tid] += (splitableCounts[tid]) * sizeof(float) * 3;
+    }
+}
+
+/**
+ * 不考虑meshId为-1的情况，会找个时候把meshId为-1的清理掉。这里需要注意很多东西，因为三个数据结构都在互相持有
+ * 如果直接compact的话不是很好，基本就是reorganize了
+ * 直接就需要创建一个拷贝
+ * 是否可以使用 统一内存分配？ 需要考虑缺页中断的数量
+ * 先尝试使用，有问题再说
+ */
+void DeCompressTool::BatchRemovedVerticesDecodingStep() {
+    int size = MCGAL::contextPool.findex;
+
+    thrust::device_vector<int> origin_fids(size);
+    thrust::device_vector<int> fids(size);
+    // 使用 thrust::transform 提取facet中的 poolId
+    thrust::transform(MCGAL::contextPool.fpool, MCGAL::contextPool.fpool + size, origin_fids.begin(),
+                      ExtractFacetPoolId());
+    thrust::copy_if(origin_fids.begin(), origin_fids.end(), fids.begin(), FilterByMeshId(MCGAL::contextPool.dfpool));
+    // 获取紧凑后的数组大小
+    int index = count_if(origin_fids.begin(), origin_fids.end(), FilterByMeshId(MCGAL::contextPool.dfpool));
+    // 将信息拷贝过来
+    int* fsizes;
+    int* fsizesSum;
+    CHECK(cudaMalloc(&fsizes, batch_size * sizeof(int)));
+    CHECK(cudaMalloc(&fsizesSum, (batch_size + 1) * sizeof(int)));
+    dim3 block(256, 1, 1);
+    dim3 grid((index + block.x - 1) / block.x, 1, 1);
+    meshIdCount<<<grid, block>>>(MCGAL::contextPool.dfpool, fsizes, index);
+
+    for (int i = 1; i < batch_size; i++) {
+        fsizesSum[i] = fsizesSum[i - 1] + fsizes[i];
+    }
+    fsizesSum[batch_size] = index;
+
+    int* d_firstQueue;
+    int* d_secondQueue;
+    int* d_nextQueueSize;
+    int nextQueueSize = 0;
+    cudaMalloc((void**)&d_firstQueue, size);
+    cudaMalloc((void**)&d_secondQueue, size);
+    cudaMalloc((void**)d_nextQueueSize, sizeof(int));
+    cudaMemcpy(d_nextQueueSize, &nextQueueSize, sizeof(int), cudaMemcpyHostToDevice);
+    int* h_firstQueue = new int[batch_size];
+    int* stIds = new int[batch_size];
+    int currentQueueSize = batch_size;
+
+    int level = 0;
+    for (int i = 0; i < batch_size; i++) {
+        MCGAL::Halfedge* hit = pushHehInit(i);
+        // hit->facet()->forder = 0;
+        stIds[i] = hit->facet_;
+        h_firstQueue[i] = hit->poolId;
+    }
+    // set forder by cuda
+    initForder<<<1, batch_size>>>(MCGAL::contextPool.dfpool, stIds, batch_size);
+    // copy first to queue
+    CHECK(cudaMemcpy(d_firstQueue, &h_firstQueue, batch_size * sizeof(int), cudaMemcpyHostToDevice));
+
     int threshold = 64 / 4 - 1;
     int firstCount = 0;
     int secondCount = 0;
     while (currentQueueSize > 0) {
-        int* currentQueue;
-        int* nextQueue;
+        int* d_currentQueue;
+        int* d_nextQueue;
         if (level % 2 == 0) {
-            currentQueue = firstQueue;
-            nextQueue = secondQueue;
+            d_currentQueue = d_firstQueue;
+            d_nextQueue = d_secondQueue;
         } else {
-            currentQueue = secondQueue;
-            nextQueue = firstQueue;
+            d_currentQueue = d_secondQueue;
+            d_nextQueue = d_firstQueue;
         }
-        #pragma omp parallel for num_threads(128)
-        for (int i = 0; i < currentQueueSize; i++) {
-            int current = currentQueue[i];
-            MCGAL::Halfedge* h = MCGAL::contextPool.getHalfedgeByIndex(current);
-            MCGAL::Facet* f = h->facet();
-            if (f->isProcessed()) {
-                continue;
-            }
-            MCGAL::Halfedge* hIt = h;
-            unsigned long long idx = 1;
-            do {
-                MCGAL::Halfedge* hOpp = hIt->opposite();
-                unsigned long long order = f->forder << 4 | idx;
-#pragma omp atomic compare
-                hOpp->facet()->forder = order < hOpp->facet()->forder ? order : hOpp->facet()->forder;
+        dim3 block(256, 1, 1);
+        dim3 grid((currentQueueSize + block.x - 1) / block.x, 1, 1);
+        computeNextQueue<<<grid, block>>>(MCGAL::contextPool.dvpool, MCGAL::contextPool.dhpool,
+                                          MCGAL::contextPool.dfpool, d_currentQueue, d_nextQueue, d_nextQueue,
+                                          currentQueueSize);
 
-                if (hOpp->facet()->forder == order && !hOpp->facet()->isProcessed()) {
-                    idx++;
-                    if (hOpp->facet()->indexInQueue != -1) {
-                        nextQueue[hOpp->facet()->indexInQueue] = hOpp->poolId;
-                    } else {
-                        int position;
-#pragma omp critical
-                        { position = nextQueueSize++; }
-                        // #pragma omp atomic read
-                        hOpp->facet()->indexInQueue = position;
-                        // #pragma omp atomic write
-                        nextQueue[position] = hOpp->poolId;
-                    }
-                }
-                hIt = hIt->next();
-            } while (hIt != h);
-        }
         ++level;
         // 到达阈值后开始compact
         if (level == threshold) {
             // sort(faces.begin() + firstCount, faces.begin() + secondCount, cmpForder);
             // 需要一个新的临时的array，以order进行排序
-            sort(fids + firstCount, fids + index, cmpForder);
-            std::vector<int> ids(batch_size);
+            // sort(fids + firstCount, fids + index, cmpForder);
+            thrust::sort(fids.begin() + firstCount, fids.begin() + index, SortByForder(MCGAL::contextPool.dfpool));
             for (int i = firstCount; i < index; i++) {
                 if (MCGAL::contextPool.fpool[fids[i]].forder != (~(unsigned long long)0)) {
                     MCGAL::Facet* facet = &MCGAL::contextPool.fpool[fids[i]];
-                    // facet->forder = ids[facet->meshId]++;
                     facet->forder = i;
                     secondCount = i;
                 }
@@ -337,78 +512,30 @@ void DeCompressTool::BatchRemovedVerticesDecodingStep() {
             threshold += (64 - power) / 4 - 1;
         }
 
-#pragma omp parallel num_threads(128)
-        for (int i = 0; i < currentQueueSize; i++) {
-            MCGAL::Halfedge* h = MCGAL::contextPool.getHalfedgeByIndex(currentQueue[i]);
-            h->facet()->indexInQueue = -1;
-            h->facet()->setProcessedFlag();
-        }
-
+        setProcessedProcessedFlagOnCuda<<<grid, block>>>(MCGAL::contextPool.dhpool, MCGAL::contextPool.dfpool,
+                                                         d_currentQueue, currentQueueSize);
+        CHECK(cudaMemcpy(&currentQueueSize, d_nextQueueSize, sizeof(int), cudaMemcpyDeviceToHost));
         currentQueueSize = nextQueueSize;
-        nextQueueSize = 0;
+        CHECK(cudaMemcpy(&d_nextQueueSize, &nextQueueSize, sizeof(int), cudaMemcpyDeviceToHost));
     }
     // sort
-    sort(fids, fids + index, cmpForder);
-    char path[256];
-    sprintf(path, "./BatchRemovedVerticesDecodingStep2%d.txt", i_curDecimationId);
-    std::ofstream offFile(path);
-    for (int i = 0; i < index; i++) {
-        std::vector<float> fts;
-        MCGAL::Facet* facet = MCGAL::contextPool.getFacetByIndex(fids[i]);
-        for (int j = 0; j < facet->vertex_size; j++) {
-            fts.push_back(MCGAL::contextPool.getVertexByIndex(facet->vertices[j])->x());
-            fts.push_back(MCGAL::contextPool.getVertexByIndex(facet->vertices[j])->y());
-            fts.push_back(MCGAL::contextPool.getVertexByIndex(facet->vertices[j])->z());
-        }
-        sort(fts.begin(), fts.end());
-        for (int j = 0; j < fts.size(); j++) {
-            offFile << fts[j] << " ";
-        }
-        offFile << "\n";
-    }
+    // sort(fids, fids + index, cmpForder);
+    thrust::sort(fids.begin() + firstCount, fids.begin() + index, SortByForder(MCGAL::contextPool.dfpool));
+    int* d_offset;
 
     // 需要计算前缀和
-    std::vector<int> offsets(index);
-    // 并行读取
-#pragma omp parallel for num_threads(128) schedule(dynamic)
-    for (int i = 0; i < index; i++) {
-        MCGAL::Facet* facet = MCGAL::contextPool.getFacetByIndex(fids[i]);
-        // 需要知道自己在自己这个mesh中是第几个
-        int offset = stOffsets[facet->meshId] + i - fsizesSum[facet->meshId];
-        char symbol = readCharByOffset(offset);
-        if (symbol) {
-            facet->setSplittable();
-            offsets[i] = 1;
-        } else {
-            facet->setUnsplittable();
-        }
-    }
-    // scan
-    for (int i = 1; i < index; i++) {
-        offsets[i] += offsets[i - 1];
-    }
-    // 偏移所有的offset
-    for (int i = 0; i < batch_size; i++) {
-        stOffsets[i] += fsizes[i];
-    }
-#pragma omp parallel for num_threads(128) schedule(dynamic)
-    for (int i = 0; i < index; i++) {
-        MCGAL::Facet* facet = MCGAL::contextPool.getFacetByIndex(fids[i]);
-        if (facet->isSplittable()) {
-            int st = facet->meshId == 0 ? 0 : offsets[fsizesSum[facet->meshId] - 1];
-            int offset = offsets[i] - 1 - st;
-            MCGAL::Point p = readPointByOffset(stOffsets[facet->meshId] + offset * sizeof(float) * 3);
-            facet->setRemovedVertexPos(p);
-        }
-    }
-    for (int i = 0; i < batch_size; i++) {
-        int ed = offsets[fsizesSum[i + 1] - 1];
-        int st = fsizesSum[i] == 0 ? 0 : offsets[fsizesSum[i] - 1];
-        splitableCounts[i] = ed - st;
-        stOffsets[i] += (splitableCounts[i]) * sizeof(float) * 3;
-    }
-    delete firstQueue;
-    delete secondQueue;
+    CHECK(cudaMalloc(&d_offset, index * sizeof(int)));
+    // std::vector<int> offsets(index);
+
+    readFacetSymbolOnCuda<<<grid, block>>>(MCGAL::contextPool.fpool, thrust::raw_pointer_cast(fids.data()), fsizesSum,
+                                           dstOffsets, d_offset, dbuffer, index);
+
+    thrust::inclusive_scan(thrust::device, d_offset, d_offset + index, d_offset);
+    arrayAdd<<<1, batch_size>>>(dstOffsets, fsizes, batch_size);
+    readPointOnCuda<<<grid, block>>>(MCGAL::contextPool.fpool, thrust::raw_pointer_cast(fids.data()), fsizesSum,
+                                     dstOffsets, d_offset, dbuffer, index);
+
+    calSplitableCounts<<<1, batch_size>>>(dstOffsets, dSplittabelCount, d_offset, fsizesSum, batch_size);
 }
 
 void DeCompressTool::BatchInsertedEdgeDecodingStep() {
@@ -456,7 +583,7 @@ void DeCompressTool::BatchInsertedEdgeDecodingStep() {
             currentQueue = secondQueue;
             nextQueue = firstQueue;
         }
-        #pragma omp parallel for num_threads(128)
+#pragma omp parallel for num_threads(128)
         for (int i = 0; i < currentQueueSize; i++) {
             int current = currentQueue[i];
             MCGAL::Halfedge* h = MCGAL::contextPool.getHalfedgeByIndex(current);
@@ -930,8 +1057,6 @@ __global__ void joinFacetOnCuda(MCGAL::Vertex* vpool,
 //     // exit(0);
 //     return;
 // }
-
-
 
 void DeCompressTool::removeInsertedEdges(int meshId) {
     std::queue<MCGAL::Halfedge*> gateQueue;

@@ -131,6 +131,10 @@ class Facet {
         return (flag == Splittable);
     }
 
+    __device__ inline bool isSplittableOnCuda() const {
+        return (flag == Splittable);
+    }
+
     inline bool isUnsplittable() const {
         return (flag == Unsplittable);
     }
@@ -145,11 +149,29 @@ class Facet {
         flag = Unsplittable;
     }
 
+    __device__ inline void setSplittableOnCuda() {
+        assert(flag == Unknown);
+        flag = Splittable;
+    }
+
+    __device__ inline void setUnsplittableOnCuda() {
+        assert(flag == Unknown);
+        flag = Unsplittable;
+    }
+
     inline void setProcessedFlag() {
         processedFlag = Processed;
     }
 
+    __device__ inline void setProcessedFlagOnCuda() {
+        processedFlag = Processed;
+    }
+
     inline bool isProcessed() const {
+        return (processedFlag == Processed);
+    }
+
+    __device__ inline bool isProcessedOnCuda() const {
         return (processedFlag == Processed);
     }
 
@@ -176,6 +198,22 @@ class Facet {
 
     inline bool isRemoved() {
         return removedFlag == Removed;
+    }
+
+    __device__ inline bool isConqueredOnCuda() const {
+        // return (flag == Splittable || flag == Unsplittable || removedFlag == Removed);
+        return (flag == Splittable || flag == Unsplittable);
+    }
+
+
+    __device__ inline void setRemovedVertexPosOnCuda(float* p) {
+        removedVertexPos.v[0] = p[0];
+        removedVertexPos.v[1] = p[1];
+        removedVertexPos.v[2] = p[2];
+    }
+
+    __device__ inline void setRemovedVertexPosOnCuda(Point p) {
+        removedVertexPos = p;
     }
 
   public:

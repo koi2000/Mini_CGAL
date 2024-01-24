@@ -2,11 +2,17 @@
 #define DECOMPRESS_TOOL
 #include "../MCGAL/Core_CUDA/include/core.cuh"
 #include "util.h"
+#include "cuda_functions.cuh"
+#include <algorithm>
 #include <deque>
 #include <fstream>
-#include <algorithm>
 #include <omp.h>
 #include <queue>
+#include <thrust/copy.h>
+#include <thrust/device_vector.h>
+#include <thrust/iterator/counting_iterator.h>
+#include <thrust/iterator/transform_iterator.h>
+#include <thrust/sort.h>
 #define BUFFER_SIZE 10 * 10 * 1024 * 1024
 #define SPLITABLE_SIZE 10 * 10 * 1024
 /**
@@ -51,6 +57,7 @@ class DeCompressTool {
     int* dvertexIndexes;
     int* dstHalfedgeIndexes;
     int* dstFacetIndexes;
+    int* dSplittabelCount;
 
   public:
     DeCompressTool(char* bufferPath, std::vector<int> stOffsets);
@@ -65,6 +72,9 @@ class DeCompressTool {
     void BatchRemovedVerticesDecodingStep();
     void BatchInsertedEdgeDecodingStep();
 
+    void RemovedVerticesDecodingOnCuda();
+    void InsertedEdgeDecodingOnCuda();
+
     void insertRemovedVertices();
     void removeInsertedEdges(int meshId);
     void readBaseMesh(int meshId, int* offset);
@@ -74,6 +84,7 @@ class DeCompressTool {
     MCGAL::Halfedge* find_prev(MCGAL::Halfedge* h) const;
     inline void remove_tip(MCGAL::Halfedge* h) const;
     void startNextDecompresssionOp();
+
     // cuda
     void decodeOnCuda();
     __device__ void readBaseMeshOnCuda(char* buffer, int* stOffsets, int num);
