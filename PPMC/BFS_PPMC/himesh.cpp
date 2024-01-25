@@ -60,6 +60,9 @@ HiMesh::HiMesh(char* data, size_t dsize, bool owndata) : MCGAL::Mesh() {
         p_data = data;
     }
     readBaseMesh();
+    if (dataOffset % 4 != 0) {
+        dataOffset = (dataOffset / 4 + 1) * 4;
+    }
     // Set the vertices of the edge that is the departure of the coding and decoding conquests.
     // vh_departureConquest[0] = (*halfedges.begin())->vertex;
     // vh_departureConquest[1] = (*halfedges.begin())->end_vertex;
@@ -125,7 +128,8 @@ MCGAL::Facet* HiMesh::add_face_by_pool(std::vector<MCGAL::Vertex*>& vs) {
 //                     if ((j == i_prev &&
 //                          polygon[i]->face->facet_degree() != 3)  // The vertex cut operation is forbidden.
 //                         || (j == i_next &&
-//                             polygon[i]->opposite->face->facet_degree() != 3))  // The vertex cut operation is forbidden.
+//                             polygon[i]->opposite->face->facet_degree() != 3))  // The vertex cut operation is
+//                             forbidden.
 //                         return true;
 //                 }
 //             }

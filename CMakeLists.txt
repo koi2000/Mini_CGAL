@@ -9,7 +9,7 @@ set(CMAKE_CUDA_COMPILER "/usr/local/cuda-12/bin/nvcc")
 # set(CMAKE_CUDA_COMPILER "/usr/local/cuda-12.2/bin/nvcc")
 project(Mini_CGAL LANGUAGES  CXX C CUDA)
 
-set(CMAKE_CUDA_FLAGS "-arch=compute_89 -code=sm_89 -rdc=true -g -G -O3")
+set(CMAKE_CUDA_FLAGS "-arch=compute_89 -code=sm_89 -rdc=true -g -G -O0")
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xcompiler -std=c++14")
 
 set(CMAKE_CXX_STANDARD 14)
@@ -117,7 +117,7 @@ file(GLOB_RECURSE MINICGAL_CUDA
     "${MINICGAL_CUDA_SOURCE_DIR}/*.cuh"
 )
 
-# add_subdirectory(CUDA_new)
+add_subdirectory(CUDA_new)
 
 add_executable(Mini_CGAL main.cpp ${PPMC_FILES})
 set_target_properties(Mini_CGAL PROPERTIES COMPILE_FLAGS -frounding-math)

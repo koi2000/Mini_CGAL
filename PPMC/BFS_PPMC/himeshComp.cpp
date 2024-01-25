@@ -372,10 +372,16 @@ void HiMesh::writeBaseMesh() {
 void HiMesh::encodeInsertedEdges(unsigned i_operationId) {
     std::deque<unsigned>& symbols = connectEdgeSym[i_operationId];
     assert(symbols.size() > 0);
+    if (dataOffset % 4 != 0) {
+        dataOffset = (dataOffset / 4 + 1) * 4;
+    }
 
     unsigned i_len = symbols.size();
     for (unsigned i = 0; i < i_len; ++i) {
         writeChar(symbols[i]);
+    }
+    if (dataOffset % 4 != 0) {
+        dataOffset = (dataOffset / 4 + 1) * 4;
     }
 }
 
@@ -392,11 +398,17 @@ void HiMesh::encodeRemovedVertices(unsigned i_operationId) {
     assert(i_lenConn > 0);
 
     unsigned k = 0;
+    if (dataOffset % 4 != 0) {
+        dataOffset = (dataOffset / 4 + 1) * 4;
+    }
     for (unsigned i = 0; i < i_lenConn; ++i) {
         // Encode the connectivity.
         unsigned sym = connSym[i];
         writeChar(sym);
         // Encode the geometry if necessary.
+    }
+    if (dataOffset % 4 != 0) {
+        dataOffset = (dataOffset / 4 + 1) * 4;
     }
     for (unsigned i = 0; i < i_lenGeom; ++i) {
         writePoint(geomSym[i]);

@@ -41,9 +41,15 @@ void HiMesh::startNextDecompresssionOp() {
     // 2. decoding the removed vertices and add to target facets
     struct timeval start = get_cur_time();
     RemovedVerticesDecodingStep();
+    if (dataOffset % 4 != 0) {
+        dataOffset = (dataOffset / 4 + 1) * 4;
+    }
     logt("%d RemovedVerticesDecodingStep", start, i_curDecimationId);
     // 3. decoding the inserted edge and marking the ones added
     InsertedEdgeDecodingStep();
+    if (dataOffset % 4 != 0) {
+        dataOffset = (dataOffset / 4 + 1) * 4;
+    }
     logt("%d InsertedEdgeDecodingStep", start, i_curDecimationId);
     for (auto fit = faces.begin(); fit != faces.end();) {
         if ((*fit)->isRemoved()) {
@@ -443,6 +449,9 @@ void HiMesh::RemovedVerticesDecodingStep() {
     }
 
     dataOffset += faces.size();
+    if (dataOffset % 4 != 0) {
+        dataOffset = (dataOffset / 4 + 1) * 4;
+    }
 #pragma omp parallel for num_threads(128) schedule(dynamic)
     for (int i = 0; i < size; i++) {
         if (faces[i]->isSplittable()) {

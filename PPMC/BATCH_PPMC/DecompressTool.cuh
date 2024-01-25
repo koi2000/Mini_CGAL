@@ -13,6 +13,7 @@
 #include <thrust/iterator/counting_iterator.h>
 #include <thrust/iterator/transform_iterator.h>
 #include <thrust/sort.h>
+#include <thrust/count.h>
 #define BUFFER_SIZE 10 * 10 * 1024 * 1024
 #define SPLITABLE_SIZE 10 * 10 * 1024
 /**
