@@ -79,7 +79,7 @@ DeCompressTool::DeCompressTool(char** path, int number, bool is_base) {
                 stOffsets[i] = (stOffsets[i] / 4 + 1) * 4;
             }
         }
-        cudaMemcpy(&dstOffsets, stOffsets.data(), batch_size * sizeof(int), cudaMemcpyHostToDevice);
+        cudaMemcpy(dstOffsets, stOffsets.data(), batch_size * sizeof(int), cudaMemcpyHostToDevice);
     }
 }
 
@@ -360,7 +360,17 @@ struct SortByForder {
 __global__ void meshIdCount(MCGAL::Facet* fpool, int* fsizes, int num) {
     int tid = blockIdx.x * (blockDim.x * blockDim.y) + blockDim.x * threadIdx.y + threadIdx.x;
     if (tid < num) {
-        atomicAdd(&(fpool[tid].meshId), 1);
+        atomicAdd(&(fsizes[fpool[tid].meshId]), 1);
+        __syncthreads();
+    }
+}
+
+__global__ void countOccurrences(MCGAL::Facet* fpool, int* fids, int* fsizes, int size) {
+    int tid = threadIdx.x + blockIdx.x * blockDim.x;
+
+    while (tid < size) {
+        atomicAdd(&(fsizes[fpool[fids[tid]].meshId]), 1);
+        tid += blockDim.x * gridDim.x;
     }
 }
 
@@ -382,6 +392,7 @@ __global__ void readFacetSymbolOnCuda(MCGAL::Facet* fpool,
             offsets[tid] = 1;
         } else {
             facet->setUnsplittableOnCuda();
+            offsets[tid] = 0;
         }
     }
 }
@@ -403,7 +414,7 @@ readPointOnCuda(MCGAL::Facet* fpool, int* fids, int* fsizesSum, int* stOffsets, 
 __global__ void arrayAdd(int* arr1, int* arr2, int num) {
     int tid = blockIdx.x * (blockDim.x * blockDim.y) + blockDim.x * threadIdx.y + threadIdx.x;
     if (tid < num) {
-        arr1[tid] += arr2[tid];
+        arr1[tid] = arr1[tid] + arr2[tid];
     }
 }
 
@@ -437,10 +448,10 @@ __global__ void checkOffset(int* stOffsets, int batch_size) {
 }
 
 struct UpdateOrderFunctor {
-    thrust::device_vector<int> fids;
+    int* fids;
     MCGAL::Facet* fpool;
 
-    UpdateOrderFunctor(const thrust::device_vector<int>& _fids, MCGAL::Facet* _fpool) : fids(_fids), fpool(_fpool) {}
+    UpdateOrderFunctor(int* _fids, MCGAL::Facet* _fpool) : fids(_fids), fpool(_fpool) {}
 
     __host__ __device__ void operator()(int index) const {
         int fidIndex = fids[index];
@@ -449,6 +460,16 @@ struct UpdateOrderFunctor {
             MCGAL::Facet& facet = fpool[fidIndex];
             facet.forder = static_cast<unsigned long long>(index);
         }
+        // printf("%d ", index);
+    }
+};
+
+struct printf_functor {
+    __host__ __device__ void operator()(int x) {
+        // note that using printf in a __device__ function requires
+        // code compiled for a GPU with compute capability 2.0 or
+        // higher (nvcc --arch=sm_20)
+        printf("%d\n", x);
     }
 };
 
@@ -476,19 +497,30 @@ void DeCompressTool::BatchRemovedVerticesDecodingStep() {
     // 使用 thrust::transform 提取facet中的 poolId
     thrust::transform(MCGAL::contextPool.dfpool, MCGAL::contextPool.dfpool + size, origin_fids.begin(),
                       ExtractFacetPoolId());
+    // 仅拷贝meshId不为1的部分
     thrust::copy_if(origin_fids.begin(), origin_fids.end(), fids.begin(), FilterByMeshId(MCGAL::contextPool.dfpool));
     // 获取紧凑后的数组大小
     int index = thrust::count_if(thrust::device, origin_fids.begin(), origin_fids.end(),
                                  FilterByMeshId(MCGAL::contextPool.dfpool));
-    // 将信息拷贝过来
+    // 初始化每个面的数量以及前缀和
     int* fsizes;
+    int* hfsizes = new int[batch_size];
+    memset(hfsizes, 0, batch_size * sizeof(int));
     int* fsizesSum;
+    int* hfsizesSum = new int[batch_size + 1];
+    memset(hfsizesSum, 0, (batch_size + 1) * sizeof(int));
     CHECK(cudaMalloc(&fsizes, batch_size * sizeof(int)));
     CHECK(cudaMalloc(&fsizesSum, (batch_size + 1) * sizeof(int)));
+    CHECK(cudaMemcpy(fsizes, hfsizes, batch_size * sizeof(int), cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpy(fsizesSum, hfsizesSum, (batch_size + 1) * sizeof(int), cudaMemcpyHostToDevice));
     dim3 block(256, 1, 1);
     dim3 grid((index + block.x - 1) / block.x, 1, 1);
-    meshIdCount<<<grid, block>>>(MCGAL::contextPool.dfpool, fsizes, index);
+    // 统计每个mesh中面的数量，方便之后计算offset
+    countOccurrences<<<grid, block>>>(MCGAL::contextPool.dfpool, thrust::raw_pointer_cast(fids.data()), fsizes, index);
     cudaDeviceSynchronize();
+    cudaMemcpy(hfsizes, fsizes, batch_size * sizeof(int), cudaMemcpyDeviceToHost);
+
+    // 为fsizes计算前缀和
     initFsizesSum<<<1, 1>>>(fsizesSum, fsizes, index, batch_size);
     cudaDeviceSynchronize();
     // 检查offset是否为4的倍数
@@ -539,7 +571,7 @@ void DeCompressTool::BatchRemovedVerticesDecodingStep() {
         dim3 block(256, 1, 1);
         dim3 grid((currentQueueSize + block.x - 1) / block.x, 1, 1);
         computeNextQueue<<<grid, block>>>(MCGAL::contextPool.dvpool, MCGAL::contextPool.dhpool,
-                                          MCGAL::contextPool.dfpool, d_currentQueue, d_nextQueue, d_nextQueue,
+                                          MCGAL::contextPool.dfpool, d_currentQueue, d_nextQueue, d_nextQueueSize,
                                           currentQueueSize);
         cudaDeviceSynchronize();
         ++level;
@@ -548,13 +580,16 @@ void DeCompressTool::BatchRemovedVerticesDecodingStep() {
             // sort(faces.begin() + firstCount, faces.begin() + secondCount, cmpForder);
             // 需要一个新的临时的array，以order进行排序
             // sort(fids + firstCount, fids + index, cmpForder);
-            thrust::sort(fids.begin() + firstCount, fids.begin() + index, SortByForder(MCGAL::contextPool.dfpool));
+            thrust::sort(fids.begin(), fids.begin() + index, SortByForder(MCGAL::contextPool.dfpool));
 
             secondCount = thrust::count_if(thrust::device, fids.begin(), fids.begin() + index,
                                            FilterByForder(MCGAL::contextPool.dfpool));
-
-            thrust::for_each(thrust::counting_iterator<int>(firstCount), thrust::counting_iterator<int>(secondCount),
-                             UpdateOrderFunctor(fids, MCGAL::contextPool.dfpool));
+            thrust::device_vector<int> incId(secondCount);
+            thrust::sequence(incId.begin(), incId.end());
+            thrust::for_each(thrust::device, incId.begin(), incId.end(),
+                             UpdateOrderFunctor(thrust::raw_pointer_cast(fids.data()), MCGAL::contextPool.dfpool));
+            // thrust::for_each(thrust::device, incId.begin(), incId.end(),
+            //                  printf_functor());
 
             // for (int i = firstCount; i < index; i++) {
             //     if (MCGAL::contextPool.fpool[fids[i]].forder != (~(unsigned long long)0)) {
@@ -576,24 +611,25 @@ void DeCompressTool::BatchRemovedVerticesDecodingStep() {
                                                          d_currentQueue, currentQueueSize);
         cudaDeviceSynchronize();
         CHECK(cudaMemcpy(&currentQueueSize, d_nextQueueSize, sizeof(int), cudaMemcpyDeviceToHost));
-        currentQueueSize = nextQueueSize;
+        // currentQueueSize = nextQueueSize;
         CHECK(cudaMemcpy(d_nextQueueSize, &nextQueueSize, sizeof(int), cudaMemcpyHostToDevice));
     }
     // sort
     // sort(fids, fids + index, cmpForder);
-    thrust::sort(fids.begin() + firstCount, fids.begin() + index, SortByForder(MCGAL::contextPool.dfpool));
+    thrust::sort(fids.begin(), fids.begin() + index, SortByForder(MCGAL::contextPool.dfpool));
+    int* hoffset = new int[index];
+    memset(hoffset, 0, sizeof(int) * index);
     int* d_offset;
 
     // 需要计算前缀和
     CHECK(cudaMalloc(&d_offset, index * sizeof(int)));
+    // CHECK(cudaMemcpy(d_offset,hoffset));
     // std::vector<int> offsets(index);
-
     readFacetSymbolOnCuda<<<grid, block>>>(MCGAL::contextPool.dfpool, thrust::raw_pointer_cast(fids.data()), fsizesSum,
                                            dstOffsets, d_offset, dbuffer, index);
     cudaDeviceSynchronize();
-    // 检查offset是否为4的倍数
-    checkOffset<<<1, batch_size>>>(dstOffsets, batch_size);
-    cudaDeviceSynchronize();
+    CHECK(cudaMemcpy(hfsizesSum, fsizesSum, (batch_size + 1) * sizeof(int), cudaMemcpyDeviceToHost));
+
     // 求前缀和，用于计算offset
     thrust::inclusive_scan(thrust::device, d_offset, d_offset + index, d_offset);
     arrayAdd<<<1, batch_size>>>(dstOffsets, fsizes, batch_size);
@@ -604,6 +640,9 @@ void DeCompressTool::BatchRemovedVerticesDecodingStep() {
         printf("code:%d,reason:%s\n", error, cudaGetErrorString(error));
         exit(1);
     }
+    // 检查offset是否为4的倍数
+    checkOffset<<<1, batch_size>>>(dstOffsets, batch_size);
+    cudaDeviceSynchronize();
     // 根据offset的值读取point
     readPointOnCuda<<<grid, block>>>(MCGAL::contextPool.dfpool, thrust::raw_pointer_cast(fids.data()), fsizesSum,
                                      dstOffsets, d_offset, dbuffer, index);
@@ -627,6 +666,7 @@ void DeCompressTool::BatchRemovedVerticesDecodingStep() {
         printf("code:%d,reason:%s\n", error, cudaGetErrorString(error));
         exit(1);
     }
+
     int vsize = MCGAL::contextPool.vindex;
     int hsize = MCGAL::contextPool.hindex;
     int fsize = MCGAL::contextPool.findex;
@@ -753,6 +793,7 @@ void DeCompressTool::BatchInsertedEdgeDecodingStep() {
             stOffsets[i] = (stOffsets[i] / 4 + 1) * 4;
         }
     }
+    cudaMemcpy(dstOffsets, stOffsets.data(), batch_size * sizeof(int), cudaMemcpyHostToDevice);
     delete firstQueue;
     delete secondQueue;
 }

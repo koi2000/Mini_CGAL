@@ -576,8 +576,6 @@ __global__ void joinFacetOnCuda(MCGAL::Vertex* vpool,
             MCGAL::Halfedge* h = &hpool[edgeIndexes[stIndex + i]];
             // acquireLock(&h->lock);
             joinFacetDevice(vpool, hpool, fpool, h);
-            unsigned long long* t1, t2;
-            atomicMin(t1, t2);
             // releaseLock(&h->lock);
             // MCGAL::Halfedge* hprev = find_prevOncuda(hpool, h);
             // MCGAL::Halfedge* gprev = find_prevOncuda(hpool, h->dopposite(hpool));
