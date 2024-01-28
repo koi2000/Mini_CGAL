@@ -4,9 +4,9 @@ option(PROF "Description" OFF)
 option(GRID "Description" 1)
 option(BLOCK "Description" 512)
 
-set(CMAKE_CUDA_COMPILER "/usr/local/cuda-12/bin/nvcc")
+# set(CMAKE_CUDA_COMPILER "/usr/local/cuda-12/bin/nvcc")
 # set(CMAKE_CUDA_ARCHITECTURES 89) 
-# set(CMAKE_CUDA_COMPILER "/usr/local/cuda-12.2/bin/nvcc")
+set(CMAKE_CUDA_COMPILER "/usr/local/cuda-12.2/bin/nvcc")
 project(Mini_CGAL LANGUAGES  CXX C CUDA)
 
 set(CMAKE_CUDA_FLAGS "-arch=compute_89 -code=sm_89 -rdc=true -g -G -O0")

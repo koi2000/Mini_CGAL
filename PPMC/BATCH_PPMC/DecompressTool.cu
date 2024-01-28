@@ -464,15 +464,6 @@ struct UpdateOrderFunctor {
     }
 };
 
-struct printf_functor {
-    __host__ __device__ void operator()(int x) {
-        // note that using printf in a __device__ function requires
-        // code compiled for a GPU with compute capability 2.0 or
-        // higher (nvcc --arch=sm_20)
-        printf("%d\n", x);
-    }
-};
-
 struct FilterByForder {
     MCGAL::Facet* fpool;  // 外部变量
 
