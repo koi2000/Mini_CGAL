@@ -6,11 +6,15 @@ option(BLOCK "Description" 512)
 
 # set(CMAKE_CUDA_COMPILER "/usr/local/cuda-12/bin/nvcc")
 # set(CMAKE_CUDA_ARCHITECTURES 89) 
-set(CMAKE_CUDA_COMPILER "/usr/local/cuda-12.2/bin/nvcc")
+# set(CMAKE_SYSROOT "/home/koi/install/gcc-12")
+set(CMAKE_CXX_COMPILER "/home/koi/install/gcc-12/bin/g++")
+set(CMAKE_C_COMPILER "/home/koi/install/gcc-12/bin/gcc")
+set(CMAKE_CUDA_COMPILER "/usr/local/cuda-12/bin/nvcc")
 project(Mini_CGAL LANGUAGES  CXX C CUDA)
 
-set(CMAKE_CUDA_FLAGS "-arch=compute_89 -code=sm_89 -rdc=true -g -G -O0")
+set(CMAKE_CUDA_FLAGS "-arch=compute_75 -code=sm_75 -rdc=true -g -G -O0")
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xcompiler -std=c++14")
+# set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xcompiler")
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -g -Wno-unused-result")
@@ -34,6 +38,7 @@ include_directories(
     /usr/local/cgal/include
     # /usr/local/include/eigen3
     /usr/include/eigen3
+    /home/koi/install/gcc-12/include/c++/12.3.1/
     ${CUDA_INCLUDE_DIRS}
 )
 find_package(CGAL REQUIRED)
@@ -42,8 +47,10 @@ find_package(CUDA REQUIRED)
 
 # Add library paths
 link_directories(
-    /usr/local/cgal/lib
+    /usr/local/cgal/lib/
     /usr/lib/x86_64-linux-gnu/
+    /home/koi/install/gcc-12/lib64/
+    /home/koi/install/gcc-12/lib/gcc/x86_64-pc-linux-gnu/12.3.1/
     # /usr/lib/x86_64-linux-gnu/
 )
 
@@ -119,52 +126,52 @@ file(GLOB_RECURSE MINICGAL_CUDA
 
 add_subdirectory(CUDA_new)
 
-add_executable(Mini_CGAL main.cpp ${PPMC_FILES})
-set_target_properties(Mini_CGAL PROPERTIES COMPILE_FLAGS -frounding-math)
-target_link_libraries(Mini_CGAL ${CGAL_LIBRARIES} ${OPENGL_LIBRARY} ${GLUT_LIBRARY} m)
+# add_executable(Mini_CGAL main.cpp ${PPMC_FILES})
+# set_target_properties(Mini_CGAL PROPERTIES COMPILE_FLAGS -frounding-math)
+# target_link_libraries(Mini_CGAL ${CGAL_LIBRARIES} ${OPENGL_LIBRARY} ${GLUT_LIBRARY} m)
 
-add_executable(PPMC_compress tools/PPMC_test.cpp ${PPMC_FILES})
-set_target_properties(PPMC_compress PROPERTIES COMPILE_FLAGS -frounding-math)
-target_link_libraries(PPMC_compress ${CGAL_LIBRARIES} ${OPENGL_LIBRARY} ${GLUT_LIBRARY} m)
+# add_executable(PPMC_compress tools/PPMC_test.cpp ${PPMC_FILES})
+# set_target_properties(PPMC_compress PROPERTIES COMPILE_FLAGS -frounding-math)
+# target_link_libraries(PPMC_compress ${CGAL_LIBRARIES} ${OPENGL_LIBRARY} ${GLUT_LIBRARY} m)
 
-add_executable(Mini_CGAL_test tools/MiniCGAL_test.cpp ${MINI_CGAL_FILES})
-set_target_properties(Mini_CGAL_test PROPERTIES COMPILE_FLAGS -frounding-math)
-target_link_libraries(Mini_CGAL_test ${CGAL_LIBRARIES} ${OPENGL_LIBRARY} ${GLUT_LIBRARY} m)
+# add_executable(Mini_CGAL_test tools/MiniCGAL_test.cpp ${MINI_CGAL_FILES})
+# set_target_properties(Mini_CGAL_test PROPERTIES COMPILE_FLAGS -frounding-math)
+# target_link_libraries(Mini_CGAL_test ${CGAL_LIBRARIES} ${OPENGL_LIBRARY} ${GLUT_LIBRARY} m)
 
-add_executable(MiniCGAL_Compress tools/MCompress_test.cpp ${MINICGAL_PPMC_FILES})
-set_target_properties(MiniCGAL_Compress PROPERTIES COMPILE_FLAGS -frounding-math)
-target_link_libraries(MiniCGAL_Compress ${CGAL_LIBRARIES} ${OPENGL_LIBRARY} ${GLUT_LIBRARY} m)
+# add_executable(MiniCGAL_Compress tools/MCompress_test.cpp ${MINICGAL_PPMC_FILES})
+# set_target_properties(MiniCGAL_Compress PROPERTIES COMPILE_FLAGS -frounding-math)
+# target_link_libraries(MiniCGAL_Compress ${CGAL_LIBRARIES} ${OPENGL_LIBRARY} ${GLUT_LIBRARY} m)
 
-add_executable(MiniCGAL_Decompress tools/MDecompress_test.cpp ${MINICGAL_PPMC_FILES})
-set_target_properties(MiniCGAL_Decompress PROPERTIES COMPILE_FLAGS -frounding-math)
-target_link_libraries(MiniCGAL_Decompress ${CGAL_LIBRARIES} ${OPENGL_LIBRARY} ${GLUT_LIBRARY} m)
+# add_executable(MiniCGAL_Decompress tools/MDecompress_test.cpp ${MINICGAL_PPMC_FILES})
+# set_target_properties(MiniCGAL_Decompress PROPERTIES COMPILE_FLAGS -frounding-math)
+# target_link_libraries(MiniCGAL_Decompress ${CGAL_LIBRARIES} ${OPENGL_LIBRARY} ${GLUT_LIBRARY} m)
 
-# add_executable(MiniCGAL_CudaDecompress tools/MCudaDecompress_test.cu ${MINICGAL_CUDA_PPMC_FILES})
-add_executable(MiniCGAL_CudaDecompress tools/MCudaDecompress_test.cu  ${CUDA_PPMC} ${MINICGAL_CUDA})
-set_target_properties(MiniCGAL_CudaDecompress PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON)
-# target_compile_definitions(MiniCGAL_CudaDecompress PUBLIC BLOCK_SIZE=${BLOCK} GRID_SIZE=${GRID} PROHIBIT_LOG)
-# target_compile_definitions(MiniCGAL_CudaDecompress PRIVATE PROHIBIT_LOG)
-IF(TEST)
-    target_compile_definitions(MiniCGAL_CudaDecompress PRIVATE BLOCK_SIZE=${BLOCK})
-    target_compile_definitions(MiniCGAL_CudaDecompress PRIVATE GRID_SIZE=${GRID})
-ENDIF(TEST)
-target_link_libraries(MiniCGAL_CudaDecompress ${CUDA_LIBRARIES} OpenMP::OpenMP_CXX)
+# # add_executable(MiniCGAL_CudaDecompress tools/MCudaDecompress_test.cu ${MINICGAL_CUDA_PPMC_FILES})
+# add_executable(MiniCGAL_CudaDecompress tools/MCudaDecompress_test.cu  ${CUDA_PPMC} ${MINICGAL_CUDA})
+# set_target_properties(MiniCGAL_CudaDecompress PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON)
+# # target_compile_definitions(MiniCGAL_CudaDecompress PUBLIC BLOCK_SIZE=${BLOCK} GRID_SIZE=${GRID} PROHIBIT_LOG)
+# # target_compile_definitions(MiniCGAL_CudaDecompress PRIVATE PROHIBIT_LOG)
+# IF(TEST)
+#     target_compile_definitions(MiniCGAL_CudaDecompress PRIVATE BLOCK_SIZE=${BLOCK})
+#     target_compile_definitions(MiniCGAL_CudaDecompress PRIVATE GRID_SIZE=${GRID})
+# ENDIF(TEST)
+# target_link_libraries(MiniCGAL_CudaDecompress ${CUDA_LIBRARIES} OpenMP::OpenMP_CXX)
 
-add_executable(MiniCGAL_CudaCompress tools/MCudaCompress_test.cu  ${CUDA_PPMC} ${MINICGAL_CUDA})
-set_target_properties(MiniCGAL_CudaCompress PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON)
-target_link_libraries(MiniCGAL_CudaCompress ${CUDA_LIBRARIES})
+# add_executable(MiniCGAL_CudaCompress tools/MCudaCompress_test.cu  ${CUDA_PPMC} ${MINICGAL_CUDA})
+# set_target_properties(MiniCGAL_CudaCompress PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON)
+# target_link_libraries(MiniCGAL_CudaCompress ${CUDA_LIBRARIES})
 
-add_executable(MiniCGAL_NewCompress tools/MNewCompress_test.cu  ${CUDA_PPMC} ${MINICGAL_CUDA})
-set_target_properties(MiniCGAL_NewCompress PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON)
-target_link_libraries(MiniCGAL_NewCompress ${CUDA_LIBRARIES})
+# add_executable(MiniCGAL_NewCompress tools/MNewCompress_test.cu  ${CUDA_PPMC} ${MINICGAL_CUDA})
+# set_target_properties(MiniCGAL_NewCompress PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON)
+# target_link_libraries(MiniCGAL_NewCompress ${CUDA_LIBRARIES})
 
 add_executable(Batch_Decompress tools/BatchDecompress_test.cu  ${BATCH_PPMC_FILES} ${MINICGAL_CUDA})
 set_target_properties(Batch_Decompress PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON)
 target_link_libraries(Batch_Decompress ${CUDA_LIBRARIES} OpenMP::OpenMP_CXX)
 
-add_executable(BFSCompress tools/BFSCompress_test.cpp  ${BFS_PPMC} ${MINI_CGAL_FILES})
-set_target_properties(BFSCompress PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON)
-target_compile_definitions(BFSCompress PRIVATE _OPENMP=202011)
-target_link_libraries(BFSCompress ${CUDA_LIBRARIES} OpenMP::OpenMP_CXX)
+# add_executable(BFSCompress tools/BFSCompress_test.cpp  ${BFS_PPMC} ${MINI_CGAL_FILES})
+# set_target_properties(BFSCompress PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON)
+# target_compile_definitions(BFSCompress PRIVATE _OPENMP=202011)
+# target_link_libraries(BFSCompress ${CUDA_LIBRARIES} OpenMP::OpenMP_CXX -lstdc++)
 # target_link_libraries(BFSCompress ${CUDA_LIBRARIES})
 # message(STATUS "list = ${CUDA_PPMC}" )

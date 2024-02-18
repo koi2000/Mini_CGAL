@@ -1,4 +1,5 @@
 // g++ -v -E -x c++ -
+// sudo update-alternatives --install /usr/bin/gcc gcc /usr/local/gcc-12/bin/gcc 71
 {
     "configurations": [
         {
@@ -12,20 +13,31 @@
                 // "/usr/local/include",
                 // "/usr/include/x86_64-linux-gnu",
                 // "/usr/include",
-                "/usr/include/c++/12",
-                "/usr/include/x86_64-linux-gnu/c++/12",
-                "/usr/include/c++/12/backward",
-                "/usr/lib/gcc/x86_64-linux-gnu/12/include",
+
+                // "/usr/include/c++/12",
+                // "/usr/include/x86_64-linux-gnu/c++/12",
+                // "/usr/include/c++/12/backward",
+                // "/usr/lib/gcc/x86_64-linux-gnu/12/include",
+                // "/usr/local/gcc-12/lib/gcc/x86_64-pc-linux-gnu/12.2.0/include",
+                // "/usr/local/include",
+                // "/usr/include/x86_64-linux-gnu",
+                // "/usr/include"
+                "/home/koi/install/gcc-12/lib/gcc/x86_64-pc-linux-gnu/12.3.1/../../../../include/c++/12.3.1",
+                "/home/koi/install/gcc-12/lib/gcc/x86_64-pc-linux-gnu/12.3.1/../../../../include/c++/12.3.1/x86_64-pc-linux-gnu",
+                "/home/koi/install/gcc-12/lib/gcc/x86_64-pc-linux-gnu/12.3.1/../../../../include/c++/12.3.1/backward",
+                "/home/koi/install/gcc-12/lib/gcc/x86_64-pc-linux-gnu/12.3.1/include",
                 "/usr/local/include",
+                "/home/koi/install/gcc-12/include",
+                "/home/koi/install/gcc-12/lib/gcc/x86_64-pc-linux-gnu/12.3.1/include-fixed",
                 "/usr/include/x86_64-linux-gnu",
                 "/usr/include"
             ],
             "defines": [],
             // "compilerPath": "/usr/bin/clang++-14",
-            "compilerPath": "/usr/bin/g++",
-            "cStandard": "c14",
-            "cppStandard": "c++14",
-            "intelliSenseMode": "linux-clang-x64"
+            "compilerPath": "/home/koi/install/gcc-12/bin/g++",
+            "cStandard": "c11",
+            "cppStandard": "c++14"
+            // "intelliSenseMode": "linux-clang-x64"
         }
     ],
     "version": 4

@@ -11,6 +11,9 @@ void compress(int argc, char** argv) {
         "/home/koi/mastercode/Mini_CGAL/buffers/newbuffer1", "/home/koi/mastercode/Mini_CGAL/buffers/newbuffer2",
         "/home/koi/mastercode/Mini_CGAL/buffers/newbuffer3", "/home/koi/mastercode/Mini_CGAL/buffers/newbuffer4",
         "/home/koi/mastercode/Mini_CGAL/buffers/newbuffer5"};
+    // const char* strings[] = {
+    //     "/home/koi/mastercode/Mini_CGAL/buffers/newbuffer1", "/home/koi/mastercode/Mini_CGAL/buffers/newbuffer2",
+    //     "/home/koi/mastercode/Mini_CGAL/buffers/newbuffer3"};
     char** paths = new char*[sizeof(strings) / sizeof(strings[0])];
     for (size_t i = 0; i < sizeof(strings) / sizeof(strings[0]); ++i) {
         paths[i] = new char[strlen(strings[i]) + 1];

@@ -72,6 +72,8 @@ class DeCompressTool {
     void InsertedEdgeDecodingStep(int meshId);
     void BatchRemovedVerticesDecodingStep();
     void BatchInsertedEdgeDecodingStep();
+    // cuda
+    void BatchInsertedEdgeDecodingStepOnCuda();
 
     void RemovedVerticesDecodingOnCuda();
     void InsertedEdgeDecodingOnCuda();

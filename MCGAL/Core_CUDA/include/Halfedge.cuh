@@ -142,9 +142,18 @@ class Halfedge {
         return (processedFlag == Processed);
     }
 
+    __device__ inline bool isProcessedOnCuda() const {
+        return (processedFlag == Processed);
+    }
+
     /* Flag 2 */
 
     inline void setAdded() {
+        assert(flag2 == Original);
+        flag2 = Added;
+    }
+
+    __device__ inline void setAddedOnCuda() {
         assert(flag2 == Original);
         flag2 = Added;
     }
