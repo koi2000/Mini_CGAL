@@ -1,19 +1,19 @@
 #ifndef DECOMPRESS_TOOL
 #define DECOMPRESS_TOOL
 #include "../MCGAL/Core_CUDA/include/core.cuh"
-#include "util.h"
 #include "cuda_functions.cuh"
+#include "util.h"
 #include <algorithm>
 #include <deque>
 #include <fstream>
 #include <omp.h>
 #include <queue>
 #include <thrust/copy.h>
+#include <thrust/count.h>
 #include <thrust/device_vector.h>
 #include <thrust/iterator/counting_iterator.h>
 #include <thrust/iterator/transform_iterator.h>
 #include <thrust/sort.h>
-#include <thrust/count.h>
 #define BUFFER_SIZE 10 * 10 * 1024 * 1024
 #define SPLITABLE_SIZE 10 * 10 * 1024
 /**
@@ -79,6 +79,7 @@ class DeCompressTool {
     void InsertedEdgeDecodingOnCuda();
 
     void insertRemovedVertices();
+    void insertRemovedVerticesOnCuda();
     void removeInsertedEdges(int meshId);
     void readBaseMesh(int meshId, int* offset);
     MCGAL::Halfedge* pushHehInit(int meshId);
@@ -94,7 +95,6 @@ class DeCompressTool {
     __device__ void pushHehInitOnCuda();
     __device__ void RemovedVerticesDecodingStepOnCuda(char* buffer, int* stOffsets, int num);
     __device__ void InsertedEdgeDecodingStepOnCuda(char* buffer, int* stOffsets, int num);
-    __device__ void insertRemovedVerticesOnCuda();
     __device__ void removeInsertedEdgesOnCuda();
 
     // IOs

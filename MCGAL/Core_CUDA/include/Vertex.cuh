@@ -101,6 +101,10 @@ class Vertex : public Point {
         this->meshId = id;
     }
 
+    __device__ void setMeshIdOnCuda(int id) {
+        this->meshId = id;
+    }
+
     int meshId = -1;
     int lock = 1;
     int poolId;
@@ -152,6 +156,12 @@ class Vertex : public Point {
         this->v[0] = p.x();
         this->v[1] = p.y();
         this->v[2] = p.z();
+    }
+
+    __device__ void setPointOnCuda(float* p) {
+        this->v[0] = p[0];
+        this->v[1] = p[1];
+        this->v[2] = p[2];
     }
 
     inline void resetState() {

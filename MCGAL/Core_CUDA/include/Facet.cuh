@@ -71,6 +71,10 @@ class Facet {
         this->meshId = id;
     }
 
+    __device__ void setMeshIdOnCuda(int id) {
+        this->meshId = id;
+    }
+
     // cuda
     __device__ Vertex* getVertexByIndexOnCuda(Vertex* vertices, int index);
     __device__ Halfedge* getHalfedgeByIndexOnCuda(Halfedge* halfedges, int index);
@@ -83,10 +87,6 @@ class Facet {
 
     __device__ void setRemovedOnCuda() {
         removedFlag = Removed;
-    }
-
-    __device__ void setMeshIdOnCuda(int id) {
-        this->meshId = id;
     }
 
     __device__ inline bool isRemovedOnCuda() {
@@ -185,6 +185,10 @@ class Facet {
 
     inline MCGAL::Point getRemovedVertexPos() {
         return removedVertexPos;
+    }
+
+    __device__ inline float* getRemovedVertexPosOnCuda() {
+        return removedVertexPos.v;
     }
 
     inline void setRemovedVertexPos(Point p) {

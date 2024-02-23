@@ -19,9 +19,9 @@ class ContextPool {
     MCGAL::Halfedge* dhpool;
     MCGAL::Facet* dfpool;
 
-    int vindex = 0;
-    int hindex = 0;
-    int findex = 0;
+    int* vindex = 0;
+    int* hindex = 0;
+    int* findex = 0;
     ContextPool();
 
   public:
@@ -44,23 +44,23 @@ class ContextPool {
     ContextPool& operator=(const ContextPool&) = delete;
 
     void reset() {
-        vindex = 0;
-        hindex = 0;
-        findex = 0;
+        *vindex = 0;
+        *hindex = 0;
+        *findex = 0;
         freeOnUnifiedMemory();
         mallocOnUnifiedMemory();
     }
 
     int getFindex() {
-        return findex;
+        return *findex;
     }
 
     int getHindex() {
-        return hindex;
+        return *hindex;
     }
 
     int getVindex() {
-        return vindex;
+        return *vindex;
     }
 
     MCGAL::Vertex* getVertexByIndex(int index) {
@@ -88,52 +88,52 @@ class ContextPool {
     }
 
     inline MCGAL::Vertex* allocateVertexFromPool() {
-        return &vpool[vindex++];
+        return &vpool[(*vindex)++];
     }
 
     inline MCGAL::Vertex* allocateVertexFromPool(MCGAL::Point p) {
-        vpool[vindex].setPoint(p);
-        return &vpool[vindex++];
+        vpool[*vindex].setPoint(p);
+        return &vpool[(*vindex)++];
     }
 
     inline MCGAL::Halfedge* allocateHalfedgeFromPool() {
-        return &hpool[hindex++];
+        return &hpool[(*hindex)++];
     }
 
     inline MCGAL::Halfedge* allocateHalfedgeFromPool(MCGAL::Vertex* v1, MCGAL::Vertex* v2) {
-        hpool[hindex].reset(v1, v2);
-        return &hpool[hindex++];
+        hpool[*hindex].reset(v1, v2);
+        return &hpool[(*hindex)++];
     }
 
     inline MCGAL::Facet* allocateFaceFromPool() {
-        return &fpool[findex++];
+        return &fpool[(*findex)++];
     }
 
     inline MCGAL::Facet* allocateFaceFromPool(MCGAL::Halfedge* h) {
-        fpool[findex].reset(h);
-        return &fpool[findex++];
+        fpool[*findex].reset(h);
+        return &fpool[(*findex)++];
     }
 
     inline MCGAL::Facet* allocateFaceFromPool(std::vector<MCGAL::Vertex*> vts) {
-        fpool[findex].reset(vts);
-        return &fpool[findex++];
+        fpool[*findex].reset(vts);
+        return &fpool[(*findex)++];
     }
 
     inline int preAllocVertex(int size) {
-        int ret = vindex;
-        vindex += size;
+        int ret = (*vindex);
+        (*vindex) += size;
         return ret;
     }
 
     inline int preAllocHalfedge(int size) {
-        int ret = hindex;
-        hindex += size;
+        int ret = (*hindex);
+        (*hindex) += size;
         return ret;
     }
 
     inline int preAllocFace(int size) {
-        int ret = findex;
-        findex += size;
+        int ret = (*findex);
+        (*findex) += size;
         return ret;
     }
 };

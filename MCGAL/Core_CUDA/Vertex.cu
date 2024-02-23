@@ -11,6 +11,12 @@ void Vertex::addHalfedge(int halfedge) {
     halfedges[halfedges_size++] = halfedge;
 }
 
+__device__ void Vertex::addHalfedgeOnCuda(int halfedge) {
+    int tpIndex = halfedges_size;
+    atomicAdd(&halfedges_size, 1);
+    halfedges[tpIndex] = halfedge;
+}
+
 Halfedge* Vertex::getHalfedgeByIndex(int index) {
     assert(index < halfedges_size);
     return contextPool.getHalfedgeByIndex(halfedges[index]);
@@ -36,45 +42,25 @@ void Vertex::eraseHalfedgeByPointer(Halfedge* halfedge) {
 }
 // #pragma optimize( "", on )
 
-// cuda
-__device__ void Vertex::addHalfedgeOnCuda(Halfedge* halfedge) {
-    // halfedges[halfedges_size++] = halfedge->poolId;
-    auto ti = blockDim.x * blockIdx.x + threadIdx.x;
-    // For each thread in a wrap
-    for (int i = 0; i < 32; i++) {
-        // Check if it is this thread's turn
-        if (ti % 32 != i)
-            continue;
+// __device__ void Vertex::addHalfedgeOnCuda(int halfedge) {
+//     // halfedges[halfedges_size++] = halfedge;
+//     auto ti = blockDim.x * blockIdx.x + threadIdx.x;
+//     // For each thread in a wrap
+//     for (int i = 0; i < 32; i++) {
+//         // Check if it is this thread's turn
+//         if (ti % 32 != i)
+//             continue;
 
-        // Lock
-        while (atomicExch(&lock, 0) == 0)
-            ;
-        // Work
-        halfedges[halfedges_size++] = halfedge->poolId;
-        // Unlock
-        lock = 1;
-    }
-}
-
-__device__ void Vertex::addHalfedgeOnCuda(int halfedge) {
-    // halfedges[halfedges_size++] = halfedge;
-    auto ti = blockDim.x * blockIdx.x + threadIdx.x;
-    // For each thread in a wrap
-    for (int i = 0; i < 32; i++) {
-        // Check if it is this thread's turn
-        if (ti % 32 != i)
-            continue;
-
-        // Lock
-        while (atomicExch(&lock, 0) == 0)
-            ;
-        // Work
-        halfedges[halfedges_size] = halfedge;
-        atomicAdd(&halfedges_size, 1);
-        // Unlock
-        lock = 1;
-    }
-}
+//         // Lock
+//         while (atomicExch(&lock, 0) == 0)
+//             ;
+//         // Work
+//         halfedges[halfedges_size] = halfedge;
+//         atomicAdd(&halfedges_size, 1);
+//         // Unlock
+//         lock = 1;
+//     }
+// }
 
 void Vertex::eraseHalfedgeByIndexOnCuda(int index) {
     assert(index < halfedges_size);
