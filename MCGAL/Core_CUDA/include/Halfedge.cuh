@@ -29,6 +29,7 @@ class Halfedge {
     int next_ = -1;
     int opposite_ = -1;
     int count = 0;
+    int parent = -1;
     unsigned long long horder = ~(unsigned long long)0;
     Halfedge() {
         vertex_ = -1;
@@ -36,6 +37,7 @@ class Halfedge {
         facet_ = -1;
         next_ = -1;
         opposite_ = -1;
+        parent = -1;
     };
     // Vertex* vertex = nullptr;
     // Vertex* end_vertex = nullptr;
@@ -102,6 +104,7 @@ class Halfedge {
         removedFlag = NotRemoved;
         bfsFlag = NotVisited;
         horder = ~(unsigned long long)0;
+        parent = -1;
     }
 
     inline void resetState() {
@@ -111,6 +114,7 @@ class Halfedge {
         removedFlag = NotRemoved;
         bfsFlag = NotVisited;
         horder = ~(unsigned long long)0;
+        parent = -1;
     }
 
     /* Flag 1 */

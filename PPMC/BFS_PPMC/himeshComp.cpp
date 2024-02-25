@@ -321,7 +321,7 @@ void HiMesh::InsertedEdgeCodingStep() {
 
         // Determine the edge symbol.
         unsigned sym;
-        if (h->isOriginal())
+        if (h->isOriginal()||h->opposite->isAdded())
             sym = 0;
         else
             sym = 1;
