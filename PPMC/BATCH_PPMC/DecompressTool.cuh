@@ -2,6 +2,7 @@
 #define DECOMPRESS_TOOL
 #include "../MCGAL/Core_CUDA/include/core.cuh"
 #include "cuda_functions.cuh"
+#include "thrust_struct.cuh"
 #include "util.h"
 #include <algorithm>
 #include <deque>

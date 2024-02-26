@@ -4,20 +4,20 @@ option(PROF "Description" OFF)
 option(GRID "Description" 1)
 option(BLOCK "Description" 512)
 
-# set(CMAKE_CUDA_COMPILER "/usr/local/cuda-12/bin/nvcc")
+set(CMAKE_CUDA_COMPILER "/usr/local/cuda-12/bin/nvcc")
 # set(CMAKE_CUDA_ARCHITECTURES 89) 
 # set(CMAKE_SYSROOT "/home/koi/install/gcc-12")
-set(CMAKE_CXX_COMPILER "/home/koi/install/gcc-12/bin/g++")
-set(CMAKE_C_COMPILER "/home/koi/install/gcc-12/bin/gcc")
-set(CMAKE_CUDA_COMPILER "/usr/local/cuda-12/bin/nvcc")
+# set(CMAKE_CXX_COMPILER "/home/koi/install/gcc-12/bin/g++")
+# set(CMAKE_C_COMPILER "/home/koi/install/gcc-12/bin/gcc")
+# set(CMAKE_CUDA_COMPILER "/usr/local/cuda-12/bin/nvcc")
 project(Mini_CGAL LANGUAGES  CXX C CUDA)
 
-set(CMAKE_CUDA_FLAGS "-arch=compute_75 -code=sm_75 -rdc=true -g -G -O0")
+set(CMAKE_CUDA_FLAGS "-arch=compute_89 -code=sm_89 -rdc=true -g -G -O3")
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xcompiler -std=c++14")
 # set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xcompiler")
 
 set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -g -Wno-unused-result")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -g -Wno-unused-result")
 
 if(PROF)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pg")
@@ -38,7 +38,7 @@ include_directories(
     /usr/local/cgal/include
     # /usr/local/include/eigen3
     /usr/include/eigen3
-    /home/koi/install/gcc-12/include/c++/12.3.1/
+    # /home/koi/install/gcc-12/include/c++/12.3.1/
     ${CUDA_INCLUDE_DIRS}
 )
 find_package(CGAL REQUIRED)
@@ -46,13 +46,13 @@ find_package(OpenMP REQUIRED)
 find_package(CUDA REQUIRED)
 
 # Add library paths
-link_directories(
-    /usr/local/cgal/lib/
-    /usr/lib/x86_64-linux-gnu/
-    /home/koi/install/gcc-12/lib64/
-    /home/koi/install/gcc-12/lib/gcc/x86_64-pc-linux-gnu/12.3.1/
-    # /usr/lib/x86_64-linux-gnu/
-)
+# link_directories(
+#     /usr/local/cgal/lib/
+#     /usr/lib/x86_64-linux-gnu/
+#     # /home/koi/install/gcc-12/lib64/
+#     # /home/koi/install/gcc-12/lib/gcc/x86_64-pc-linux-gnu/12.3.1/
+#     # /usr/lib/x86_64-linux-gnu/
+# )
 
 
 set(MINICGAL_SOURCE_DIR "MCGAL/Core")
@@ -130,9 +130,9 @@ add_subdirectory(CUDA_new)
 # set_target_properties(Mini_CGAL PROPERTIES COMPILE_FLAGS -frounding-math)
 # target_link_libraries(Mini_CGAL ${CGAL_LIBRARIES} ${OPENGL_LIBRARY} ${GLUT_LIBRARY} m)
 
-# add_executable(PPMC_compress tools/PPMC_test.cpp ${PPMC_FILES})
-# set_target_properties(PPMC_compress PROPERTIES COMPILE_FLAGS -frounding-math)
-# target_link_libraries(PPMC_compress ${CGAL_LIBRARIES} ${OPENGL_LIBRARY} ${GLUT_LIBRARY} m)
+add_executable(PPMC_compress tools/PPMC_test.cpp ${PPMC_FILES})
+set_target_properties(PPMC_compress PROPERTIES COMPILE_FLAGS -frounding-math)
+target_link_libraries(PPMC_compress ${CGAL_LIBRARIES} ${OPENGL_LIBRARY} ${GLUT_LIBRARY} m)
 
 # add_executable(Mini_CGAL_test tools/MiniCGAL_test.cpp ${MINI_CGAL_FILES})
 # set_target_properties(Mini_CGAL_test PROPERTIES COMPILE_FLAGS -frounding-math)
