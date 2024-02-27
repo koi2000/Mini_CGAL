@@ -1,9 +1,15 @@
 #include "DecompressTool.cuh"
-
+#include <thread>
 __global__ void
 readBaseMeshOnCuda(char* buffer, int* stOffsets, int num, int* vh_departureConquest, int* nbDecimations) {
     int tid = blockIdx.x * (blockDim.x * blockDim.y) + blockDim.x * threadIdx.y + threadIdx.x;
     if (tid < num) {}
+}
+
+__global__ void warmup() {
+    int tid1 = 1;
+    int tid2 = 2;
+    int tid3 = tid1 + tid2;
 }
 
 DeCompressTool::~DeCompressTool() {
@@ -89,6 +95,8 @@ void DeCompressTool::decode(int lod) {
     }
     i_decompPercentage = lod;
     b_jobCompleted = false;
+    warmup<<<16, 256>>>();
+    cudaDeviceSynchronize();
     while (!b_jobCompleted) {
         startNextDecompresssionOp();
     }
@@ -151,9 +159,15 @@ void DeCompressTool::startNextDecompresssionOp() {
     // 2. decoding the removed vertices and add to target facets
     struct timeval start = get_cur_time();
     BatchRemovedVerticesDecodingStep();
-    logt("%d RemovedVerticesDecodingStep", start, i_curDecimationId);
+    // logt("%d RemovedVerticesDecodingStep", start, i_curDecimationId);
     // 3. decoding the inserted edge and marking the ones added
     BatchInsertedEdgeDecodingStepOnCuda();
+    // std::thread thread1([&]() -> void { BatchRemovedVerticesDecodingStep(); });
+    // std::thread thread2([&]() -> void { BatchInsertedEdgeDecodingStepOnCuda(); });
+    // std::thread thread1(&DeCompressTool::BatchRemovedVerticesDecodingStep, this);
+    // std::thread thread2(&DeCompressTool::BatchInsertedEdgeDecodingStepOnCuda, this);
+    // thread1.join();
+    // thread2.join();
     logt("%d InsertedEdgeDecodingStep", start, i_curDecimationId);
     // 4. truly insert the removed vertices
     insertRemovedVerticesOnCuda();
@@ -554,14 +568,15 @@ void DeCompressTool::BatchRemovedVerticesDecodingStep() {
         if (level == threshold) {
             struct timeval compact = get_cur_time();
             // 需要一个新的临时的array，以order进行排序
-            thrust::sort(fids.begin(), fids.begin() + index, SortFacetByForder(MCGAL::contextPool.dfpool));
+            thrust::sort(fids.begin() + firstCount, fids.begin() + index, SortFacetByForder(MCGAL::contextPool.dfpool));
 
-            secondCount = thrust::count_if(thrust::device, fids.begin(), fids.begin() + index,
-                                           FilterFacetByForder(MCGAL::contextPool.dfpool));
-            thrust::device_vector<int> incId(secondCount);
+            secondCount += thrust::count_if(thrust::device, fids.begin() + firstCount, fids.begin() + index,
+                                            FilterFacetByForder(MCGAL::contextPool.dfpool));
+            thrust::device_vector<int> incId(secondCount - firstCount);
             thrust::sequence(incId.begin(), incId.end());
             thrust::for_each(thrust::device, incId.begin(), incId.end(),
-                             UpdateFacetOrderFunctor(thrust::raw_pointer_cast(fids.data()), MCGAL::contextPool.dfpool));
+                             UpdateFacetOrderFunctor(thrust::raw_pointer_cast(fids.data()) + firstCount,
+                                                     MCGAL::contextPool.dfpool, firstCount));
             firstCount = secondCount;
             int power = 1;
             int x = secondCount + 1;
@@ -583,7 +598,7 @@ void DeCompressTool::BatchRemovedVerticesDecodingStep() {
     logt("%d bfs", start, i_curDecimationId);
     // sort
     // sort(fids, fids + index, cmpForder);
-    thrust::sort(fids.begin(), fids.begin() + index, SortFacetByForder(MCGAL::contextPool.dfpool));
+    thrust::sort(fids.begin(), fids.begin() + index, SortFacetByMeshId(MCGAL::contextPool.dfpool));
     logt("%d sort", start, i_curDecimationId);
     int* hoffset = new int[index];
     memset(hoffset, 0, sizeof(int) * index);
@@ -725,15 +740,16 @@ void DeCompressTool::BatchInsertedEdgeDecodingStepOnCuda() {
         ++level;
         // 到达阈值后开始compact
         if (level == threshold) {
-            thrust::sort(hids.begin(), hids.begin() + index, SortHalfedgeByHorder(MCGAL::contextPool.dhpool));
+            thrust::sort(hids.begin() + firstCount, hids.begin() + index,
+                         SortHalfedgeByHorder(MCGAL::contextPool.dhpool));
 
-            secondCount = thrust::count_if(thrust::device, hids.begin(), hids.begin() + index,
-                                           FilterHalfedgeByMeshId(MCGAL::contextPool.dhpool));
-            thrust::device_vector<int> incId(secondCount);
+            secondCount += thrust::count_if(thrust::device, hids.begin() + firstCount, hids.begin() + index,
+                                            FilterHalfedgeByHorder(MCGAL::contextPool.dhpool));
+            thrust::device_vector<int> incId(secondCount - firstCount);
             thrust::sequence(incId.begin(), incId.end());
-            thrust::for_each(
-                thrust::device, incId.begin(), incId.end(),
-                UpdateHalfedgeOrderFunctor(thrust::raw_pointer_cast(hids.data()), MCGAL::contextPool.dhpool));
+            thrust::for_each(thrust::device, incId.begin(), incId.end(),
+                             UpdateHalfedgeOrderFunctor(thrust::raw_pointer_cast(hids.data()) + firstCount,
+                                                        MCGAL::contextPool.dhpool, firstCount));
 
             firstCount = secondCount;
             int power = 1;
@@ -749,7 +765,7 @@ void DeCompressTool::BatchInsertedEdgeDecodingStepOnCuda() {
         // currentQueueSize = nextQueueSize;
         CHECK(cudaMemcpy(d_nextQueueSize, &nextQueueSize, sizeof(int), cudaMemcpyHostToDevice));
     }
-    thrust::sort(hids.begin(), hids.begin() + index, SortHalfedgeByHorder(MCGAL::contextPool.dhpool));
+    thrust::sort(hids.begin(), hids.begin() + index, SortHalfedgeByMeshId(MCGAL::contextPool.dhpool));
 
     readHalfedgeSymbolOnCuda<<<grid, block>>>(MCGAL::contextPool.dhpool, thrust::raw_pointer_cast(hids.data()),
                                               hsizesSum, dstOffsets, dbuffer, index);
@@ -1102,7 +1118,7 @@ void DeCompressTool::insertRemovedVerticesOnCuda() {
         printf("code:%d,reason:%s\n", error, cudaGetErrorString(error));
         exit(1);
     }
-    log("index:%d,splittable:%d", index, splitable_count);
+    // log("index:%d,splittable:%d", index, splitable_count);
     dim3 block(256, 1, 1);
     dim3 grid((splitable_count + block.x - 1) / block.x, 1, 1);
     preAllocOnCuda<<<grid, block>>>(
