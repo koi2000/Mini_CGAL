@@ -7,6 +7,17 @@ __global__ void kernel() {
 }
 
 void compress(int argc, char** argv) {
+    // const char* strings[] = {
+    //     "/home/koi/mastercode/Mini_CGAL/buffers/newbuffer1", "/home/koi/mastercode/Mini_CGAL/buffers/newbuffer2",
+    //     "/home/koi/mastercode/Mini_CGAL/buffers/newbuffer3", "/home/koi/mastercode/Mini_CGAL/buffers/newbuffer4",
+    //     "/home/koi/mastercode/Mini_CGAL/buffers/newbuffer5", "/home/koi/mastercode/Mini_CGAL/buffers/newbuffer6",
+    //     "/home/koi/mastercode/Mini_CGAL/buffers/newbuffer7", "/home/koi/mastercode/Mini_CGAL/buffers/newbuffer8",
+    //     "/home/koi/mastercode/Mini_CGAL/buffers/newbuffer9", "/home/koi/mastercode/Mini_CGAL/buffers/newbuffer10",
+    //     "/home/koi/mastercode/Mini_CGAL/buffers/newbuffer11", "/home/koi/mastercode/Mini_CGAL/buffers/newbuffer12",
+    //     "/home/koi/mastercode/Mini_CGAL/buffers/newbuffer13", "/home/koi/mastercode/Mini_CGAL/buffers/newbuffer14",
+    //     "/home/koi/mastercode/Mini_CGAL/buffers/newbuffer15", "/home/koi/mastercode/Mini_CGAL/buffers/newbuffer16",
+    //     "/home/koi/mastercode/Mini_CGAL/buffers/newbuffer17", "/home/koi/mastercode/Mini_CGAL/buffers/newbuffer18",
+    //     "/home/koi/mastercode/Mini_CGAL/buffers/newbuffer19", "/home/koi/mastercode/Mini_CGAL/buffers/newbuffer20"};
     const char* strings[] = {
         "/home/koi/mastercode/Mini_CGAL/buffers/newbuffer1", "/home/koi/mastercode/Mini_CGAL/buffers/newbuffer2",
         "/home/koi/mastercode/Mini_CGAL/buffers/newbuffer3", "/home/koi/mastercode/Mini_CGAL/buffers/newbuffer4",

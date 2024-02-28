@@ -12,8 +12,7 @@ void Vertex::addHalfedge(int halfedge) {
 }
 
 __device__ void Vertex::addHalfedgeOnCuda(int halfedge) {
-    int tpIndex = halfedges_size;
-    atomicAdd(&halfedges_size, 1);
+    int tpIndex = atomicAdd(&halfedges_size, 1);
     halfedges[tpIndex] = halfedge;
 }
 

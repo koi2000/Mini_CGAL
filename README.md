@@ -15,7 +15,10 @@ Halfedge
 Mesh
 
 ## TODO:
-
+分析一下现在性能慢的主要原因
+第一个 compcat的次数太多，sort的次数太多，修改方法：通过多源点的方法提升并行度，降低bfs的level
+第二个 prealloc on cuda中atomic的次数太多，竞争比较激烈
+第三个 joinFacet 目前还没有迁移至cuda上
 
 ## Performance analysis
 the performance of MCGAL is poor. 

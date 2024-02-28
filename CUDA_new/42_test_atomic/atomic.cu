@@ -1,12 +1,17 @@
 #include "freshman.h"
 #include <cuda_runtime.h>
 #include <stdio.h>
-#define N 500000000
+#define N 90000
 int arr[N];
 __global__ void test_atomic(int* arr, int* max, int num) {
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
     if (tid < num) {
-        atomicMax(max, arr[tid]);
+        int min = 0;
+        for (int i = 0; i < arr[i]; i++) {
+            min += arr[i];
+        }
+
+        atomicAdd(max, arr[tid]);
     }
 }
 
@@ -40,7 +45,6 @@ __global__ void findMaxKernel(int* array, int* result, int size) {
 }
 
 int main() {
-    
     for (int i = 0; i < N; i++) {
         arr[i] = i;
     }
