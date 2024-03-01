@@ -11,7 +11,7 @@ HiMesh* read_mesh(char* path, bool complete_compression) {
 void compress(int argc, char** argv) {
     struct timeval start = get_cur_time();
     HiMesh* mesh = read_mesh(argv[1], true);
-    mesh->dumpBuffer("/home/koi/mastercode/Mini_CGAL/buffers/newbuffer1");
+    mesh->dumpBuffer("/home/koi/mastercode/Mini_CGAL/buffers/avoidCompetitionBuffer1");
     logt("compress", start);
     HiMesh* hm = new HiMesh(mesh);
     int lod = 100;

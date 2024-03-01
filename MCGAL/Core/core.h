@@ -1,11 +1,11 @@
 #include <assert.h>
 #include <math.h>
+#include <mutex>
 #include <set>
+#include <stdexcept>
 #include <string>
 #include <unordered_set>
 #include <vector>
-#include <mutex>
-#include <stdexcept>
 namespace MCGAL {
 
 #define VERTEX_POOL_SIZE 100 * 1024
@@ -302,6 +302,9 @@ class Halfedge {
     inline bool isOriginal() const {
         return flag2 == Original;
     }
+    inline void setOriginal() {
+        flag2 = Original;
+    }
 
     inline bool isNew() const {
         return flag2 == New;
@@ -431,7 +434,7 @@ class Facet {
     }
 
     inline void setUnsplittable() {
-        assert(flag == Unknown);
+        assert(flag == Unknown || flag == Unsplittable);
         flag = Unsplittable;
     }
 

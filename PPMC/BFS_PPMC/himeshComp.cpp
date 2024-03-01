@@ -93,6 +93,17 @@ void HiMesh::startNextCompresssionOp() {
             } while ((hh = hh->next) != h);
             h->removeFromQueue();
         } else {
+            // std::set<MCGAL::Facet*> fset;
+            // for (int i = 0; i < h->end_vertex->halfedges.size(); i++) {
+            //     // MCGAL::Halfedge* hit = h->end_vertex->halfedges[i];
+            //     // fset.insert(hit->face);
+            //     MCGAL::Halfedge* hit = h->end_vertex->halfedges[i];
+            //     MCGAL::Halfedge* ed = hit;
+            //     do {
+            //         hit->end_vertex->setConquered();
+            //         hit = hit->next;
+            //     } while (hit != ed);
+            // }
             // in that case, cornerCut that vertex.
             h->removeFromQueue();
             vertexCut(unconqueredVertexHE);
@@ -130,7 +141,6 @@ MCGAL::Halfedge* HiMesh::vertexCut(MCGAL::Halfedge* startH) {
     // make sure that the center vertex can be removed
     assert(!v->isConquered());
     assert(v->vertex_degree() > 2);
-
     MCGAL::Halfedge* h = startH->opposite;
     MCGAL::Halfedge* end(h);
     int removed = 0;
@@ -139,6 +149,16 @@ MCGAL::Halfedge* HiMesh::vertexCut(MCGAL::Halfedge* startH) {
         // assert(!h->is_border());
         MCGAL::Facet* f = h->face;
         assert(!f->isConquered() && !f->isRemoved());  // we cannot cut again an already cut face, or a NULL patch
+        for (int i = 0; i < f->vertices.size(); i++) {
+            f->vertices[i]->setConquered();
+        }
+        MCGAL::Halfedge* st = h;
+        MCGAL::Halfedge* ed = st;
+        do {
+            st->vertex->setConquered();
+            st = st->next;
+        } while (st != ed);
+
         /*
          * the old facets around the vertex will be removed in the vertex cut operation
          * and being replaced with a merged one. but the replacing group information
@@ -321,10 +341,12 @@ void HiMesh::InsertedEdgeCodingStep() {
 
         // Determine the edge symbol.
         unsigned sym;
-        if (h->isOriginal()||h->opposite->isAdded())
+        if (h->isOriginal())
             sym = 0;
-        else
+        else {
             sym = 1;
+            h->opposite->setOriginal();
+        }
 
         // Store the symbol if needed.
         // if (b_toCode)

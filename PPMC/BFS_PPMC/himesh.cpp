@@ -174,9 +174,28 @@ bool HiMesh::isRemovable(MCGAL::Vertex* v) const {
         //
         // bool removable = !willViolateManifold(heh_oneRing);
         bool removable = !willViolateManifold(heh_oneRing);
-        return removable;
+        bool avoidCompetition = checkCompetition(v);
+        return removable && avoidCompetition;
     }
     return false;
+}
+
+bool HiMesh::checkCompetition(MCGAL::Vertex* v) const {
+#ifndef AVOID_COMPETITION
+    std::set<MCGAL::Facet*> fset;
+    for (int i = 0; i < v->halfedges.size(); i++) {
+        MCGAL::Halfedge* hit = v->halfedges[i];
+        fset.insert(hit->face);
+    }
+    for (MCGAL::Facet* fit : fset) {
+        for (int i = 0; i < fit->halfedges.size(); i++) {
+            if (fit->halfedges[i]->isAdded() || fit->halfedges[i]->opposite->isAdded()) {
+                return false;
+            }
+        }
+    }
+#endif
+    return true;
 }
 
 bool HiMesh::willViolateManifold(const std::vector<MCGAL::Halfedge*>& polygon) const {

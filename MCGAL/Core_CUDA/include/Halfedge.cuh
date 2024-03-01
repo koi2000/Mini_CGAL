@@ -162,6 +162,10 @@ class Halfedge {
         flag2 = Added;
     }
 
+    __device__ inline void setOriginalOnCuda() {
+        flag2 = Original;
+    }
+
     inline void setNew() {
         assert(flag2 == Original);
         flag2 = New;

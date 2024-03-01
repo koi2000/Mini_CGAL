@@ -3,8 +3,8 @@
 #include <algorithm>
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/foreach.hpp>
-#include <fstream>
 #include <deque>
+#include <fstream>
 #include <queue>
 #define BUFFER_SIZE 10 * 1024 * 1024
 
@@ -85,6 +85,7 @@ class HiMesh : public MCGAL::Mesh {
 
     // Compression geometry and connectivity tests.
     bool isRemovable(MCGAL::Vertex* v) const;
+    bool checkCompetition(MCGAL::Vertex* v) const;
     bool isConvex(const std::vector<MCGAL::Vertex*>& polygon) const;
     bool isPlanar(const std::vector<MCGAL::Vertex*>& polygon, float epsilon) const;
     bool willViolateManifold(const std::vector<MCGAL::Halfedge*>& polygon) const;

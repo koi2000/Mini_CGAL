@@ -49,7 +49,7 @@ class DeCompressTool {
     bool own_data = true;
     bool is_base = true;
     int batch_size = 0;
-    int i_decompPercentage;
+    int i_decompPercentage = 0;
     bool b_jobCompleted;
     // cuda
     char* dbuffer;
@@ -97,7 +97,7 @@ class DeCompressTool {
     __device__ void pushHehInitOnCuda();
     __device__ void RemovedVerticesDecodingStepOnCuda(char* buffer, int* stOffsets, int num);
     __device__ void InsertedEdgeDecodingStepOnCuda(char* buffer, int* stOffsets, int num);
-    __device__ void removeInsertedEdgesOnCuda();
+    void removeInsertedEdgesOnCuda();
 
     // IOs
     void dumpto(std::string prefix);

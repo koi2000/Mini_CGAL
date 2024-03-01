@@ -174,10 +174,11 @@ void DeCompressTool::startNextDecompresssionOp() {
     // insertRemovedVertices();
     logt("%d insertRemovedVertices", start, i_curDecimationId);
     // 5. truly remove the added edges
-#pragma omp parallel for num_threads(batch_size)
-    for (int i = 0; i < batch_size; i++) {
-        removeInsertedEdges(i);
-    }
+    // #pragma omp parallel for num_threads(batch_size)
+    //     for (int i = 0; i < batch_size; i++) {
+    //         removeInsertedEdges(i);
+    //     }
+    removeInsertedEdgesOnCuda();
     logt("%d removeInsertedEdges", start, i_curDecimationId);
 }
 
@@ -423,6 +424,8 @@ readHalfedgeSymbolOnCuda(MCGAL::Halfedge* hpool, int* hids, int* hsizesSum, int*
         char symbol = readCharOnCuda(buffer, offset);
         if (symbol) {
             halfedge->setAddedOnCuda();
+        } else {
+            halfedge->setOriginalOnCuda();
         }
     }
 }
@@ -1109,6 +1112,7 @@ __global__ void preAllocInit(MCGAL::Vertex* vpool,
         int stHindex = stHalfedgeIndexes[tid];
         for (int j = 0; j < hcount; j++) {
             hpool[stHindex + j].setMeshIdOnCuda(fit->meshId);
+            hpool[stHindex + j].resetStateOnCuda();
         }
         MCGAL::Vertex* vnew = &vpool[vertexIndexes[tid]];
         vnew->setMeshIdOnCuda(fit->meshId);
@@ -1494,7 +1498,7 @@ __device__ MCGAL::Halfedge* find_prevOncuda(MCGAL::Halfedge* hpool, MCGAL::Halfe
     int idx = 0;
     while (g->dnext(hpool) != h) {
         if (idx >= 120) {
-            printf("error\n");
+            // printf("error\n");
             break;
         }
         idx++;
@@ -1512,7 +1516,6 @@ inline __device__ void remove_tipOnCuda(MCGAL::Halfedge* hpool, MCGAL::Halfedge*
 __device__ void joinFacetDevice(MCGAL::Vertex* vpool, MCGAL::Halfedge* hpool, MCGAL::Facet* fpool, MCGAL::Halfedge* h) {
     MCGAL::Halfedge* hprev = find_prevOncuda(hpool, h);
     MCGAL::Halfedge* gprev = find_prevOncuda(hpool, h->dopposite(hpool));
-    atomicAdd(&h->count, 1);
     // atomicAdd(&hprev->count, 1);
     remove_tipOnCuda(hpool, hprev);
     remove_tipOnCuda(hpool, gprev);
@@ -1520,24 +1523,24 @@ __device__ void joinFacetDevice(MCGAL::Vertex* vpool, MCGAL::Halfedge* hpool, MC
     hprev->dfacet(fpool)->resetOnCuda(vpool, hpool, hprev);
 }
 
-__global__ void joinFacetOnCuda(MCGAL::Vertex* vpool,
-                                MCGAL::Halfedge* hpool,
-                                MCGAL::Facet* fpool,
-                                int* edgeIndexes,
-                                int* stIndexes,
-                                int* thNumberes,
-                                int num,
-                                double clockRate) {
-    int tid = blockIdx.x * (blockDim.x * blockDim.y) + blockDim.x * threadIdx.y + threadIdx.x;
-    if (tid < num) {
-        int stIndex = stIndexes[tid];
-        int thNumber = thNumberes[tid];
-        for (int i = 0; i < thNumber; i++) {
-            MCGAL::Halfedge* h = &hpool[edgeIndexes[stIndex + i]];
-            joinFacetDevice(vpool, hpool, fpool, h);
-        }
-    }
-}
+// __global__ void joinFacetOnCuda(MCGAL::Vertex* vpool,
+//                                 MCGAL::Halfedge* hpool,
+//                                 MCGAL::Facet* fpool,
+//                                 int* edgeIndexes,
+//                                 int* stIndexes,
+//                                 int* thNumberes,
+//                                 int num,
+//                                 double clockRate) {
+//     int tid = blockIdx.x * (blockDim.x * blockDim.y) + blockDim.x * threadIdx.y + threadIdx.x;
+//     if (tid < num) {
+//         int stIndex = stIndexes[tid];
+//         int thNumber = thNumberes[tid];
+//         for (int i = 0; i < thNumber; i++) {
+//             MCGAL::Halfedge* h = &hpool[edgeIndexes[stIndex + i]];
+//             joinFacetDevice(vpool, hpool, fpool, h);
+//         }
+//     }
+// }
 
 MCGAL::Halfedge* DeCompressTool::find_prev(MCGAL::Halfedge* h) const {
     MCGAL::Halfedge* g = h;
@@ -1550,38 +1553,67 @@ inline void DeCompressTool::remove_tip(MCGAL::Halfedge* h) const {
     h->next_ = h->next()->opposite()->next_;
 }
 
-__global__ void initParent(MCGAL::Halfedge* hpool, MCGAL::Facet* fpool, int* hids, int num) {
+__global__ void joinFacetOnCuda(MCGAL::Vertex* vpool,
+                                MCGAL::Halfedge* hpool,
+                                MCGAL::Facet* fpool,
+                                int* edgeIndexes,
+                                int num,
+                                int i_curId) {
     int tid = blockIdx.x * (blockDim.x * blockDim.y) + blockDim.x * threadIdx.y + threadIdx.x;
     if (tid < num) {
-        MCGAL::Halfedge* halfedge = &hpool[tid];
-        halfedge->parent = min(halfedge->poolId, halfedge->opposite_);
-    }
-}
-// 尝试两边同时find
-
-__global__ void mergeParent(MCGAL::Halfedge* hpool, MCGAL::Facet* fpool, int* hids, int num) {
-    int tid = blockIdx.x * (blockDim.x * blockDim.y) + blockDim.x * threadIdx.y + threadIdx.x;
-    if (tid < num) {
-        MCGAL::Halfedge* halfedge = &hpool[tid];
-        if (halfedge->parent != halfedge->poolId) {
-            MCGAL::Halfedge* tp = halfedge;
-            while (true) {
-                MCGAL::Halfedge* parent = &hpool[tp->parent];
-                tp->parent = parent->parent;
-                if (parent->poolId == parent->parent) {
-                    break;
-                }
+        MCGAL::Halfedge* h = &hpool[edgeIndexes[tid]];
+        MCGAL::Facet* fit1 = h->dfacet(fpool);
+        MCGAL::Facet* fit2 = h->dopposite(hpool)->dfacet(fpool);
+        if (i_curId == 1) {
+            printf("%d ", h->poolId);
+        }
+        int num1 = 0;
+        int num2 = 0;
+        for (int i = 0; i < fit1->halfedge_size; i++) {
+            if (hpool[fit1->halfedges[i]].isAddedOnCuda() && fit1->halfedges[i] != h->poolId) {
+                printf("%d %d 1 is %d,2 is %d\n", tid, i_curId, fit1->halfedges[i], h->poolId);
+                num1++;
             }
         }
+        for (int i = 0; i < fit2->halfedge_size; i++) {
+            if (hpool[fit2->halfedges[i]].isAddedOnCuda()) {
+                num2++;
+            }
+        }
+        if (num1 > 0 || num2 > 0) {
+            printf("num1 %d,num2 %d?\n", num1, num2);
+        }
+        joinFacetDevice(vpool, hpool, fpool, h);
     }
 }
 
-// 每个人都先找一下自己的parent
-
+void DeCompressTool::removeInsertedEdgesOnCuda() {
+    int size = *MCGAL::contextPool.hindex;
+    thrust::device_vector<int> origin_hids(size);
+    thrust::device_vector<int> hids(size);
+    thrust::transform(MCGAL::contextPool.dhpool, MCGAL::contextPool.dhpool + size, origin_hids.begin(),
+                      ExtractHalfedgePoolId());
+    // 仅拷贝meshId不为1的部分
+    thrust::copy_if(origin_hids.begin(), origin_hids.end(), hids.begin(),
+                    FilterHalfedgeByAdded(MCGAL::contextPool.dhpool));
+    // 获取紧凑后的数组大小
+    int index = thrust::count_if(thrust::device, origin_hids.begin(), origin_hids.end(),
+                                 FilterHalfedgeByAdded(MCGAL::contextPool.dhpool));
+    log("index is %d", index);
+    dim3 block(256, 1, 1);
+    dim3 grid((index + block.x - 1) / block.x, 1, 1);
+    joinFacetOnCuda<<<grid, block>>>(MCGAL::contextPool.dvpool, MCGAL::contextPool.dhpool, MCGAL::contextPool.dfpool,
+                                     thrust::raw_pointer_cast(hids.data()), index, i_curDecimationId);
+    cudaDeviceSynchronize();
+    cudaError_t error = cudaGetLastError();
+    if (error != cudaSuccess) {
+        printf("ERROR: %s:%d,", __FILE__, __LINE__);
+        printf("code:%d,reason:%s\n", error, cudaGetErrorString(error));
+        exit(1);
+    }
+}
 /**
  * Remove all the marked edges on cuda
- */
-/**
  * 分为两步进行，第一步先标记，第二步合并
  */
 // void DeCompressTool::removeInsertedEdgesOnCuda() {
@@ -1610,11 +1642,9 @@ __global__ void mergeParent(MCGAL::Halfedge* hpool, MCGAL::Facet* fpool, int* hi
 //     // 在排序后的数组上应用unique操作，得到不重复的元素
 //     thrust::device_vector<int> stHalfedge = hids;
 //     auto new_end = thrust::unique(stHalfedge.begin(), stHalfedge.end());
-
 //     // 调整新数组的大小，以便只包含不重复的元素
 //     stHalfedge.resize(thrust::distance(stHalfedge.begin(), new_end));
 //     int num = stHalfedge.size();
-
 //     cudaDeviceProp prop;
 //     cudaGetDeviceProperties(&prop, 0);
 //     double clockRate = prop.clockRate;
