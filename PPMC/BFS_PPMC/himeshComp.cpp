@@ -19,6 +19,27 @@ void HiMesh::startNextCompresssionOp() {
     //         it++;
     //     }
     // }
+    for (int i = 0; i < faces.size(); i++) {
+        MCGAL::Facet* fit = faces[i];
+        if (fit->isRemoved()) {
+            continue;
+        }
+        int index = 0;
+        for (int j = 0; j < fit->halfedges.size(); j++) {
+            if (fit->halfedges[j]->isAdded()) {
+                index++;
+                MCGAL::Facet* ofit = fit->halfedges[j]->opposite->face;
+                for (int k = 0; k < ofit->halfedges.size(); k++) {
+                    if (ofit->halfedges[k]->isAdded()) {
+                        printf("error");
+                    }
+                }
+            }
+            if(fit->halfedges[j]->isAdded()&&fit->halfedges[j]->opposite->isAdded()){
+                printf("error2");
+            }
+        }
+    }
     // 1. reset the stats
     for (MCGAL::Vertex* vit : vertices)
         vit->resetState();
@@ -33,6 +54,7 @@ void HiMesh::startNextCompresssionOp() {
             fit++;
         }
     }
+
     i_nbRemovedVertices = 0;  // Reset the number of removed vertices.
     // 2. do one round of decimation
     // choose a halfedge that can be processed:
@@ -93,17 +115,6 @@ void HiMesh::startNextCompresssionOp() {
             } while ((hh = hh->next) != h);
             h->removeFromQueue();
         } else {
-            // std::set<MCGAL::Facet*> fset;
-            // for (int i = 0; i < h->end_vertex->halfedges.size(); i++) {
-            //     // MCGAL::Halfedge* hit = h->end_vertex->halfedges[i];
-            //     // fset.insert(hit->face);
-            //     MCGAL::Halfedge* hit = h->end_vertex->halfedges[i];
-            //     MCGAL::Halfedge* ed = hit;
-            //     do {
-            //         hit->end_vertex->setConquered();
-            //         hit = hit->next;
-            //     } while (hit != ed);
-            // }
             // in that case, cornerCut that vertex.
             h->removeFromQueue();
             vertexCut(unconqueredVertexHE);
@@ -149,15 +160,6 @@ MCGAL::Halfedge* HiMesh::vertexCut(MCGAL::Halfedge* startH) {
         // assert(!h->is_border());
         MCGAL::Facet* f = h->face;
         assert(!f->isConquered() && !f->isRemoved());  // we cannot cut again an already cut face, or a NULL patch
-        for (int i = 0; i < f->vertices.size(); i++) {
-            f->vertices[i]->setConquered();
-        }
-        MCGAL::Halfedge* st = h;
-        MCGAL::Halfedge* ed = st;
-        do {
-            st->vertex->setConquered();
-            st = st->next;
-        } while (st != ed);
 
         /*
          * the old facets around the vertex will be removed in the vertex cut operation
@@ -175,7 +177,7 @@ MCGAL::Halfedge* HiMesh::vertexCut(MCGAL::Halfedge* startH) {
             MCGAL::Halfedge* hCorner = split_facet(h, hSplit);
             // mark the new halfedges as added
             hCorner->setAdded();
-            hCorner->opposite->setAdded();
+            // hCorner->opposite->setAdded();
             // the corner one inherit the original facet
             // while the fRest is a newly generated facet
         }
@@ -341,9 +343,9 @@ void HiMesh::InsertedEdgeCodingStep() {
 
         // Determine the edge symbol.
         unsigned sym;
-        if (h->isOriginal())
+        if (h->isOriginal()) {
             sym = 0;
-        else {
+        } else {
             sym = 1;
             h->opposite->setOriginal();
         }

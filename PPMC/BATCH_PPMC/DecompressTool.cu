@@ -180,6 +180,15 @@ void DeCompressTool::startNextDecompresssionOp() {
     //     }
     removeInsertedEdgesOnCuda();
     logt("%d removeInsertedEdges", start, i_curDecimationId);
+    vsize = *MCGAL::contextPool.vindex;
+    hsize = *MCGAL::contextPool.hindex;
+    fsize = *MCGAL::contextPool.findex;
+    CHECK(cudaMemcpy(MCGAL::contextPool.vpool, MCGAL::contextPool.dvpool, vsize * sizeof(MCGAL::Vertex),
+                     cudaMemcpyDeviceToHost));
+    CHECK(cudaMemcpy(MCGAL::contextPool.hpool, MCGAL::contextPool.dhpool, hsize * sizeof(MCGAL::Halfedge),
+                     cudaMemcpyDeviceToHost));
+    CHECK(cudaMemcpy(MCGAL::contextPool.fpool, MCGAL::contextPool.dfpool, fsize * sizeof(MCGAL::Facet),
+                     cudaMemcpyDeviceToHost));
 }
 
 MCGAL::Halfedge* DeCompressTool::pushHehInit(int meshId) {
@@ -1369,15 +1378,15 @@ void DeCompressTool::insertRemovedVerticesOnCuda() {
         printf("code:%d,reason:%s\n", error, cudaGetErrorString(error));
         exit(1);
     }
-    int vsize = *MCGAL::contextPool.vindex;
-    int hsize = *MCGAL::contextPool.hindex;
-    int fsize = *MCGAL::contextPool.findex;
-    CHECK(cudaMemcpy(MCGAL::contextPool.vpool, MCGAL::contextPool.dvpool, vsize * sizeof(MCGAL::Vertex),
-                     cudaMemcpyDeviceToHost));
-    CHECK(cudaMemcpy(MCGAL::contextPool.hpool, MCGAL::contextPool.dhpool, hsize * sizeof(MCGAL::Halfedge),
-                     cudaMemcpyDeviceToHost));
-    CHECK(cudaMemcpy(MCGAL::contextPool.fpool, MCGAL::contextPool.dfpool, fsize * sizeof(MCGAL::Facet),
-                     cudaMemcpyDeviceToHost));
+    // int vsize = *MCGAL::contextPool.vindex;
+    // int hsize = *MCGAL::contextPool.hindex;
+    // int fsize = *MCGAL::contextPool.findex;
+    // CHECK(cudaMemcpy(MCGAL::contextPool.vpool, MCGAL::contextPool.dvpool, vsize * sizeof(MCGAL::Vertex),
+    //                  cudaMemcpyDeviceToHost));
+    // CHECK(cudaMemcpy(MCGAL::contextPool.hpool, MCGAL::contextPool.dhpool, hsize * sizeof(MCGAL::Halfedge),
+    //                  cudaMemcpyDeviceToHost));
+    // CHECK(cudaMemcpy(MCGAL::contextPool.fpool, MCGAL::contextPool.dfpool, fsize * sizeof(MCGAL::Facet),
+    //                  cudaMemcpyDeviceToHost));
 }
 
 // 多线程预处理
@@ -1519,7 +1528,13 @@ __device__ void joinFacetDevice(MCGAL::Vertex* vpool, MCGAL::Halfedge* hpool, MC
     // atomicAdd(&hprev->count, 1);
     remove_tipOnCuda(hpool, hprev);
     remove_tipOnCuda(hpool, gprev);
+    h->setRemoved();
+    h->dopposite(hpool)->setRemoved();
+
+    h->dopposite(hpool)->setMeshIdOnCuda(-1);
+    h->setMeshIdOnCuda(-1);
     gprev->dfacet(fpool)->setRemovedOnCuda();
+    gprev->dfacet(fpool)->setMeshIdOnCuda(-1);
     hprev->dfacet(fpool)->resetOnCuda(vpool, hpool, hprev);
 }
 
@@ -1553,65 +1568,92 @@ inline void DeCompressTool::remove_tip(MCGAL::Halfedge* h) const {
     h->next_ = h->next()->opposite()->next_;
 }
 
-__global__ void joinFacetOnCuda(MCGAL::Vertex* vpool,
-                                MCGAL::Halfedge* hpool,
-                                MCGAL::Facet* fpool,
-                                int* edgeIndexes,
-                                int num,
-                                int i_curId) {
+__global__ void
+joinFacetOnCuda(MCGAL::Vertex* vpool, MCGAL::Halfedge* hpool, MCGAL::Facet* fpool, int* fids, int num, int i_curId) {
     int tid = blockIdx.x * (blockDim.x * blockDim.y) + blockDim.x * threadIdx.y + threadIdx.x;
     if (tid < num) {
-        MCGAL::Halfedge* h = &hpool[edgeIndexes[tid]];
-        MCGAL::Facet* fit1 = h->dfacet(fpool);
-        MCGAL::Facet* fit2 = h->dopposite(hpool)->dfacet(fpool);
-        if (i_curId == 1) {
-            printf("%d ", h->poolId);
-        }
-        int num1 = 0;
-        int num2 = 0;
-        for (int i = 0; i < fit1->halfedge_size; i++) {
-            if (hpool[fit1->halfedges[i]].isAddedOnCuda() && fit1->halfedges[i] != h->poolId) {
-                printf("%d %d 1 is %d,2 is %d\n", tid, i_curId, fit1->halfedges[i], h->poolId);
-                num1++;
+        MCGAL::Facet* facet = &fpool[fids[tid]];
+
+        for (int i = 0; i < facet->halfedge_size; i++) {
+            if (hpool[facet->halfedges[i]].isAddedOnCuda()) {
+                // printf("%d %d\n", i_curId, facet->halfedges[i]);
+                MCGAL::Halfedge* halfedge = &hpool[facet->halfedges[i]];
+                joinFacetDevice(vpool, hpool, fpool, halfedge);
+            }
+            if (hpool[facet->halfedges[i]].dopposite(hpool)->isAddedOnCuda()) {
+                // printf("%d error", i_curId);
             }
         }
-        for (int i = 0; i < fit2->halfedge_size; i++) {
-            if (hpool[fit2->halfedges[i]].isAddedOnCuda()) {
-                num2++;
+    }
+}
+
+__global__ void checkCompetition(MCGAL::Halfedge* hpool, MCGAL::Facet* fpool, int* edgeIndexes, int num, int i_curId) {
+    int tid = blockIdx.x * (blockDim.x * blockDim.y) + blockDim.x * threadIdx.y + threadIdx.x;
+    if (tid < num) {
+        MCGAL::Halfedge* hit = &hpool[edgeIndexes[tid]];
+        MCGAL::Facet* facet = &fpool[hit->facet_];
+        if (!hit->isAddedOnCuda()) {
+            printf("error3");
+        }
+
+        if (hit->dopposite(hpool)->isAddedOnCuda() && hit->isAddedOnCuda()) {
+            printf("%d error4 ", i_curId);
+        }
+        for (int i = 0; i < facet->halfedge_size; i++) {
+            // if (hpool[facet->halfedges[i]].isAddedOnCuda()) {
+            //     printf("%d %d\n", i_curId, facet->halfedges[i]);
+            // }
+            if (hpool[facet->halfedges[i]].dopposite(hpool)->isAddedOnCuda()) {
+                if (hpool[facet->halfedges[i]].isAddedOnCuda()) {
+                    printf("%d error1 ", i_curId);
+                }
+                printf("%d error2\n", i_curId);
             }
         }
-        if (num1 > 0 || num2 > 0) {
-            printf("num1 %d,num2 %d?\n", num1, num2);
-        }
-        joinFacetDevice(vpool, hpool, fpool, h);
     }
 }
 
 void DeCompressTool::removeInsertedEdgesOnCuda() {
-    int size = *MCGAL::contextPool.hindex;
-    thrust::device_vector<int> origin_hids(size);
-    thrust::device_vector<int> hids(size);
-    thrust::transform(MCGAL::contextPool.dhpool, MCGAL::contextPool.dhpool + size, origin_hids.begin(),
-                      ExtractHalfedgePoolId());
-    // 仅拷贝meshId不为1的部分
-    thrust::copy_if(origin_hids.begin(), origin_hids.end(), hids.begin(),
-                    FilterHalfedgeByAdded(MCGAL::contextPool.dhpool));
-    // 获取紧凑后的数组大小
-    int index = thrust::count_if(thrust::device, origin_hids.begin(), origin_hids.end(),
-                                 FilterHalfedgeByAdded(MCGAL::contextPool.dhpool));
-    log("index is %d", index);
-    dim3 block(256, 1, 1);
-    dim3 grid((index + block.x - 1) / block.x, 1, 1);
-    joinFacetOnCuda<<<grid, block>>>(MCGAL::contextPool.dvpool, MCGAL::contextPool.dhpool, MCGAL::contextPool.dfpool,
-                                     thrust::raw_pointer_cast(hids.data()), index, i_curDecimationId);
-    cudaDeviceSynchronize();
     cudaError_t error = cudaGetLastError();
     if (error != cudaSuccess) {
         printf("ERROR: %s:%d,", __FILE__, __LINE__);
         printf("code:%d,reason:%s\n", error, cudaGetErrorString(error));
         exit(1);
     }
+    int size = *MCGAL::contextPool.hindex;
+    thrust::device_vector<int> origin_hids(size);
+    thrust::device_vector<int> hids(size);
+    thrust::transform(MCGAL::contextPool.dhpool, MCGAL::contextPool.dhpool + size, origin_hids.begin(),
+                      ExtractHalfedgePoolId());
+    // 仅拷贝meshId不为1的部分
+    // 获取到added的数量，转为对应的facet，然后对facet进行去重，转换
+    auto copyEnd = thrust::copy_if(origin_hids.begin(), origin_hids.end(), hids.begin(),
+                                   FilterHalfedgeByAdded(MCGAL::contextPool.dhpool));
+    int copyNum = copyEnd - hids.begin();
+    dim3 block1(256, 1, 1);
+    dim3 grid1((copyNum + block1.x - 1) / block1.x, 1, 1);
+    checkCompetition<<<grid1, block1>>>(MCGAL::contextPool.dhpool, MCGAL::contextPool.dfpool,
+                                        thrust::raw_pointer_cast(hids.data()), copyNum, i_curDecimationId);
+    cudaDeviceSynchronize();
+
+    thrust::transform(hids.begin(), hids.begin() + copyNum, hids.begin(),
+                      ConvertHalfedgeToFacet(MCGAL::contextPool.dhpool));
+
+    auto unique_end = thrust::unique(hids.begin(), hids.begin() + copyNum);
+    int uniqueNum = unique_end - hids.begin();
+    dim3 block(256, 1, 1);
+    dim3 grid((uniqueNum + block.x - 1) / block.x, 1, 1);
+    joinFacetOnCuda<<<grid, block>>>(MCGAL::contextPool.dvpool, MCGAL::contextPool.dhpool, MCGAL::contextPool.dfpool,
+                                     thrust::raw_pointer_cast(hids.data()), uniqueNum, i_curDecimationId);
+    cudaDeviceSynchronize();
+    error = cudaGetLastError();
+    if (error != cudaSuccess) {
+        printf("ERROR: %s:%d,", __FILE__, __LINE__);
+        printf("code:%d,reason:%s\n", error, cudaGetErrorString(error));
+        exit(1);
+    }
 }
+
 /**
  * Remove all the marked edges on cuda
  * 分为两步进行，第一步先标记，第二步合并

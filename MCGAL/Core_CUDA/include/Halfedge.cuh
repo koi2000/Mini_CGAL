@@ -188,7 +188,7 @@ class Halfedge {
     }
 
     /* Flag 3*/
-    inline void setRemoved() {
+    __host__ __device__ inline void setRemoved() {
         removedFlag = Removed;
     }
 

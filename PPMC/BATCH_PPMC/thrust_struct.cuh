@@ -35,6 +35,15 @@ struct ExtractHalfedgePoolId {
     }
 };
 
+struct ConvertHalfedgeToFacet {
+    MCGAL::Halfedge* hpool;
+
+    ConvertHalfedgeToFacet(MCGAL::Halfedge* _hpool) : hpool(_hpool) {}
+    __host__ __device__ int operator()(int& hid) const {
+        return hpool[hid].facet_;
+    }
+};
+
 struct FilterHalfedgeByMeshId {
     MCGAL::Halfedge* hpool;
 

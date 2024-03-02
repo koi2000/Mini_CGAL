@@ -24,14 +24,14 @@ void compress(int argc, char** argv) {
     //     "/home/koi/mastercode/Mini_CGAL/buffers/newbuffer5", "/home/koi/mastercode/Mini_CGAL/buffers/newbuffer6",
     //     "/home/koi/mastercode/Mini_CGAL/buffers/newbuffer7", "/home/koi/mastercode/Mini_CGAL/buffers/newbuffer8",
     //     "/home/koi/mastercode/Mini_CGAL/buffers/newbuffer9", "/home/koi/mastercode/Mini_CGAL/buffers/newbuffer10"};
-    // const char* strings[] = {
-    //     "/home/koi/mastercode/Mini_CGAL/buffers/avoidCompetitionBuffer1", "/home/koi/mastercode/Mini_CGAL/buffers/avoidCompetitionBuffer2",
-    //     "/home/koi/mastercode/Mini_CGAL/buffers/avoidCompetitionBuffer3", "/home/koi/mastercode/Mini_CGAL/buffers/avoidCompetitionBuffer4",
-    //     "/home/koi/mastercode/Mini_CGAL/buffers/avoidCompetitionBuffer5", "/home/koi/mastercode/Mini_CGAL/buffers/avoidCompetitionBuffer6",
-    //     "/home/koi/mastercode/Mini_CGAL/buffers/avoidCompetitionBuffer7", "/home/koi/mastercode/Mini_CGAL/buffers/avoidCompetitionBuffer8",
-    //     "/home/koi/mastercode/Mini_CGAL/buffers/avoidCompetitionBuffer9", "/home/koi/mastercode/Mini_CGAL/buffers/avoidCompetitionBuffer10"};
     const char* strings[] = {
-        "/home/koi/mastercode/Mini_CGAL/buffers/avoidCompetitionBuffer1"};
+        "/home/koi/mastercode/Mini_CGAL/buffers/avoidCompetitionBuffer1", "/home/koi/mastercode/Mini_CGAL/buffers/avoidCompetitionBuffer2",
+        "/home/koi/mastercode/Mini_CGAL/buffers/avoidCompetitionBuffer3", "/home/koi/mastercode/Mini_CGAL/buffers/avoidCompetitionBuffer4",
+        "/home/koi/mastercode/Mini_CGAL/buffers/avoidCompetitionBuffer5", "/home/koi/mastercode/Mini_CGAL/buffers/avoidCompetitionBuffer6",
+        "/home/koi/mastercode/Mini_CGAL/buffers/avoidCompetitionBuffer7", "/home/koi/mastercode/Mini_CGAL/buffers/avoidCompetitionBuffer8",
+        "/home/koi/mastercode/Mini_CGAL/buffers/avoidCompetitionBuffer9", "/home/koi/mastercode/Mini_CGAL/buffers/avoidCompetitionBuffer10"};
+    // const char* strings[] = {
+    //     "/home/koi/mastercode/Mini_CGAL/buffers/avoidCompetitionBuffer11"};
     // const char* strings[] = {
     //     "/home/koi/mastercode/Mini_CGAL/buffers/newbuffer1", "/home/koi/mastercode/Mini_CGAL/buffers/newbuffer2",
     //     "/home/koi/mastercode/Mini_CGAL/buffers/newbuffer3"};
@@ -43,11 +43,11 @@ void compress(int argc, char** argv) {
         paths[i] = new char[strlen(strings[i]) + 1];
         strcpy(paths[i], strings[i]);
     }
-    DeCompressTool* deCompressTool = new DeCompressTool(paths, 1, true);
+    DeCompressTool* deCompressTool = new DeCompressTool(paths, 10, true);
     int lod = 100;
     char path[256];
     sprintf(path, "%s", "./gisdata/compressed_0_mesh_%d_mesh.off");
-    deCompressTool->dumpto(path);
+    // deCompressTool->dumpto(path);
     struct timeval start = get_cur_time();
     for (uint i = 10; i <= lod; i += 10) {
         deCompressTool->decode(i);
@@ -55,7 +55,7 @@ void compress(int argc, char** argv) {
         sprintf(path, "./gisdata/compressed_%d%s", i, "_mesh_%d_mesh.off");
         // std::cout << path << std::endl;
         // printf("%s", path);
-        deCompressTool->dumpto(path);
+        // deCompressTool->dumpto(path);
     }
     delete deCompressTool;
 }
