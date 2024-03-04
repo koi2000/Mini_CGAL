@@ -31,8 +31,6 @@ class Facet {
     int halfedge_size = 0;
     int fid = -1;
     int poolId;
-    int lock = 1;
-    int count = 0;
     int meshId = -1;
     int indexInQueue = -1;
     unsigned long long forder = ~(unsigned long long)0;

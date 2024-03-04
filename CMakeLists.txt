@@ -12,7 +12,7 @@ set(CMAKE_CUDA_COMPILER "/usr/local/cuda-12/bin/nvcc")
 # set(CMAKE_CUDA_COMPILER "/usr/local/cuda-12/bin/nvcc")
 project(Mini_CGAL LANGUAGES  CXX C CUDA)
 
-set(CMAKE_CUDA_FLAGS "-arch=compute_89 -code=sm_89 -rdc=true -g -G -O3")
+set(CMAKE_CUDA_FLAGS "-arch=compute_89 -code=sm_89 -rdc=true -g -G -O3 -fopenmp")
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xcompiler -std=c++14")
 # set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xcompiler")
 

@@ -78,7 +78,7 @@ DeCompressTool::DeCompressTool(char** path, int number, bool is_base) {
         insertedCounts.resize(number);
         dim3 block(256, 1, 1);
         dim3 grid((number + block.x - 1) / block.x, 1, 1);
-#pragma omp parallel for
+// #pragma omp parallel for
         for (int i = 0; i < number; i++) {
             readBaseMesh(i, &stOffsets[i]);
             // if (stOffsets[i] % 4 != 0) {
@@ -802,123 +802,123 @@ void DeCompressTool::BatchInsertedEdgeDecodingStepOnCuda() {
     //                  cudaMemcpyDeviceToHost));
 }
 
-void DeCompressTool::BatchInsertedEdgeDecodingStep() {
-    int size = *MCGAL::contextPool.hindex;
-    int* firstQueue = new int[size];
-    int* secondQueue = new int[size];
-    int currentQueueSize = batch_size;
-    int nextQueueSize = 0;
-    int level = 0;
-    int threshold = 64 / 4 - 1;
-    int firstCount = 0;
-    int secondCount = 0;
-    int* hids = new int[size];
-    // 将信息拷贝过来
-    int index = 0;
-    int* hsizes = new int[batch_size];
-    int* hsizesSum = new int[batch_size + 1];
-    memset(hsizes, 0, batch_size * sizeof(int));
-    memset(hsizesSum, 0, (batch_size + 1) * sizeof(int));
-    for (int i = 0; i < size; i++) {
-        MCGAL::Halfedge* halfedge = &MCGAL::contextPool.hpool[i];
-        if (halfedge->meshId != -1) {
-            hids[index++] = i;
-            hsizes[halfedge->facet()->meshId]++;
-        }
-    }
-    for (int i = 1; i < batch_size; i++) {
-        hsizesSum[i] = hsizesSum[i - 1] + hsizes[i];
-    }
-    hsizesSum[batch_size] = index;
+// void DeCompressTool::BatchInsertedEdgeDecodingStep() {
+//     int size = *MCGAL::contextPool.hindex;
+//     int* firstQueue = new int[size];
+//     int* secondQueue = new int[size];
+//     int currentQueueSize = batch_size;
+//     int nextQueueSize = 0;
+//     int level = 0;
+//     int threshold = 64 / 4 - 1;
+//     int firstCount = 0;
+//     int secondCount = 0;
+//     int* hids = new int[size];
+//     // 将信息拷贝过来
+//     int index = 0;
+//     int* hsizes = new int[batch_size];
+//     int* hsizesSum = new int[batch_size + 1];
+//     memset(hsizes, 0, batch_size * sizeof(int));
+//     memset(hsizesSum, 0, (batch_size + 1) * sizeof(int));
+//     for (int i = 0; i < size; i++) {
+//         MCGAL::Halfedge* halfedge = &MCGAL::contextPool.hpool[i];
+//         if (halfedge->meshId != -1) {
+//             hids[index++] = i;
+//             hsizes[halfedge->facet()->meshId]++;
+//         }
+//     }
+//     for (int i = 1; i < batch_size; i++) {
+//         hsizesSum[i] = hsizesSum[i - 1] + hsizes[i];
+//     }
+//     hsizesSum[batch_size] = index;
 
-    for (int i = 0; i < batch_size; i++) {
-        MCGAL::Halfedge* hit = pushHehInit(i);
-        hit->horder = 0;
-        firstQueue[i] = hit->poolId;
-    }
+//     for (int i = 0; i < batch_size; i++) {
+//         MCGAL::Halfedge* hit = pushHehInit(i);
+//         hit->horder = 0;
+//         firstQueue[i] = hit->poolId;
+//     }
 
-    while (currentQueueSize > 0) {
-        int* currentQueue;
-        int* nextQueue;
-        if (level % 2 == 0) {
-            currentQueue = firstQueue;
-            nextQueue = secondQueue;
-        } else {
-            currentQueue = secondQueue;
-            nextQueue = firstQueue;
-        }
-#pragma omp parallel for num_threads(128)
-        for (int i = 0; i < currentQueueSize; i++) {
-            int current = currentQueue[i];
-            MCGAL::Halfedge* h = MCGAL::contextPool.getHalfedgeByIndex(current);
-            if (h->isProcessed()) {
-                continue;
-            }
-            MCGAL::Halfedge* hIt = h->next();
-            unsigned long long idx = 1;
-            while (hIt->opposite() != h) {
-                unsigned long long order = h->horder << 4 | idx;
+//     while (currentQueueSize > 0) {
+//         int* currentQueue;
+//         int* nextQueue;
+//         if (level % 2 == 0) {
+//             currentQueue = firstQueue;
+//             nextQueue = secondQueue;
+//         } else {
+//             currentQueue = secondQueue;
+//             nextQueue = firstQueue;
+//         }
+// #pragma omp parallel for num_threads(128)
+//         for (int i = 0; i < currentQueueSize; i++) {
+//             int current = currentQueue[i];
+//             MCGAL::Halfedge* h = MCGAL::contextPool.getHalfedgeByIndex(current);
+//             if (h->isProcessed()) {
+//                 continue;
+//             }
+//             MCGAL::Halfedge* hIt = h->next();
+//             unsigned long long idx = 1;
+//             while (hIt->opposite() != h) {
+//                 unsigned long long order = h->horder << 4 | idx;
 
-#pragma omp atomic compare
-                hIt->horder = order < hIt->horder ? order : hIt->horder;
+// #pragma omp atomic compare
+//                 hIt->horder = order < hIt->horder ? order : hIt->horder;
 
-                if (hIt->horder == order) {
-                    idx++;
-                    int position;
-#pragma omp critical
-                    { position = nextQueueSize++; }
-                    nextQueue[position] = hIt->poolId;
-                }
-                hIt = hIt->opposite()->next();
-            };
-        }
-        ++level;
-        // 到达阈值后开始compact
-        if (level == threshold) {
-            // sort(halfedges.begin() + firstCount, halfedges.begin() + secondCount, cmpHorder);
-            sort(hids, hids + index, cmpHorder);
+//                 if (hIt->horder == order) {
+//                     idx++;
+//                     int position;
+// #pragma omp critical
+//                     { position = nextQueueSize++; }
+//                     nextQueue[position] = hIt->poolId;
+//                 }
+//                 hIt = hIt->opposite()->next();
+//             };
+//         }
+//         ++level;
+//         // 到达阈值后开始compact
+//         if (level == threshold) {
+//             // sort(halfedges.begin() + firstCount, halfedges.begin() + secondCount, cmpHorder);
+//             sort(hids, hids + index, cmpHorder);
 
-            for (int i = firstCount; i < index; i++) {
-                if (MCGAL::contextPool.hpool[hids[i]].horder != (~(unsigned long long)0)) {
-                    MCGAL::contextPool.hpool[hids[i]].horder = i;
-                    secondCount = i;
-                }
-            }
-            firstCount = secondCount;
+//             for (int i = firstCount; i < index; i++) {
+//                 if (MCGAL::contextPool.hpool[hids[i]].horder != (~(unsigned long long)0)) {
+//                     MCGAL::contextPool.hpool[hids[i]].horder = i;
+//                     secondCount = i;
+//                 }
+//             }
+//             firstCount = secondCount;
 
-            int power = 1;
-            int x = secondCount + 1;
-            while (x > 1) {
-                x /= 2;
-                power++;
-            }
-            threshold += (64 - power) / 4 - 1;
-        }
-        // offFile << "\n";
-        currentQueueSize = nextQueueSize;
-        nextQueueSize = 0;
-    }
-    sort(hids, hids + index, cmpHorder);
-    // 并行读取
-#pragma omp parallel for num_threads(128)
-    for (int i = 0; i < index; i++) {
-        MCGAL::Halfedge* halfedge = MCGAL::contextPool.getHalfedgeByIndex(hids[i]);
-        int offset = stOffsets[halfedge->meshId] + i - hsizesSum[halfedge->meshId];
-        char symbol = readCharByOffset(offset);
-        if (symbol) {
-            halfedge->setAdded();
-        }
-    }
-    for (int i = 0; i < batch_size; i++) {
-        stOffsets[i] += hsizes[i];
-        if (stOffsets[i] % 4 != 0) {
-            stOffsets[i] = (stOffsets[i] / 4 + 1) * 4;
-        }
-    }
-    cudaMemcpy(dstOffsets, stOffsets.data(), batch_size * sizeof(int), cudaMemcpyHostToDevice);
-    delete firstQueue;
-    delete secondQueue;
-}
+//             int power = 1;
+//             int x = secondCount + 1;
+//             while (x > 1) {
+//                 x /= 2;
+//                 power++;
+//             }
+//             threshold += (64 - power) / 4 - 1;
+//         }
+//         // offFile << "\n";
+//         currentQueueSize = nextQueueSize;
+//         nextQueueSize = 0;
+//     }
+//     sort(hids, hids + index, cmpHorder);
+//     // 并行读取
+// #pragma omp parallel for num_threads(128)
+//     for (int i = 0; i < index; i++) {
+//         MCGAL::Halfedge* halfedge = MCGAL::contextPool.getHalfedgeByIndex(hids[i]);
+//         int offset = stOffsets[halfedge->meshId] + i - hsizesSum[halfedge->meshId];
+//         char symbol = readCharByOffset(offset);
+//         if (symbol) {
+//             halfedge->setAdded();
+//         }
+//     }
+//     for (int i = 0; i < batch_size; i++) {
+//         stOffsets[i] += hsizes[i];
+//         if (stOffsets[i] % 4 != 0) {
+//             stOffsets[i] = (stOffsets[i] / 4 + 1) * 4;
+//         }
+//     }
+//     cudaMemcpy(dstOffsets, stOffsets.data(), batch_size * sizeof(int), cudaMemcpyHostToDevice);
+//     delete firstQueue;
+//     delete secondQueue;
+// }
 
 void DeCompressTool::RemovedVerticesDecodingStep(int meshId) {
     std::queue<MCGAL::Halfedge*> gateQueue;
