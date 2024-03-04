@@ -72,15 +72,15 @@ void DeCompressTool::buildFromBuffer(int meshId,
 }
 
 void DeCompressTool::dumpto(std::string prefix) {
-    // int vsize = *MCGAL::contextPool.vindex;
-    // int hsize = *MCGAL::contextPool.hindex;
-    // int fsize = *MCGAL::contextPool.findex;
-    // CHECK(cudaMemcpy(MCGAL::contextPool.vpool, MCGAL::contextPool.dvpool, vsize * sizeof(MCGAL::Vertex),
-    //                  cudaMemcpyDeviceToHost));
-    // CHECK(cudaMemcpy(MCGAL::contextPool.hpool, MCGAL::contextPool.dhpool, hsize * sizeof(MCGAL::Halfedge),
-    //                  cudaMemcpyDeviceToHost));
-    // CHECK(cudaMemcpy(MCGAL::contextPool.fpool, MCGAL::contextPool.dfpool, fsize * sizeof(MCGAL::Facet),
-    //                  cudaMemcpyDeviceToHost));
+    int vsize = *MCGAL::contextPool.vindex;
+    int hsize = *MCGAL::contextPool.hindex;
+    int fsize = *MCGAL::contextPool.findex;
+    CHECK(cudaMemcpy(MCGAL::contextPool.vpool, MCGAL::contextPool.dvpool, vsize * sizeof(MCGAL::Vertex),
+                     cudaMemcpyDeviceToHost));
+    CHECK(cudaMemcpy(MCGAL::contextPool.hpool, MCGAL::contextPool.dhpool, hsize * sizeof(MCGAL::Halfedge),
+                     cudaMemcpyDeviceToHost));
+    CHECK(cudaMemcpy(MCGAL::contextPool.fpool, MCGAL::contextPool.dfpool, fsize * sizeof(MCGAL::Facet),
+                     cudaMemcpyDeviceToHost));
 
     std::vector<std::vector<MCGAL::Vertex*>> vertices(batch_size);
     std::vector<std::vector<MCGAL::Facet*>> facets(batch_size);

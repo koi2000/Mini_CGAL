@@ -3,8 +3,8 @@
 #include "Configuration.cuh"
 #include "Halfedge.cuh"
 #include "Vertex.cuh"
-#include <vector>
 #include "stdint.h"
+#include <vector>
 
 namespace MCGAL {
 class replacing_group;
@@ -41,7 +41,13 @@ class Facet {
     ~Facet();
 
     // constructor
-    Facet(){};
+    Facet() {
+        flag = Unknown;
+        processedFlag = NotProcessed;
+        removedFlag = NotRemoved;
+        visitedFlag = NotVisited;
+        forder = ~(unsigned long long)0;
+    };
     Facet(const Facet& face);
     Facet(Halfedge* hit);
     Facet(std::vector<Vertex*>& vs);
@@ -208,7 +214,6 @@ class Facet {
         // return (flag == Splittable || flag == Unsplittable || removedFlag == Removed);
         return (flag == Splittable || flag == Unsplittable);
     }
-
 
     __device__ inline void setRemovedVertexPosOnCuda(float* p) {
         removedVertexPos.v[0] = p[0];

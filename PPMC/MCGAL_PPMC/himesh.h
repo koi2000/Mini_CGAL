@@ -84,6 +84,7 @@ class HiMesh : public MCGAL::Mesh {
 
     // Compression geometry and connectivity tests.
     bool isRemovable(MCGAL::Vertex* v) const;
+    bool checkCompetition(MCGAL::Vertex* v) const;
     bool isConvex(const std::vector<MCGAL::Vertex*>& polygon) const;
     bool isPlanar(const std::vector<MCGAL::Vertex*>& polygon, float epsilon) const;
     bool willViolateManifold(const std::vector<MCGAL::Halfedge*>& polygon) const;

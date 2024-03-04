@@ -12,7 +12,7 @@ void compress(int argc, char** argv) {
     HiMesh* mesh = read_mesh(argv[1], true);
     logt("compress", start);
     HiMesh* hm = new HiMesh(mesh);
-    
+    mesh->dumpBuffer("/home/koi/mastercode/Mini_CGAL/buffers/oldbuffer1");
     int lod = 100;
     char path[256];
     sprintf(path, "./gisdata2/compressed_0.mesh.off");

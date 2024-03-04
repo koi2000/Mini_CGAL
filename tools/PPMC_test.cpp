@@ -19,12 +19,12 @@ void compress(int argc, char** argv) {
     hm->write_to_off(path);
     for (uint i = 10; i <= lod; i += 10) {
         hm->decode(i);
-        hispeed::logt("decode to %d", start, i);
+        // hispeed::logt("decode to %d", start, i);
         // log("%d %f", i, MyMesh->getHausdorfDistance());
         sprintf(path, "./gisdata1/compressed_%d.mesh.off", i);
         hm->write_to_off(path);
     }
-
+    hispeed::logt("decode", start);
     delete mesh;
     delete hm;
 }

@@ -32,11 +32,12 @@ class Halfedge {
     int parent = -1;
     unsigned long long horder = ~(unsigned long long)0;
     Halfedge() {
-        vertex_ = -1;
-        end_vertex_ = -1;
-        facet_ = -1;
-        next_ = -1;
-        opposite_ = -1;
+        flag = NotYetInQueue;
+        flag2 = Original;
+        processedFlag = NotProcessed;
+        removedFlag = NotRemoved;
+        bfsFlag = NotVisited;
+        horder = ~(unsigned long long)0;
         parent = -1;
     };
     // Vertex* vertex = nullptr;
