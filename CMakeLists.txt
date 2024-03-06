@@ -61,6 +61,7 @@ set(PPMC_SOURCE_DIR "PPMC/CGAL_PPMC")
 set(MINICGAL_PPMC_SOURCE_DIR "PPMC/MCGAL_PPMC")
 set(PPMC_CUDA_SOURCE_DIR "PPMC/CUDA_PPMC")
 set(BATCH_PPMC_SOURCE_DIR "PPMC/BATCH_PPMC")
+set(CPU_BATCH_PPMC_SOURCE_DIR "PPMC/BATCH_PPMC_CPU")
 set(NEW_PPMC_SOURCE_DIR "PPMC/NEW_PPMC")
 set(BFS_PPMC_SOURCE_DIR "PPMC/BFS_PPMC")
 
@@ -87,6 +88,11 @@ file(GLOB_RECURSE MINICGAL_PPMC_FILES
 file(GLOB_RECURSE BATCH_PPMC_FILES
     "${BATCH_PPMC_SOURCE_DIR}/*.cuh"
     "${BATCH_PPMC_SOURCE_DIR}/*.cu"
+)
+
+file(GLOB_RECURSE BATCH_PPMC_CPU_FILES
+    "${CPU_BATCH_PPMC_SOURCE_DIR}/*.h"
+    "${CPU_BATCH_PPMC_SOURCE_DIR}/*.cpp"
 )
 
 file(GLOB_RECURSE NEW_PPMC_FILES
@@ -169,9 +175,13 @@ add_executable(Batch_Decompress tools/BatchDecompress_test.cu  ${BATCH_PPMC_FILE
 set_target_properties(Batch_Decompress PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON)
 target_link_libraries(Batch_Decompress ${CUDA_LIBRARIES} OpenMP::OpenMP_CXX)
 
-add_executable(BFSCompress tools/BFSCompress_test.cpp  ${BFS_PPMC} ${MINI_CGAL_FILES})
-set_target_properties(BFSCompress PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON)
-target_compile_definitions(BFSCompress PRIVATE _OPENMP=202011)
-target_link_libraries(BFSCompress ${CUDA_LIBRARIES} OpenMP::OpenMP_CXX -lstdc++)
+add_executable(Cpu_Batch_Decompress tools/BatchDecompressCpuTest.cpp  ${BATCH_PPMC_CPU_FILES} ${MINI_CGAL_FILES})
+set_target_properties(Cpu_Batch_Decompress PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON)
+target_link_libraries(Cpu_Batch_Decompress ${CUDA_LIBRARIES} OpenMP::OpenMP_CXX)
+
+# add_executable(BFSCompress tools/BFSCompress_test.cpp  ${BFS_PPMC} ${MINI_CGAL_FILES})
+# set_target_properties(BFSCompress PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON)
+# target_compile_definitions(BFSCompress PRIVATE _OPENMP=202011)
+# target_link_libraries(BFSCompress ${CUDA_LIBRARIES} OpenMP::OpenMP_CXX -lstdc++)
 # target_link_libraries(BFSCompress ${CUDA_LIBRARIES})
 # message(STATUS "list = ${CUDA_PPMC}" )

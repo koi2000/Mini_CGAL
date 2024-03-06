@@ -1,4 +1,6 @@
-#include "core.h"
+#include "include/Facet.h"
+#include "include/Halfedge.h"
+#include "include/Vertex.h"
 
 namespace MCGAL {
 
@@ -56,7 +58,7 @@ Halfedge::~Halfedge() {
     }
 
     // detach from the vertices
-    assert(vertex && end_vertex);
+    // assert(vertex && end_vertex);
     // assert(vertex->halfedges.find(this) != vertex->halfedges.end());
     // assert(end_vertex->opposite_half_edges.find(this) != end_vertex->opposite_half_edges.end());
     // if (vertex->halfedges.find(this) != vertex->halfedges.end()) {

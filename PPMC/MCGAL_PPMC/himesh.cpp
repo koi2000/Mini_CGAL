@@ -5,6 +5,7 @@
 #include "util.h"
 // #include "configuration.h"
 #include <algorithm>
+#include <set>
 
 HiMesh::HiMesh(string& str, bool completeop) : MCGAL::Mesh() {
     boost::replace_all(str, "|", "\n");
@@ -99,7 +100,7 @@ void HiMesh::pushHehInit() {
 }
 
 MCGAL::Facet* HiMesh::add_face_by_pool(std::vector<MCGAL::Vertex*>& vs) {
-    MCGAL::Facet* f = allocateFaceFromPool(vs, this);
+    MCGAL::Facet* f = MCGAL::contextPool.allocateFaceFromPool(vs);
     // for (MCGAL::Halfedge* hit : f->halfedges) {
     //     this->halfedges.insert(hit);
     // }

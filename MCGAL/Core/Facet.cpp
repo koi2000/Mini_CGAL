@@ -1,4 +1,8 @@
-#include "core.h"
+#include "include/Facet.h"
+#include "include/Global.h"
+#include "include/Halfedge.h"
+#include "include/Vertex.h"
+#include "stdio.h"
 
 namespace MCGAL {
 void Facet::remove(Halfedge* rh) {
@@ -13,11 +17,19 @@ void Facet::remove(Halfedge* rh) {
 
     for (Halfedge* h : halfedges) {
         if (h->next == rh) {
-            h->next = NULL;
+            h->next = nullptr;
         }
     }
     delete rh;
 }
+
+Point Facet::getRemovedVertexPos() const {
+    return removedVertexPos;
+};
+
+void Facet::setRemovedVertexPos(Point p) {
+    removedVertexPos = p;
+};
 
 Facet::Facet(const Facet& face) {
     // this->vertices = face.vertices;
@@ -48,6 +60,30 @@ Facet* Facet::clone() {
     return new Facet(*this);
 }
 
+// Facet::Facet(std::vector<Vertex*>& vs) {
+//     // vertices.reserve(SMALL_BUCKET_SIZE);
+//     // halfedges.reserve(SMALL_BUCKET_SIZE);
+//     Halfedge* prev = nullptr;
+//     Halfedge* head = nullptr;
+//     for (int i = 0; i < vs.size(); i++) {
+//         vertices.push_back(vs[i]);
+//         Vertex* nextv = vs[(i + 1) % vs.size()];
+//         Halfedge* hf = new Halfedge(vs[i], nextv);
+//         halfedges.push_back(hf);
+//         // vs[i]->halfedges.insert(hf);
+//         hf->face = this;
+//         if (prev != nullptr) {
+//             prev->next = hf;
+//         } else {
+//             head = hf;
+//         }
+//         if (i == vs.size() - 1) {
+//             hf->next = head;
+//         }
+//         prev = hf;
+//     }
+// }
+
 Facet::Facet(std::vector<Vertex*>& vs) {
     // vertices.reserve(SMALL_BUCKET_SIZE);
     // halfedges.reserve(SMALL_BUCKET_SIZE);
@@ -56,7 +92,7 @@ Facet::Facet(std::vector<Vertex*>& vs) {
     for (int i = 0; i < vs.size(); i++) {
         vertices.push_back(vs[i]);
         Vertex* nextv = vs[(i + 1) % vs.size()];
-        Halfedge* hf = new Halfedge(vs[i], nextv);
+        Halfedge* hf = MCGAL::contextPool.allocateHalfedgeFromPool(vs[i], nextv);
         halfedges.push_back(hf);
         // vs[i]->halfedges.insert(hf);
         hf->face = this;
@@ -72,15 +108,37 @@ Facet::Facet(std::vector<Vertex*>& vs) {
     }
 }
 
-Facet::Facet(std::vector<Vertex*>& vs, Mesh* mesh) {
-    // vertices.reserve(SMALL_BUCKET_SIZE);
-    // halfedges.reserve(SMALL_BUCKET_SIZE);
+// Facet::Facet(std::vector<Vertex*>& vs, Mesh* mesh) {
+//     // vertices.reserve(SMALL_BUCKET_SIZE);
+//     // halfedges.reserve(SMALL_BUCKET_SIZE);
+//     Halfedge* prev = nullptr;
+//     Halfedge* head = nullptr;
+//     for (int i = 0; i < vs.size(); i++) {
+//         vertices.push_back(vs[i]);
+//         Vertex* nextv = vs[(i + 1) % vs.size()];
+//         Halfedge* hf = std::move(mesh->allocateHalfedgeFromPool(vs[i], nextv));
+//         halfedges.push_back(hf);
+//         // vs[i]->halfedges.insert(hf);
+//         hf->face = this;
+//         if (prev != NULL) {
+//             prev->next = hf;
+//         } else {
+//             head = hf;
+//         }
+//         if (i == vs.size() - 1) {
+//             hf->next = head;
+//         }
+//         prev = hf;
+//     }
+// }
+
+void Facet::reset(std::vector<Vertex*>& vs) {
     Halfedge* prev = nullptr;
     Halfedge* head = nullptr;
     for (int i = 0; i < vs.size(); i++) {
         vertices.push_back(vs[i]);
         Vertex* nextv = vs[(i + 1) % vs.size()];
-        Halfedge* hf = std::move(mesh->allocateHalfedgeFromPool(vs[i], nextv));
+        Halfedge* hf = MCGAL::contextPool.allocateHalfedgeFromPool(vs[i], nextv);
         halfedges.push_back(hf);
         // vs[i]->halfedges.insert(hf);
         hf->face = this;
@@ -96,27 +154,27 @@ Facet::Facet(std::vector<Vertex*>& vs, Mesh* mesh) {
     }
 }
 
-void Facet::reset(std::vector<Vertex*>& vs, Mesh* mesh) {
-    Halfedge* prev = nullptr;
-    Halfedge* head = nullptr;
-    for (int i = 0; i < vs.size(); i++) {
-        vertices.push_back(vs[i]);
-        Vertex* nextv = vs[(i + 1) % vs.size()];
-        Halfedge* hf = mesh->allocateHalfedgeFromPool(vs[i], nextv);
-        halfedges.push_back(hf);
-        // vs[i]->halfedges.insert(hf);
-        hf->face = this;
-        if (prev != NULL) {
-            prev->next = hf;
-        } else {
-            head = hf;
-        }
-        if (i == vs.size() - 1) {
-            hf->next = head;
-        }
-        prev = hf;
-    }
-}
+// void Facet::reset(std::vector<Vertex*>& vs, Mesh* mesh) {
+//     Halfedge* prev = nullptr;
+//     Halfedge* head = nullptr;
+//     for (int i = 0; i < vs.size(); i++) {
+//         vertices.push_back(vs[i]);
+//         Vertex* nextv = vs[(i + 1) % vs.size()];
+//         Halfedge* hf = mesh->allocateHalfedgeFromPool(vs[i], nextv);
+//         halfedges.push_back(hf);
+//         // vs[i]->halfedges.insert(hf);
+//         hf->face = this;
+//         if (prev != NULL) {
+//             prev->next = hf;
+//         } else {
+//             head = hf;
+//         }
+//         if (i == vs.size() - 1) {
+//             hf->next = head;
+//         }
+//         prev = hf;
+//     }
+// }
 
 void Facet::reset(Halfedge* h) {
     Halfedge* st = h;
