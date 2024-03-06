@@ -77,7 +77,9 @@ void DeCompressTool::resetState() {
 }
 
 void DeCompressTool::startNextDecompresssionOp() {
+    struct timeval start = get_cur_time();
     resetState();
+    logt("%d resetState", start, i_curDecimationId);
     for (int i = 0; i < splitableCounts.size(); i++) {
         splitableCounts[i] = 0;
         insertedCounts[i] = 0;
@@ -87,12 +89,16 @@ void DeCompressTool::startNextDecompresssionOp() {
     for (int i = 0; i < batch_size; i++) {
         RemovedVerticesDecodingStep(i);
     }
+    logt("%d RemovedVerticesDecodingStep", start, i_curDecimationId);
 #pragma omp parallel for num_threads(batch_size)
     for (int i = 0; i < batch_size; i++) {
         InsertedEdgeDecodingStep(i);
     }
+    logt("%d InsertedEdgeDecodingStep", start, i_curDecimationId);
     insertRemovedVertices();
+    logt("%d insertRemovedVertices", start, i_curDecimationId);
     removedInsertedEdges();
+    logt("%d removedInsertedEdges", start, i_curDecimationId);
 }
 
 MCGAL::Halfedge* DeCompressTool::pushHehInit(int meshId) {
@@ -188,7 +194,7 @@ template <typename T, typename Op> void DeCompressTool::omp_scan(int n, const T*
     omp_set_dynamic(true);
     int number_of_processors = 64;
     if (n < number_of_processors) {
-        number_of_processors = n - 1;
+        number_of_processors = n;
     }
     // omp_set_num_threads(number_of_processors);
     int parallel_chunk = n / number_of_processors;
@@ -251,7 +257,7 @@ void DeCompressTool::createCenterVertex(int* vertexIndexes,
                                         int* stHalfedgeIndexes,
                                         int* stFacetIndexes,
                                         int num) {
-    // #pragma omp parallel for
+#pragma omp parallel for
     for (int tid = 0; tid < num; tid++) {
         int faceId = faceIndexes[tid];
         MCGAL::Facet* facet = &MCGAL::contextPool.fpool[faceId];
@@ -262,10 +268,10 @@ void DeCompressTool::createCenterVertex(int* vertexIndexes,
 
         MCGAL::Halfedge* h = facet->halfedges[0];
         MCGAL::Halfedge* hnew = &MCGAL::contextPool.hpool[stHalfedgeIndex++];
-        hnew->reset(h->end_vertex, vnew);
+        hnew->setVertex(h->end_vertex, vnew);
 
         MCGAL::Halfedge* oppo_new = &MCGAL::contextPool.hpool[stHalfedgeIndex++];
-        oppo_new->reset(vnew, h->end_vertex);
+        oppo_new->setVertex(vnew, h->end_vertex);
         hnew->opposite = oppo_new;
         oppo_new->opposite = hnew;
         insert_tip(hnew->opposite, h);
@@ -273,10 +279,10 @@ void DeCompressTool::createCenterVertex(int* vertexIndexes,
         MCGAL::Halfedge* hed = hnew;
         while (g->next->poolId != hed->poolId) {
             MCGAL::Halfedge* gnew = &MCGAL::contextPool.hpool[stHalfedgeIndex++];
-            gnew->reset(g->end_vertex, vnew);
+            gnew->setVertex(g->end_vertex, vnew);
 
             MCGAL::Halfedge* oppo_gnew = &MCGAL::contextPool.hpool[stHalfedgeIndex++];
-            oppo_gnew->reset(vnew, g->end_vertex);
+            oppo_gnew->setVertex(vnew, g->end_vertex);
 
             gnew->opposite = oppo_gnew;
             oppo_gnew->opposite = gnew;
@@ -386,7 +392,7 @@ void DeCompressTool::insertRemovedVertices() {
     int* conditionArray = new int[size];
     int* prefixSum = new int[size];
     memset(prefixSum, 0, sizeof(int) * size);
-#pragma omp parallel
+#pragma omp parallel for
     for (int i = 0; i < size; i++) {
         sourceArray[i] = i;
         if (MCGAL::contextPool.getFacetByIndex(i)->isSplittable() &&
@@ -438,7 +444,7 @@ void DeCompressTool::removedInsertedEdges() {
     int* conditionArray = new int[size];
     int* prefixSum = new int[size];
     memset(prefixSum, 0, sizeof(int) * size);
-#pragma omp parallel
+#pragma omp parallel for
     for (int i = 0; i < size; i++) {
         sourceArray[i] = i;
         if (MCGAL::contextPool.getHalfedgeByIndex(i)->isAdded() &&

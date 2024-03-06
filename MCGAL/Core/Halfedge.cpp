@@ -1,9 +1,8 @@
-#include "include/Facet.h"
 #include "include/Halfedge.h"
+#include "include/Facet.h"
 #include "include/Vertex.h"
 
 namespace MCGAL {
-
 
 // create a new half edge, setup the opposite of this half edge if needed
 Halfedge::Halfedge(Vertex* v1, Vertex* v2) {
@@ -48,6 +47,11 @@ void Halfedge::reset(Vertex* v1, Vertex* v2) {
             break;
         }
     }
+}
+
+void Halfedge::setVertex(Vertex* v1, Vertex* v2) {
+    vertex = v1;
+    end_vertex = v2;
 }
 
 Halfedge::~Halfedge() {

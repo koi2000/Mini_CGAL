@@ -78,7 +78,7 @@ DeCompressTool::DeCompressTool(char** path, int number, bool is_base) {
         insertedCounts.resize(number);
         dim3 block(256, 1, 1);
         dim3 grid((number + block.x - 1) / block.x, 1, 1);
-// #pragma omp parallel for
+        // #pragma omp parallel for
         for (int i = 0; i < number; i++) {
             readBaseMesh(i, &stOffsets[i]);
             // if (stOffsets[i] % 4 != 0) {
@@ -158,10 +158,13 @@ void DeCompressTool::startNextDecompresssionOp() {
     i_curDecimationId++;  // increment the current decimation operation id.
     // 2. decoding the removed vertices and add to target facets
     struct timeval start = get_cur_time();
+    double t1 = omp_get_wtime();
 #pragma omp parallel for num_threads(batch_size)
     for (int i = 0; i < batch_size; i++) {
         RemovedVerticesDecodingStep(i);
     }
+    t1 = omp_get_wtime() - t1;
+    log("removeVertexDecoding Step %f", t1);
     // BatchRemovedVerticesDecodingStep();
     logt("%d RemovedVerticesDecodingStep", start, i_curDecimationId);
 // 3. decoding the inserted edge and marking the ones added

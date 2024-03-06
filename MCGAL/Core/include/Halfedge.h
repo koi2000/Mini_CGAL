@@ -36,6 +36,7 @@ class Halfedge {
     void setMeshId(int meshId) {
         this->meshId = meshId;
     }
+    void setVertex(Vertex* v1, Vertex* v2);
     void reset(Vertex* v1, Vertex* v2);
 
     inline void resetState() {

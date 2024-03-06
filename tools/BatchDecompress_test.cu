@@ -52,7 +52,7 @@ void compress(int argc, char** argv) {
         paths[i] = new char[strlen(strings[i]) + 1];
         strcpy(paths[i], strings[i]);
     }
-    DeCompressTool* deCompressTool = new DeCompressTool(paths, 10, true);
+    DeCompressTool* deCompressTool = new DeCompressTool(paths, 1, true);
     int lod = 100;
     char path[256];
     sprintf(path, "%s", "./gisdata/compressed_0_mesh_%d_mesh.off");

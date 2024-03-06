@@ -60,7 +60,7 @@ void compress(int argc, char** argv) {
         sprintf(path, "./gisdata/compressed_%d%s", i, "_mesh_%d_mesh.off");
         // std::cout << path << std::endl;
         // printf("%s", path);
-        deCompressTool->dumpto(path);
+        // deCompressTool->dumpto(path);
     }
     logt("decode", start);
     delete deCompressTool;
