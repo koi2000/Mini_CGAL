@@ -70,6 +70,7 @@ CGAL单个
 17:22:11.0087 thread 18691:     decode to 100 takes 36.974000 ms
 ```
 1个mesh CUDA
+```
 18:07:38.0509 thread 36761:     removeVertexDecoding Step 0.000558
 18:07:38.0509 thread 36761:     1 RemovedVerticesDecodingStep takes 0.686000 ms
 18:07:38.0510 thread 36761:     1 InsertedEdgeDecodingStep takes 0.851000 ms
@@ -161,7 +162,7 @@ CGAL单个
 18:07:38.0761 thread 36761:     10 insertRemovedVertices takes 6.389000 ms
 18:07:38.0765 thread 36761:     10 removeInsertedEdges takes 4.424000 ms
 18:07:38.0765 thread 36761:     decode takes 329.869000 ms
-
+```
 10个mesh CUDA
 ```
 18:01:10.0562 thread 33876:     removeVertexDecoding Step 0.002380
