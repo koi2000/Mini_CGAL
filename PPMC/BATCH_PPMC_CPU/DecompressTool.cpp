@@ -85,12 +85,12 @@ void DeCompressTool::startNextDecompresssionOp() {
         insertedCounts[i] = 0;
     }
     i_curDecimationId++;
-#pragma omp parallel for num_threads(batch_size)
+#pragma omp parallel for num_threads(batch_size) schedule(dynamic)
     for (int i = 0; i < batch_size; i++) {
         RemovedVerticesDecodingStep(i);
     }
     logt("%d RemovedVerticesDecodingStep", start, i_curDecimationId);
-#pragma omp parallel for num_threads(batch_size)
+#pragma omp parallel for num_threads(batch_size) schedule(dynamic)
     for (int i = 0; i < batch_size; i++) {
         InsertedEdgeDecodingStep(i);
     }
@@ -257,7 +257,7 @@ void DeCompressTool::createCenterVertex(int* vertexIndexes,
                                         int* stHalfedgeIndexes,
                                         int* stFacetIndexes,
                                         int num) {
-#pragma omp parallel for
+#pragma omp parallel for schedule(dynamic)
     for (int tid = 0; tid < num; tid++) {
         int faceId = faceIndexes[tid];
         MCGAL::Facet* facet = &MCGAL::contextPool.fpool[faceId];
@@ -306,7 +306,7 @@ void DeCompressTool::preAllocInit(int* vertexIndexes,
                                   int* stFacetIndexes,
                                   int* stHalfedgeIndexes,
                                   int num) {
-#pragma omp parallel for
+#pragma omp parallel for schedule(dynamic)
     for (int i = 0; i < num; i++) {
         MCGAL::Facet* fit = MCGAL::contextPool.getFacetByIndex(faceIndexes[i]);
 
@@ -348,7 +348,7 @@ inline void DeCompressTool::remove_tip(MCGAL::Halfedge* h) {
 }
 
 void DeCompressTool::joinFacet(int* fids, int num) {
-#pragma omp parallel for
+#pragma omp parallel for schedule(dynamic)
     for (int tid = 0; tid < num; tid++) {
         MCGAL::Facet* facet = &MCGAL::contextPool.fpool[fids[tid]];
 
@@ -466,7 +466,7 @@ void DeCompressTool::removedInsertedEdges() {
     for (int i = 0; i < inserted_edgecount; ++i) {
         edgeIndexes[i] = MCGAL::contextPool.hpool[edgeIndexes[i]].face->poolId;
     }
-    quickSort_parallel(edgeIndexes, inserted_edgecount, 128);
+    quickSort_parallel(edgeIndexes, inserted_edgecount, 64);
 
     prefixSum[0] = 1;
 // 计算前缀和

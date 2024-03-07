@@ -16,7 +16,6 @@ void DeCompressTool::readBaseMesh(int meshId, int* offset) {
         p_pointDeque->push_back(pos);
     }
     // read the face vertex indices
-    // Read the face vertex indices.
     for (unsigned i = 0; i < i_nbFacesBaseMesh; ++i) {
         int nv = readInt(offset);
         uint32_t* f = new uint32_t[nv + 1];
