@@ -1,4 +1,4 @@
-#include "../MCGAL/Core/core.h"
+#include "../MCGAL/Core/include/core.h"
 #include "aab.h"
 #include <algorithm>
 #include <boost/algorithm/string/replace.hpp>

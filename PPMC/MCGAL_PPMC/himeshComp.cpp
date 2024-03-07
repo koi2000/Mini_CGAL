@@ -47,7 +47,7 @@ void HiMesh::startNextCompresssionOp() {
         // hitInit->setInQueue();
         // // MCGAL::Halfedge* hitInit = *vh_departureConquest[0]->halfedges.begin();
         // gateQueue.push(hitInit);
-        MCGAL::Facet* fit = faces[faces.size()/2];
+        MCGAL::Facet* fit = faces[faces.size() / 2];
         fit->halfedges[0]->setInQueue();
         gateQueue.push(fit->halfedges[0]);
     }
@@ -155,7 +155,7 @@ MCGAL::Halfedge* HiMesh::vertexCut(MCGAL::Halfedge* startH) {
             MCGAL::Halfedge* hCorner = split_facet(h, hSplit);
             // mark the new halfedges as added
             hCorner->setAdded();
-            hCorner->opposite->setAdded();
+            // hCorner->opposite->setAdded();
             // the corner one inherit the original facet
             // while the fRest is a newly generated facet
         }
@@ -243,6 +243,40 @@ void HiMesh::RemovedVertexCodingStep() {
     }
 }
 
+// void HiMesh::InsertedEdgeCodingStep() {
+//     connectEdgeSym.push_back(std::deque<unsigned>());
+//     pushHehInit();
+//     while (!gateQueue.empty()) {
+//         MCGAL::Halfedge* h = gateQueue.front();
+//         gateQueue.pop();
+//         if (h->isProcessed()) {
+//             continue;
+//         }
+//         // Mark the halfedge as processed.
+//         h->setProcessed();
+//         h->opposite->setProcessed();
+//         // Add the other halfedges to the queue
+//         MCGAL::Halfedge* hIt = h->next;
+//         while (hIt->opposite != h) {
+//             if (!hIt->isProcessed())
+//                 gateQueue.push(hIt);
+//             hIt = hIt->opposite->next;
+//         }
+//         // Don't write a symbol if the two faces of an edgde are unsplitable.
+//         // this can help to save some space, since it is guaranteed that the edge is not inserted
+//         bool b_toCode = h->face->isUnsplittable() && h->opposite->face->isUnsplittable() ? false : true;
+//         // Determine the edge symbol.
+//         unsigned sym;
+//         if (h->isOriginal())
+//             sym = 0;
+//         else
+//             sym = 1;
+//         // Store the symbol if needed.
+//         if (b_toCode)
+//             connectEdgeSym[i_curDecimationId].push_back(sym);
+//     }
+// }
+
 void HiMesh::InsertedEdgeCodingStep() {
     connectEdgeSym.push_back(std::deque<unsigned>());
     pushHehInit();
@@ -254,7 +288,7 @@ void HiMesh::InsertedEdgeCodingStep() {
         }
         // Mark the halfedge as processed.
         h->setProcessed();
-        h->opposite->setProcessed();
+        // h->opposite->setProcessed();
 
         // Add the other halfedges to the queue
         MCGAL::Halfedge* hIt = h->next;
@@ -266,14 +300,17 @@ void HiMesh::InsertedEdgeCodingStep() {
 
         // Don't write a symbol if the two faces of an edgde are unsplitable.
         // this can help to save some space, since it is guaranteed that the edge is not inserted
-        bool b_toCode = h->face->isUnsplittable() && h->opposite->face->isUnsplittable() ? false : true;
+        // bool b_toCode = h->face->isUnsplittable() && h->opposite->face->isUnsplittable() ? false : true;
+        bool b_toCode = true;
 
         // Determine the edge symbol.
         unsigned sym;
-        if (h->isOriginal())
+        if (h->isOriginal()) {
             sym = 0;
-        else
+        } else {
             sym = 1;
+            h->opposite->setOriginal();
+        }
 
         // Store the symbol if needed.
         if (b_toCode)

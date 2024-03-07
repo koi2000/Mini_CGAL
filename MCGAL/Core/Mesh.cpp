@@ -1,4 +1,8 @@
-#include "core.h"
+#include "include/Facet.h"
+#include "include/Halfedge.h"
+#include "include/Vertex.h"
+#include "include/Mesh.h"
+#include "include/Global.h"
 #include <assert.h>
 #include <fstream>
 #include <iostream>
@@ -7,19 +11,19 @@
 namespace MCGAL {
 
 Mesh::~Mesh() {
-    for (Facet* f : faces) {
-        delete f;
-    }
-    for (Vertex* p : vertices) {
-        // assert(p->halfedges.size() == (int)0 && p->opposite_half_edges.size() == 0);
-        delete p;
-    }
+    // for (Facet* f : faces) {
+    //     delete f;
+    // }
+    // for (Vertex* p : vertices) {
+    //     // assert(p->halfedges.size() == (int)0 && p->opposite_half_edges.size() == 0);
+    //     delete p;
+    // }
     // for (Halfedge* e : halfedges) {
     //     delete e;
     // }
-    delete[] vpool;
-    delete[] hpool;
-    delete[] fpool;
+    // delete[] vpool;
+    // delete[] hpool;
+    // delete[] fpool;
     vertices.clear();
     faces.clear();
     // halfedges.clear();
@@ -67,10 +71,10 @@ void Mesh::eraseVertexByPointer(Vertex* vertex) {
 Halfedge* Mesh::split_facet(Halfedge* h, Halfedge* g) {
     Facet* origin = h->face;
     // early expose
-    Facet* fnew = allocateFaceFromPool();
+    Facet* fnew = MCGAL::contextPool.allocateFaceFromPool();
     // create new halfedge
-    Halfedge* hnew = allocateHalfedgeFromPool(h->end_vertex, g->end_vertex);
-    Halfedge* oppo_hnew = allocateHalfedgeFromPool(g->end_vertex, h->end_vertex);
+    Halfedge* hnew = MCGAL::contextPool.allocateHalfedgeFromPool(h->end_vertex, g->end_vertex);
+    Halfedge* oppo_hnew = MCGAL::contextPool.allocateHalfedgeFromPool(g->end_vertex, h->end_vertex);
     // set the opposite
     // set the connect information
     hnew->next = g->next;
@@ -117,10 +121,10 @@ Halfedge* Mesh::erase_center_vertex(Halfedge* h) {
 
 Halfedge* Mesh::create_center_vertex(Halfedge* h) {
     // Vertex* vnew = new Vertex();
-    Vertex* vnew = allocateVertexFromPool();
+    Vertex* vnew = MCGAL::contextPool.allocateVertexFromPool();
     this->vertices.push_back(vnew);
-    Halfedge* hnew = allocateHalfedgeFromPool(h->end_vertex, vnew);
-    Halfedge* oppo_new = allocateHalfedgeFromPool(vnew, h->end_vertex);
+    Halfedge* hnew = MCGAL::contextPool.allocateHalfedgeFromPool(h->end_vertex, vnew);
+    Halfedge* oppo_new = MCGAL::contextPool.allocateHalfedgeFromPool(vnew, h->end_vertex);
     // add new halfedge to current mesh and set opposite
     // set the next element
     // now the next of hnew and prev of oppo_new is unknowen
@@ -130,8 +134,8 @@ Halfedge* Mesh::create_center_vertex(Halfedge* h) {
 
     Halfedge* hed = hnew;
     while (g->next != hed) {
-        Halfedge* gnew = allocateHalfedgeFromPool(g->end_vertex, vnew);
-        Halfedge* oppo_gnew = allocateHalfedgeFromPool(vnew, g->end_vertex);
+        Halfedge* gnew = MCGAL::contextPool.allocateHalfedgeFromPool(g->end_vertex, vnew);
+        Halfedge* oppo_gnew = MCGAL::contextPool.allocateHalfedgeFromPool(vnew, g->end_vertex);
         origin_around_halfedge.push_back(g);
         gnew->next = hnew->opposite;
         insert_tip(gnew->opposite, g);
@@ -143,7 +147,7 @@ Halfedge* Mesh::create_center_vertex(Halfedge* h) {
     h->face->reset(h);
     // collect all the halfedge
     for (Halfedge* hit : origin_around_halfedge) {
-        Facet* face = allocateFaceFromPool(hit);
+        Facet* face = MCGAL::contextPool.allocateFaceFromPool(hit);
         this->faces.push_back(face);
     }
     return oppo_new;

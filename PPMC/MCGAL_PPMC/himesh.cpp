@@ -5,6 +5,7 @@
 #include "util.h"
 // #include "configuration.h"
 #include <algorithm>
+#include <set>
 
 HiMesh::HiMesh(string& str, bool completeop) : MCGAL::Mesh() {
     boost::replace_all(str, "|", "\n");
@@ -99,7 +100,7 @@ void HiMesh::pushHehInit() {
 }
 
 MCGAL::Facet* HiMesh::add_face_by_pool(std::vector<MCGAL::Vertex*>& vs) {
-    MCGAL::Facet* f = allocateFaceFromPool(vs, this);
+    MCGAL::Facet* f = MCGAL::contextPool.allocateFaceFromPool(vs);
     // for (MCGAL::Halfedge* hit : f->halfedges) {
     //     this->halfedges.insert(hit);
     // }
@@ -170,9 +171,28 @@ bool HiMesh::isRemovable(MCGAL::Vertex* v) const {
         //
         // bool removable = !willViolateManifold(heh_oneRing);
         bool removable = !willViolateManifold(heh_oneRing);
+        if (removable) {
+            return checkCompetition(v);
+        }
         return removable;
     }
     return false;
+}
+
+bool HiMesh::checkCompetition(MCGAL::Vertex* v) const {
+    std::set<MCGAL::Facet*> fset;
+    for (int i = 0; i < v->halfedges.size(); i++) {
+        MCGAL::Halfedge* hit = v->halfedges[i];
+        fset.insert(hit->face);
+    }
+    for (MCGAL::Facet* fit : fset) {
+        for (int i = 0; i < fit->halfedges.size(); i++) {
+            if (fit->halfedges[i]->isAdded() || fit->halfedges[i]->opposite->isAdded()) {
+                return false;
+            }
+        }
+    }
+    return true;
 }
 
 bool HiMesh::willViolateManifold(const std::vector<MCGAL::Halfedge*>& polygon) const {

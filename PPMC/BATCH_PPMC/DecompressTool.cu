@@ -78,14 +78,23 @@ DeCompressTool::DeCompressTool(char** path, int number, bool is_base) {
         insertedCounts.resize(number);
         dim3 block(256, 1, 1);
         dim3 grid((number + block.x - 1) / block.x, 1, 1);
-#pragma omp parallel for
+        // #pragma omp parallel for
         for (int i = 0; i < number; i++) {
             readBaseMesh(i, &stOffsets[i]);
-            if (stOffsets[i] % 4 != 0) {
-                stOffsets[i] = (stOffsets[i] / 4 + 1) * 4;
-            }
+            // if (stOffsets[i] % 4 != 0) {
+            //     stOffsets[i] = (stOffsets[i] / 4 + 1) * 4;
+            // }
         }
-        cudaMemcpy(dstOffsets, stOffsets.data(), batch_size * sizeof(int), cudaMemcpyHostToDevice);
+        int vsize = *MCGAL::contextPool.vindex;
+        int hsize = *MCGAL::contextPool.hindex;
+        int fsize = *MCGAL::contextPool.findex;
+        CHECK(cudaMemcpy(MCGAL::contextPool.dvpool, MCGAL::contextPool.vpool, vsize * sizeof(MCGAL::Vertex),
+                         cudaMemcpyHostToDevice));
+        CHECK(cudaMemcpy(MCGAL::contextPool.dhpool, MCGAL::contextPool.hpool, hsize * sizeof(MCGAL::Halfedge),
+                         cudaMemcpyHostToDevice));
+        CHECK(cudaMemcpy(MCGAL::contextPool.dfpool, MCGAL::contextPool.fpool, fsize * sizeof(MCGAL::Facet),
+                         cudaMemcpyHostToDevice));
+        // cudaMemcpy(dstOffsets, stOffsets.data(), batch_size * sizeof(int), cudaMemcpyHostToDevice);
     }
 }
 
@@ -97,9 +106,7 @@ void DeCompressTool::decode(int lod) {
     b_jobCompleted = false;
     warmup<<<16, 256>>>();
     cudaDeviceSynchronize();
-    while (!b_jobCompleted) {
-        startNextDecompresssionOp();
-    }
+    startNextDecompresssionOp();
 }
 
 __global__ void resetStateOnCuda(MCGAL::Halfedge* hpool, MCGAL::Facet* fpool, int num) {
@@ -129,28 +136,21 @@ __global__ void resetStateOnCuda(MCGAL::Halfedge* hpool, MCGAL::Facet* fpool, in
 }
 
 void DeCompressTool::startNextDecompresssionOp() {
-    // check if the target LOD is reached
-    if (i_curDecimationId * 100.0 / nbDecimations[0] >= i_decompPercentage) {
-        if (i_curDecimationId == nbDecimations[0]) {}
-        b_jobCompleted = true;
-        return;
-    }
-    std::vector<int> twos;
     // 1. reset the states. note that the states of the vertices need not to be reset
     int number = *MCGAL::contextPool.findex;
     dim3 block(256, 1, 1);
     dim3 grid((number + block.x - 1) / block.x, 1, 1);
+    resetStateOnCuda<<<grid, block>>>(MCGAL::contextPool.dhpool, MCGAL::contextPool.dfpool, number);
+    cudaDeviceSynchronize();
     int vsize = *MCGAL::contextPool.vindex;
     int hsize = *MCGAL::contextPool.hindex;
     int fsize = *MCGAL::contextPool.findex;
-    CHECK(cudaMemcpy(MCGAL::contextPool.dvpool, MCGAL::contextPool.vpool, vsize * sizeof(MCGAL::Vertex),
-                     cudaMemcpyHostToDevice));
-    CHECK(cudaMemcpy(MCGAL::contextPool.dhpool, MCGAL::contextPool.hpool, hsize * sizeof(MCGAL::Halfedge),
-                     cudaMemcpyHostToDevice));
-    CHECK(cudaMemcpy(MCGAL::contextPool.dfpool, MCGAL::contextPool.fpool, fsize * sizeof(MCGAL::Facet),
-                     cudaMemcpyHostToDevice));
-    resetStateOnCuda<<<grid, block>>>(MCGAL::contextPool.dhpool, MCGAL::contextPool.dfpool, number);
-    cudaDeviceSynchronize();
+    CHECK(cudaMemcpy(MCGAL::contextPool.vpool, MCGAL::contextPool.dvpool, vsize * sizeof(MCGAL::Vertex),
+                     cudaMemcpyDeviceToHost));
+    CHECK(cudaMemcpy(MCGAL::contextPool.hpool, MCGAL::contextPool.dhpool, hsize * sizeof(MCGAL::Halfedge),
+                     cudaMemcpyDeviceToHost));
+    CHECK(cudaMemcpy(MCGAL::contextPool.fpool, MCGAL::contextPool.dfpool, fsize * sizeof(MCGAL::Facet),
+                     cudaMemcpyDeviceToHost));
     for (int i = 0; i < splitableCounts.size(); i++) {
         splitableCounts[i] = 0;
         insertedCounts[i] = 0;
@@ -158,37 +158,39 @@ void DeCompressTool::startNextDecompresssionOp() {
     i_curDecimationId++;  // increment the current decimation operation id.
     // 2. decoding the removed vertices and add to target facets
     struct timeval start = get_cur_time();
-    BatchRemovedVerticesDecodingStep();
-    // logt("%d RemovedVerticesDecodingStep", start, i_curDecimationId);
-    // 3. decoding the inserted edge and marking the ones added
-    BatchInsertedEdgeDecodingStepOnCuda();
-    // std::thread thread1([&]() -> void { BatchRemovedVerticesDecodingStep(); });
-    // std::thread thread2([&]() -> void { BatchInsertedEdgeDecodingStepOnCuda(); });
-    // std::thread thread1(&DeCompressTool::BatchRemovedVerticesDecodingStep, this);
-    // std::thread thread2(&DeCompressTool::BatchInsertedEdgeDecodingStepOnCuda, this);
-    // thread1.join();
-    // thread2.join();
+    double t1 = omp_get_wtime();
+#pragma omp parallel for num_threads(batch_size)
+    for (int i = 0; i < batch_size; i++) {
+        RemovedVerticesDecodingStep(i);
+    }
+    t1 = omp_get_wtime() - t1;
+    log("removeVertexDecoding Step %f", t1);
+    // BatchRemovedVerticesDecodingStep();
+    logt("%d RemovedVerticesDecodingStep", start, i_curDecimationId);
+// 3. decoding the inserted edge and marking the ones added
+#pragma omp parallel for num_threads(batch_size)
+    for (int i = 0; i < batch_size; i++) {
+        InsertedEdgeDecodingStep(i);
+    }
     logt("%d InsertedEdgeDecodingStep", start, i_curDecimationId);
+    vsize = *MCGAL::contextPool.vindex;
+    hsize = *MCGAL::contextPool.hindex;
+    fsize = *MCGAL::contextPool.findex;
+    CHECK(cudaMemcpy(MCGAL::contextPool.dvpool, MCGAL::contextPool.vpool, vsize * sizeof(MCGAL::Vertex),
+                     cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpy(MCGAL::contextPool.dhpool, MCGAL::contextPool.hpool, hsize * sizeof(MCGAL::Halfedge),
+                     cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpy(MCGAL::contextPool.dfpool, MCGAL::contextPool.fpool, fsize * sizeof(MCGAL::Facet),
+                     cudaMemcpyHostToDevice));
+    // BatchInsertedEdgeDecodingStepOnCuda();
+    logt("%d cuda memcpy", start, i_curDecimationId);
     // 4. truly insert the removed vertices
     insertRemovedVerticesOnCuda();
     // insertRemovedVertices();
     logt("%d insertRemovedVertices", start, i_curDecimationId);
     // 5. truly remove the added edges
-    // #pragma omp parallel for num_threads(batch_size)
-    //     for (int i = 0; i < batch_size; i++) {
-    //         removeInsertedEdges(i);
-    //     }
     removeInsertedEdgesOnCuda();
     logt("%d removeInsertedEdges", start, i_curDecimationId);
-    vsize = *MCGAL::contextPool.vindex;
-    hsize = *MCGAL::contextPool.hindex;
-    fsize = *MCGAL::contextPool.findex;
-    CHECK(cudaMemcpy(MCGAL::contextPool.vpool, MCGAL::contextPool.dvpool, vsize * sizeof(MCGAL::Vertex),
-                     cudaMemcpyDeviceToHost));
-    CHECK(cudaMemcpy(MCGAL::contextPool.hpool, MCGAL::contextPool.dhpool, hsize * sizeof(MCGAL::Halfedge),
-                     cudaMemcpyDeviceToHost));
-    CHECK(cudaMemcpy(MCGAL::contextPool.fpool, MCGAL::contextPool.dfpool, fsize * sizeof(MCGAL::Facet),
-                     cudaMemcpyDeviceToHost));
 }
 
 MCGAL::Halfedge* DeCompressTool::pushHehInit(int meshId) {
@@ -608,7 +610,6 @@ void DeCompressTool::BatchRemovedVerticesDecodingStep() {
         CHECK(cudaMemcpy(d_nextQueueSize, &nextQueueSize, sizeof(int), cudaMemcpyHostToDevice));
     }
     logt("%d bfs", start, i_curDecimationId);
-    // sort
     // sort(fids, fids + index, cmpForder);
     thrust::sort(fids.begin(), fids.begin() + index, SortFacetByMeshId(MCGAL::contextPool.dfpool));
     logt("%d sort", start, i_curDecimationId);
@@ -804,123 +805,123 @@ void DeCompressTool::BatchInsertedEdgeDecodingStepOnCuda() {
     //                  cudaMemcpyDeviceToHost));
 }
 
-void DeCompressTool::BatchInsertedEdgeDecodingStep() {
-    int size = *MCGAL::contextPool.hindex;
-    int* firstQueue = new int[size];
-    int* secondQueue = new int[size];
-    int currentQueueSize = batch_size;
-    int nextQueueSize = 0;
-    int level = 0;
-    int threshold = 64 / 4 - 1;
-    int firstCount = 0;
-    int secondCount = 0;
-    int* hids = new int[size];
-    // 将信息拷贝过来
-    int index = 0;
-    int* hsizes = new int[batch_size];
-    int* hsizesSum = new int[batch_size + 1];
-    memset(hsizes, 0, batch_size * sizeof(int));
-    memset(hsizesSum, 0, (batch_size + 1) * sizeof(int));
-    for (int i = 0; i < size; i++) {
-        MCGAL::Halfedge* halfedge = &MCGAL::contextPool.hpool[i];
-        if (halfedge->meshId != -1) {
-            hids[index++] = i;
-            hsizes[halfedge->facet()->meshId]++;
-        }
-    }
-    for (int i = 1; i < batch_size; i++) {
-        hsizesSum[i] = hsizesSum[i - 1] + hsizes[i];
-    }
-    hsizesSum[batch_size] = index;
+// void DeCompressTool::BatchInsertedEdgeDecodingStep() {
+//     int size = *MCGAL::contextPool.hindex;
+//     int* firstQueue = new int[size];
+//     int* secondQueue = new int[size];
+//     int currentQueueSize = batch_size;
+//     int nextQueueSize = 0;
+//     int level = 0;
+//     int threshold = 64 / 4 - 1;
+//     int firstCount = 0;
+//     int secondCount = 0;
+//     int* hids = new int[size];
+//     // 将信息拷贝过来
+//     int index = 0;
+//     int* hsizes = new int[batch_size];
+//     int* hsizesSum = new int[batch_size + 1];
+//     memset(hsizes, 0, batch_size * sizeof(int));
+//     memset(hsizesSum, 0, (batch_size + 1) * sizeof(int));
+//     for (int i = 0; i < size; i++) {
+//         MCGAL::Halfedge* halfedge = &MCGAL::contextPool.hpool[i];
+//         if (halfedge->meshId != -1) {
+//             hids[index++] = i;
+//             hsizes[halfedge->facet()->meshId]++;
+//         }
+//     }
+//     for (int i = 1; i < batch_size; i++) {
+//         hsizesSum[i] = hsizesSum[i - 1] + hsizes[i];
+//     }
+//     hsizesSum[batch_size] = index;
 
-    for (int i = 0; i < batch_size; i++) {
-        MCGAL::Halfedge* hit = pushHehInit(i);
-        hit->horder = 0;
-        firstQueue[i] = hit->poolId;
-    }
+//     for (int i = 0; i < batch_size; i++) {
+//         MCGAL::Halfedge* hit = pushHehInit(i);
+//         hit->horder = 0;
+//         firstQueue[i] = hit->poolId;
+//     }
 
-    while (currentQueueSize > 0) {
-        int* currentQueue;
-        int* nextQueue;
-        if (level % 2 == 0) {
-            currentQueue = firstQueue;
-            nextQueue = secondQueue;
-        } else {
-            currentQueue = secondQueue;
-            nextQueue = firstQueue;
-        }
-#pragma omp parallel for num_threads(128)
-        for (int i = 0; i < currentQueueSize; i++) {
-            int current = currentQueue[i];
-            MCGAL::Halfedge* h = MCGAL::contextPool.getHalfedgeByIndex(current);
-            if (h->isProcessed()) {
-                continue;
-            }
-            MCGAL::Halfedge* hIt = h->next();
-            unsigned long long idx = 1;
-            while (hIt->opposite() != h) {
-                unsigned long long order = h->horder << 4 | idx;
+//     while (currentQueueSize > 0) {
+//         int* currentQueue;
+//         int* nextQueue;
+//         if (level % 2 == 0) {
+//             currentQueue = firstQueue;
+//             nextQueue = secondQueue;
+//         } else {
+//             currentQueue = secondQueue;
+//             nextQueue = firstQueue;
+//         }
+// #pragma omp parallel for num_threads(128)
+//         for (int i = 0; i < currentQueueSize; i++) {
+//             int current = currentQueue[i];
+//             MCGAL::Halfedge* h = MCGAL::contextPool.getHalfedgeByIndex(current);
+//             if (h->isProcessed()) {
+//                 continue;
+//             }
+//             MCGAL::Halfedge* hIt = h->next();
+//             unsigned long long idx = 1;
+//             while (hIt->opposite() != h) {
+//                 unsigned long long order = h->horder << 4 | idx;
 
-#pragma omp atomic compare
-                hIt->horder = order < hIt->horder ? order : hIt->horder;
+// #pragma omp atomic compare
+//                 hIt->horder = order < hIt->horder ? order : hIt->horder;
 
-                if (hIt->horder == order) {
-                    idx++;
-                    int position;
-#pragma omp critical
-                    { position = nextQueueSize++; }
-                    nextQueue[position] = hIt->poolId;
-                }
-                hIt = hIt->opposite()->next();
-            };
-        }
-        ++level;
-        // 到达阈值后开始compact
-        if (level == threshold) {
-            // sort(halfedges.begin() + firstCount, halfedges.begin() + secondCount, cmpHorder);
-            sort(hids, hids + index, cmpHorder);
+//                 if (hIt->horder == order) {
+//                     idx++;
+//                     int position;
+// #pragma omp critical
+//                     { position = nextQueueSize++; }
+//                     nextQueue[position] = hIt->poolId;
+//                 }
+//                 hIt = hIt->opposite()->next();
+//             };
+//         }
+//         ++level;
+//         // 到达阈值后开始compact
+//         if (level == threshold) {
+//             // sort(halfedges.begin() + firstCount, halfedges.begin() + secondCount, cmpHorder);
+//             sort(hids, hids + index, cmpHorder);
 
-            for (int i = firstCount; i < index; i++) {
-                if (MCGAL::contextPool.hpool[hids[i]].horder != (~(unsigned long long)0)) {
-                    MCGAL::contextPool.hpool[hids[i]].horder = i;
-                    secondCount = i;
-                }
-            }
-            firstCount = secondCount;
+//             for (int i = firstCount; i < index; i++) {
+//                 if (MCGAL::contextPool.hpool[hids[i]].horder != (~(unsigned long long)0)) {
+//                     MCGAL::contextPool.hpool[hids[i]].horder = i;
+//                     secondCount = i;
+//                 }
+//             }
+//             firstCount = secondCount;
 
-            int power = 1;
-            int x = secondCount + 1;
-            while (x > 1) {
-                x /= 2;
-                power++;
-            }
-            threshold += (64 - power) / 4 - 1;
-        }
-        // offFile << "\n";
-        currentQueueSize = nextQueueSize;
-        nextQueueSize = 0;
-    }
-    sort(hids, hids + index, cmpHorder);
-    // 并行读取
-#pragma omp parallel for num_threads(128)
-    for (int i = 0; i < index; i++) {
-        MCGAL::Halfedge* halfedge = MCGAL::contextPool.getHalfedgeByIndex(hids[i]);
-        int offset = stOffsets[halfedge->meshId] + i - hsizesSum[halfedge->meshId];
-        char symbol = readCharByOffset(offset);
-        if (symbol) {
-            halfedge->setAdded();
-        }
-    }
-    for (int i = 0; i < batch_size; i++) {
-        stOffsets[i] += hsizes[i];
-        if (stOffsets[i] % 4 != 0) {
-            stOffsets[i] = (stOffsets[i] / 4 + 1) * 4;
-        }
-    }
-    cudaMemcpy(dstOffsets, stOffsets.data(), batch_size * sizeof(int), cudaMemcpyHostToDevice);
-    delete firstQueue;
-    delete secondQueue;
-}
+//             int power = 1;
+//             int x = secondCount + 1;
+//             while (x > 1) {
+//                 x /= 2;
+//                 power++;
+//             }
+//             threshold += (64 - power) / 4 - 1;
+//         }
+//         // offFile << "\n";
+//         currentQueueSize = nextQueueSize;
+//         nextQueueSize = 0;
+//     }
+//     sort(hids, hids + index, cmpHorder);
+//     // 并行读取
+// #pragma omp parallel for num_threads(128)
+//     for (int i = 0; i < index; i++) {
+//         MCGAL::Halfedge* halfedge = MCGAL::contextPool.getHalfedgeByIndex(hids[i]);
+//         int offset = stOffsets[halfedge->meshId] + i - hsizesSum[halfedge->meshId];
+//         char symbol = readCharByOffset(offset);
+//         if (symbol) {
+//             halfedge->setAdded();
+//         }
+//     }
+//     for (int i = 0; i < batch_size; i++) {
+//         stOffsets[i] += hsizes[i];
+//         if (stOffsets[i] % 4 != 0) {
+//             stOffsets[i] = (stOffsets[i] / 4 + 1) * 4;
+//         }
+//     }
+//     cudaMemcpy(dstOffsets, stOffsets.data(), batch_size * sizeof(int), cudaMemcpyHostToDevice);
+//     delete firstQueue;
+//     delete secondQueue;
+// }
 
 void DeCompressTool::RemovedVerticesDecodingStep(int meshId) {
     std::queue<MCGAL::Halfedge*> gateQueue;
@@ -994,6 +995,9 @@ void DeCompressTool::InsertedEdgeDecodingStep(int meshId) {
         }
         assert(!hIt->isNew());
     }
+    // if (stOffsets[meshId] % 4 != 0) {
+    //     stOffsets[meshId] = (stOffsets[meshId] / 4 + 1) * 4;
+    // }
 }
 
 inline __device__ void insert_tip_cuda(MCGAL::Halfedge* hs, MCGAL::Halfedge* h, MCGAL::Halfedge* v) {
@@ -1128,33 +1132,6 @@ __global__ void preAllocInit(MCGAL::Vertex* vpool,
         vnew->setPointOnCuda(fit->getRemovedVertexPosOnCuda());
     }
 }
-
-// __global__ void preAllocPostProcessor(MCGAL::Vertex* vpool,
-//                                       MCGAL::Halfedge* hpool,
-//                                       MCGAL::Facet* fpool,
-//                                       int* vertexIndexes,
-//                                       int* faceIndexes,
-//                                       int* stFacetIndexes,
-//                                       int* stHalfedgeIndexes,
-//                                       int num) {
-//     int tid = blockIdx.x * (blockDim.x * blockDim.y) + blockDim.x * threadIdx.y + threadIdx.x;
-//     if (tid < num) {
-//         MCGAL::Facet* fit = &fpool[faceIndexes[tid]];
-
-//         int hcount = fit->halfedge_size * 2;
-//         int fcount = fit->halfedge_size - 1;
-//         int stfindex = stFacetIndexes[tid];
-//         for (int i = 0; i < fcount; i++) {
-//             fpool[stfindex + i].setMeshIdOnCuda(fit->meshId);
-//         }
-//         int stHindex = stHalfedgeIndexes[tid];
-//         for (int j = 0; j < hcount; j++) {
-//             hpool[stHindex + j].setMeshIdOnCuda(fit->meshId);
-//         }
-//         MCGAL::Vertex* vnew = &vpool[vertexIndexes[tid]];
-//         vnew->setMeshIdOnCuda(fit->meshId);
-//     }
-// }
 
 __global__ void preAllocOnCuda(MCGAL::Vertex* vpool,
                                MCGAL::Halfedge* hpool,
@@ -1580,9 +1557,6 @@ joinFacetOnCuda(MCGAL::Vertex* vpool, MCGAL::Halfedge* hpool, MCGAL::Facet* fpoo
                 MCGAL::Halfedge* halfedge = &hpool[facet->halfedges[i]];
                 joinFacetDevice(vpool, hpool, fpool, halfedge);
             }
-            if (hpool[facet->halfedges[i]].dopposite(hpool)->isAddedOnCuda()) {
-                // printf("%d error", i_curId);
-            }
         }
     }
 }
@@ -1632,9 +1606,9 @@ void DeCompressTool::removeInsertedEdgesOnCuda() {
     int copyNum = copyEnd - hids.begin();
     dim3 block1(256, 1, 1);
     dim3 grid1((copyNum + block1.x - 1) / block1.x, 1, 1);
-    checkCompetition<<<grid1, block1>>>(MCGAL::contextPool.dhpool, MCGAL::contextPool.dfpool,
-                                        thrust::raw_pointer_cast(hids.data()), copyNum, i_curDecimationId);
-    cudaDeviceSynchronize();
+    // checkCompetition<<<grid1, block1>>>(MCGAL::contextPool.dhpool, MCGAL::contextPool.dfpool,
+    //                                     thrust::raw_pointer_cast(hids.data()), copyNum, i_curDecimationId);
+    // cudaDeviceSynchronize();
 
     thrust::transform(hids.begin(), hids.begin() + copyNum, hids.begin(),
                       ConvertHalfedgeToFacet(MCGAL::contextPool.dhpool));

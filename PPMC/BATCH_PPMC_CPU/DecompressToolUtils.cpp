@@ -1,4 +1,4 @@
-#include "DecompressTool.cuh"
+#include "DecompressTool.h"
 
 void DeCompressTool::readBaseMesh(int meshId, int* offset) {
     // read the number of level of detail
@@ -16,7 +16,6 @@ void DeCompressTool::readBaseMesh(int meshId, int* offset) {
         p_pointDeque->push_back(pos);
     }
     // read the face vertex indices
-    // Read the face vertex indices.
     for (unsigned i = 0; i < i_nbFacesBaseMesh; ++i) {
         int nv = readInt(offset);
         uint32_t* f = new uint32_t[nv + 1];
@@ -62,8 +61,8 @@ void DeCompressTool::buildFromBuffer(int meshId,
         }
         MCGAL::Facet* face = MCGAL::contextPool.allocateFaceFromPool(vts);
         face->setMeshId(meshId);
-        for (int k = 0; k < face->halfedge_size; k++) {
-            MCGAL::Halfedge* hit = face->getHalfedgeByIndex(k);
+        for (int k = 0; k < face->halfedges.size(); k++) {
+            MCGAL::Halfedge* hit = face->halfedges[k];
             hit->setMeshId(face->meshId);
         }
     }
@@ -72,28 +71,18 @@ void DeCompressTool::buildFromBuffer(int meshId,
 }
 
 void DeCompressTool::dumpto(std::string prefix) {
-    int vsize = *MCGAL::contextPool.vindex;
-    int hsize = *MCGAL::contextPool.hindex;
-    int fsize = *MCGAL::contextPool.findex;
-    CHECK(cudaMemcpy(MCGAL::contextPool.vpool, MCGAL::contextPool.dvpool, vsize * sizeof(MCGAL::Vertex),
-                     cudaMemcpyDeviceToHost));
-    CHECK(cudaMemcpy(MCGAL::contextPool.hpool, MCGAL::contextPool.dhpool, hsize * sizeof(MCGAL::Halfedge),
-                     cudaMemcpyDeviceToHost));
-    CHECK(cudaMemcpy(MCGAL::contextPool.fpool, MCGAL::contextPool.dfpool, fsize * sizeof(MCGAL::Facet),
-                     cudaMemcpyDeviceToHost));
-
     std::vector<std::vector<MCGAL::Vertex*>> vertices(batch_size);
     std::vector<std::vector<MCGAL::Facet*>> facets(batch_size);
     int vindex = *MCGAL::contextPool.vindex;
     int findex = *MCGAL::contextPool.findex;
-#pragma omp parallel for num_threads(60)
+// #pragma omp parallel for num_threads(60)
     for (int i = 0; i < vindex; i++) {
         MCGAL::Vertex* v = MCGAL::contextPool.getVertexByIndex(i);
         if (v->meshId != -1) {
             vertices[v->meshId].push_back(v);
         }
     }
-#pragma omp parallel for num_threads(60)
+// #pragma omp parallel for num_threads(60)
     for (int i = 0; i < findex; i++) {
         MCGAL::Facet* f = MCGAL::contextPool.getFacetByIndex(i);
         if (f->meshId != -1) {
@@ -103,14 +92,14 @@ void DeCompressTool::dumpto(std::string prefix) {
         }
     }
     char path[256];
-#pragma omp parallel for num_threads(batch_size)
+// #pragma omp parallel for num_threads(batch_size)
     for (int i = 0; i < batch_size; i++) {
         std::sprintf(path, prefix.c_str(), i);
         dumpto(vertices[i], facets[i], path);
     }
 }
 
-void DeCompressTool::dumpto(std::vector<MCGAL::Vertex*> vertices, std::vector<MCGAL::Facet*> facets, char* path) {
+void DeCompressTool::dumpto(std::vector<MCGAL::Vertex*>& vertices, std::vector<MCGAL::Facet*>& facets, char* path) {
     std::ofstream offFile(path);
     if (!offFile.is_open()) {
         std::cerr << "Error opening file: " << path << std::endl;
@@ -130,13 +119,13 @@ void DeCompressTool::dumpto(std::vector<MCGAL::Vertex*> vertices, std::vector<MC
     for (MCGAL::Facet* face : facets) {
         if (face->isRemoved())
             continue;
-        offFile << face->vertex_size << " ";
-        MCGAL::Halfedge* hst = MCGAL::contextPool.getHalfedgeByIndex(face->halfedges[0]);
+        offFile << face->vertices.size() << " ";
+        MCGAL::Halfedge* hst = face->halfedges[0];
         MCGAL::Halfedge* hed = hst;
 
         do {
-            offFile << hst->vertex()->getId() << " ";
-            hst = hst->next();
+            offFile << hst->vertex->getId() << " ";
+            hst = hst->next;
         } while (hst != hed);
         offFile << "\n";
     }

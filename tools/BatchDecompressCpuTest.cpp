@@ -1,10 +1,6 @@
-#include "../PPMC/BATCH_PPMC/DecompressTool.cuh"
+#include "../PPMC/BATCH_PPMC_CPU/DecompressTool.h"
 #include <iostream>
 using namespace std;
-
-__global__ void kernel() {
-    printf("hello world\n");
-}
 
 void compress(int argc, char** argv) {
     // const char* strings[] = {
@@ -77,7 +73,7 @@ void compress(int argc, char** argv) {
     int lod = 100;
     char path[256];
     sprintf(path, "%s", "./gisdata/compressed_0_mesh_%d_mesh.off");
-    // deCompressTool->dumpto(path);
+    deCompressTool->dumpto(path);
     struct timeval start = get_cur_time();
     for (uint i = 10; i <= lod; i += 10) {
         deCompressTool->decode(i);
