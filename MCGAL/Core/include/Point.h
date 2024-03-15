@@ -44,8 +44,9 @@ class Point {
         }
     }
 
-  protected:
+  public:
     float v[3];
+    int id;
 };
 }  // namespace MCGAL
 #endif

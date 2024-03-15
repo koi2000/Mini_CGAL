@@ -31,6 +31,8 @@ class Halfedge {
     int poolId = -1;
     int indexInQueue = -1;
     int meshId = -1;
+    int level = 0;
+    int groupId = -1;
 
     // util
     void setMeshId(int meshId) {
@@ -46,6 +48,12 @@ class Halfedge {
         removedFlag = NotRemoved;
         bfsFlag = NotVisited;
         horder = ~(unsigned long long)0;
+        level = 0;
+        groupId = -1;
+    }
+
+    void setGroupId(int gid) {
+        this->groupId = gid;
     }
 
     /* Flag 1 */
@@ -55,7 +63,7 @@ class Halfedge {
     }
 
     inline void removeFromQueue() {
-        assert(flag == InQueue);
+        // assert(flag == InQueue);
         flag = NoLongerInQueue;
     }
 

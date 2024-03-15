@@ -1,5 +1,5 @@
 #include "include/ContextPool.h"
-
+#include "string.h"
 namespace MCGAL {
 
 ContextPool::ContextPool() {
@@ -18,6 +18,8 @@ ContextPool::ContextPool() {
     for (int i = 0; i < FACET_POOL_SIZE; i++) {
         fpool[i].poolId = i;
     }
+    vid2PoolId = new int[VERTEX_POOL_SIZE];
+    memset(vid2PoolId, 0, sizeof(int) * VERTEX_POOL_SIZE);
 }
 
 ContextPool::~ContextPool() {
@@ -32,6 +34,10 @@ ContextPool::~ContextPool() {
     if (fpool != nullptr) {
         delete[] fpool;
         fpool = nullptr;
+    }
+    if (vid2PoolId != nullptr) {
+        delete[] vid2PoolId;
+        vid2PoolId = nullptr;
     }
 }
 

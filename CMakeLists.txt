@@ -12,12 +12,12 @@ set(CMAKE_CUDA_COMPILER "/usr/local/cuda-12/bin/nvcc")
 # set(CMAKE_CUDA_COMPILER "/usr/local/cuda-12/bin/nvcc")
 project(Mini_CGAL LANGUAGES  CXX C CUDA)
 
-set(CMAKE_CUDA_FLAGS "-arch=compute_89 -code=sm_89 -rdc=true -g -G -O2 -fopenmp")
+set(CMAKE_CUDA_FLAGS "-arch=compute_89 -code=sm_89 -rdc=true -g -G -O0 -fopenmp")
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xcompiler -std=c++14")
 # set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xcompiler")
 
 set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -g -Wno-unused-result")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -g -Wno-unused-result")
 
 if(PROF)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pg")
@@ -64,6 +64,7 @@ set(BATCH_PPMC_SOURCE_DIR "PPMC/BATCH_PPMC")
 set(CPU_BATCH_PPMC_SOURCE_DIR "PPMC/BATCH_PPMC_CPU")
 set(NEW_PPMC_SOURCE_DIR "PPMC/NEW_PPMC")
 set(BFS_PPMC_SOURCE_DIR "PPMC/BFS_PPMC")
+set(MULTI_PPMC_SOURCE_DIR "PPMC/MULTI_PPMC")
 
 include(${CGAL_USE_FILE})
 
@@ -93,6 +94,11 @@ file(GLOB_RECURSE BATCH_PPMC_FILES
 file(GLOB_RECURSE BATCH_PPMC_CPU_FILES
     "${CPU_BATCH_PPMC_SOURCE_DIR}/*.h"
     "${CPU_BATCH_PPMC_SOURCE_DIR}/*.cpp"
+)
+
+file(GLOB_RECURSE MULTI_PPMC_FILES
+    "${MULTI_PPMC_SOURCE_DIR}/*.h"
+    "${MULTI_PPMC_SOURCE_DIR}/*.cpp"
 )
 
 file(GLOB_RECURSE NEW_PPMC_FILES
@@ -178,6 +184,12 @@ target_link_libraries(Batch_Decompress ${CUDA_LIBRARIES} OpenMP::OpenMP_CXX)
 add_executable(Cpu_Batch_Decompress tools/BatchDecompressCpuTest.cpp  ${BATCH_PPMC_CPU_FILES} ${MINI_CGAL_FILES})
 set_target_properties(Cpu_Batch_Decompress PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON)
 target_link_libraries(Cpu_Batch_Decompress ${CUDA_LIBRARIES} OpenMP::OpenMP_CXX)
+
+add_executable(MultiCompress tools/MultiCompress_test.cpp  ${MULTI_PPMC_FILES} ${MINI_CGAL_FILES})
+set_target_properties(MultiCompress PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON)
+target_compile_definitions(MultiCompress PRIVATE _OPENMP=202011)
+target_link_libraries(MultiCompress ${CUDA_LIBRARIES} OpenMP::OpenMP_CXX -lstdc++)
+target_link_libraries(MultiCompress ${CUDA_LIBRARIES})
 
 # add_executable(BFSCompress tools/BFSCompress_test.cpp  ${BFS_PPMC} ${MINI_CGAL_FILES})
 # set_target_properties(BFSCompress PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON)

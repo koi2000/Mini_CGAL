@@ -19,6 +19,7 @@ class Facet {
     MCGAL::Point removedVertexPos;
     unsigned long long forder = ~(unsigned long long)0;
     int poolId = -1;
+    int groupId = -1;
     int meshId = -1;
 
   public:
@@ -39,6 +40,10 @@ class Facet {
     // utils
     void setMeshId(int meshId) {
         this->meshId = meshId;
+    }
+    
+    void setGroupId(int gid) {
+        this->groupId = gid;
     }
     Facet* clone();
     void reset(Halfedge* h);
@@ -62,6 +67,7 @@ class Facet {
         processedFlag = NotProcessed;
         removedFlag = NotRemoved;
         forder = ~(unsigned long long)0;
+        groupId = -1;
     }
 
     inline void resetProcessedFlag() {

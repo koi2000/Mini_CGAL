@@ -13,6 +13,7 @@ class ContextPool {
     MCGAL::Vertex* vpool = nullptr;
     MCGAL::Halfedge* hpool = nullptr;
     MCGAL::Facet* fpool = nullptr;
+    int* vid2PoolId = nullptr;
 
     int* vindex;
     int* hindex;
@@ -71,6 +72,17 @@ class ContextPool {
     }
 
     inline MCGAL::Vertex* allocateVertexFromPool() {
+        return &vpool[(*vindex)++];
+    }
+
+    inline MCGAL::Vertex* allocateVertexFromPool(float x, float y, float z) {
+        vpool[*vindex].setPoint({x, y, z});
+        return &vpool[(*vindex)++];
+    }
+
+    inline MCGAL::Vertex* allocateVertexFromPool(float x, float y, float z, int id) {
+        vpool[*vindex].setPoint({x, y, z});
+        vid2PoolId[id] = *vindex;
         return &vpool[(*vindex)++];
     }
 
