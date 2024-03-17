@@ -76,6 +76,7 @@ class Vertex : public Point {
         this->v[0] = p.x();
         this->v[1] = p.y();
         this->v[2] = p.z();
+        this->id = p.id;
     }
 
     inline void resetState() {

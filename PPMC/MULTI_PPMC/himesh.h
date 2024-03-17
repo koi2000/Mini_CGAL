@@ -33,7 +33,7 @@ class HiMesh : public MCGAL::Mesh {
     // The vertices of the edge that is the departure of the coding and decoding conquests.
     MCGAL::Vertex* vh_departureConquest[2];
     // 
-    std::vector<std::vector<int>> stVerteices;
+    
     // Geometry symbol list.
     std::deque<std::deque<MCGAL::Point>> geometrySym;
 
@@ -46,6 +46,7 @@ class HiMesh : public MCGAL::Mesh {
     // Connectivity symbol list.
     std::deque<std::deque<unsigned>> connectFaceSym;
     std::deque<std::deque<unsigned>> connectEdgeSym;
+    std::vector<std::vector<int>> stVerteices;
     
     std::vector<std::vector<int>> facetNumberInGroups;
     std::vector<std::vector<int>> halfedgeNumberInGroups;
@@ -124,6 +125,12 @@ class HiMesh : public MCGAL::Mesh {
     void writeChar(unsigned char ch);
     void writePoint(MCGAL::Point& p);
     MCGAL::Point readPoint();
+    float readFloatByOffset(int offset);
+    int16_t readInt16ByOffset(int offset);
+    uint16_t readuInt16ByOffset(int offset);
+    int readIntByOffset(int offset);
+    unsigned char readCharByOffset(int offset);
+    MCGAL::Point readPointByOffset(int offset);
 
     void writeBaseMesh();
     void readBaseMesh();

@@ -422,7 +422,10 @@ void HiMesh::writeBaseMesh() {
 void HiMesh::encodeInsertedEdges(unsigned i_operationId) {
     std::deque<unsigned>& symbols = connectEdgeSym[i_operationId];
     assert(symbols.size() > 0);
-
+    int sampleNumber = sampleNumbers[i_curDecimationId];
+    for (int i = 0; i < sampleNumber; i++) {
+        writeInt(halfedgeNumberInGroups[i_operationId][i]);
+    }
     unsigned i_len = symbols.size();
     for (unsigned i = 0; i < i_len; ++i) {
         writeChar(symbols[i]);

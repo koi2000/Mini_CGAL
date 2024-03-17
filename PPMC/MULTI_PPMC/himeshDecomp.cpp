@@ -55,6 +55,7 @@ void HiMesh::startNextDecompresssionOp() {
     logt("%d removeInsertedEdges", start, i_curDecimationId);
 }
 
+// 每个点都多了一个id，在读一个id
 void HiMesh::readBaseMesh() {
     // read the number of level of detail
     i_nbDecimations = readuInt16();
@@ -69,7 +70,6 @@ void HiMesh::readBaseMesh() {
         MCGAL::Point pos = readPoint();
         p_pointDeque->push_back(pos);
     }
-    // read the face vertex indices
     // Read the face vertex indices.
     for (unsigned i = 0; i < i_nbFacesBaseMesh; ++i) {
         int nv = readInt();
@@ -125,79 +125,185 @@ void HiMesh::buildFromBuffer(std::deque<MCGAL::Point>* p_pointDeque, std::deque<
     vertices.clear();
 }
 
+bool cmpForder(MCGAL::Facet* f1, MCGAL::Facet* f2) {
+    if (f1->groupId == f2->groupId) {
+        return f1->forder < f2->forder;
+    }
+    return f1->groupId < f2->groupId;
+}
+
+bool cmpHorder(MCGAL::Halfedge* h1, MCGAL::Halfedge* h2) {
+    if (h1->groupId == h2->groupId) {
+        return h1->horder < h2->horder;
+    }
+    return h1->groupId < h2->groupId;
+}
+
 void HiMesh::RemovedVerticesDecodingStep() {
-    //
-    pushHehInit();
-    while (!gateQueue.empty()) {
-        MCGAL::Halfedge* h = gateQueue.front();
-        gateQueue.pop();
-
-        MCGAL::Facet* f = h->face;
-
-        // If the face is already processed, pick the next halfedge:
-        if (f->isConquered())
-            continue;
-
-        // Add the other halfedges to the queue
-        MCGAL::Halfedge* hIt = h;
-        do {
-            MCGAL::Halfedge* hOpp = hIt->opposite;
-            // TODO: wait
-            // assert(!hOpp->is_border());
-            if (!hOpp->face->isConquered())
-                gateQueue.push(hOpp);
-            hIt = hIt->next;
-        } while (hIt != h);
-
-        // Decode the face symbol.
-        unsigned sym = readChar();
-        if (sym == 1) {
-            MCGAL::Point rmved = readPoint();
-            f->setSplittable();
-            f->setRemovedVertexPos(rmved);
-        } else {
-            f->setUnsplittable();
+    // 从buffer中读出meta信息
+    int sampleNumber = readInt();
+    sampleNumbers.push_back(sampleNumber);
+    std::vector<int> stVertex(sampleNumber);
+    for (int i = 0; i < 2 * sampleNumber; i++) {
+        stVertex.push_back(readInt());
+    }
+    stVerteices.push_back(stVertex);
+    std::vector<int> facetNumberInGroup;
+    for (int i = 0; i < sampleNumber; i++) {
+        facetNumberInGroup.push_back(readInt());
+    }
+    int size = *MCGAL::contextPool.findex;
+    // 将起始点放入到队列里，充分利用conquered属性
+    int* firstQueue = new int[size];
+    int* secondQueue = new int[size];
+    int currentQueueSize = sampleNumber;
+    int nextQueueSize = 0;
+    for (int i = 0; i < sampleNumber; i++) {
+        int poolId1 = MCGAL::contextPool.vid2PoolId[stVertex[i * 2]];
+        int poolId2 = MCGAL::contextPool.vid2PoolId[stVertex[i * 2 + 1]];
+        MCGAL::Vertex* v1 = MCGAL::contextPool.getVertexByIndex(poolId1);
+        MCGAL::Vertex* v2 = MCGAL::contextPool.getVertexByIndex(poolId2);
+        for (int j = 0; j < v1->halfedges.size(); j++) {
+            if (v1->halfedges[j]->end_vertex == v2) {
+                v1->halfedges[j]->face->forder = i;
+                firstQueue[i] = v1->halfedges[j]->poolId;
+                break;
+            }
         }
     }
+    int level = 0;
+    while (currentQueueSize > 0) {
+        int* currentQueue;
+        int* nextQueue;
+        if (level % 2 == 0) {
+            currentQueue = firstQueue;
+            nextQueue = secondQueue;
+        } else {
+            currentQueue = secondQueue;
+            nextQueue = firstQueue;
+        }
+        for (int i = 0; i < currentQueueSize; i++) {
+            int current = currentQueue[i];
+            MCGAL::Halfedge* h = MCGAL::contextPool.getHalfedgeByIndex(current);
+            MCGAL::Facet* f = h->face;
+            if (f->isProcessed()) {
+                continue;
+            }
+            MCGAL::Halfedge* hIt = h;
+            unsigned long long idx = 1;
+            do {
+                MCGAL::Halfedge* hOpp = hIt->opposite;
+                unsigned long long order = f->forder << 4 | idx;
+
+                if (!hOpp->face->isConquered()) {
+                    hOpp->face->forder = order < hOpp->face->forder ? order : hOpp->face->forder;
+                    if (hOpp->face->groupId != -1) {
+                        hOpp->face->groupId = min(h->face->groupId, hOpp->face->groupId);
+                    }
+                    int position = nextQueueSize++;
+                    nextQueue[position] = hOpp->poolId;
+                }
+                hIt = hIt->next;
+            } while (hIt != h);
+        }
+        currentQueueSize = nextQueueSize;
+        nextQueueSize = 0;
+    }
+    // 排好序之后直接开始按顺序读取
+    sort(faces.begin(), faces.end(), cmpForder);
+    std::vector<int> splittableIndex;
+    for (int i = 0; i < faces.size(); i++) {
+        char symbol = readCharByOffset(dataOffset + i);
+        if (symbol) {
+            faces[i]->setSplittable();
+            splittableIndex.push_back(i);
+
+        } else {
+            faces[i]->setUnsplittable();
+        }
+    }
+    dataOffset += faces.size();
+    for (int i = 0; i < splittableIndex.size(); i++) {
+        faces[splittableIndex[i]]->setRemovedVertexPos(readPointByOffset(dataOffset + i * 4 * sizeof(int)));
+    }
+    dataOffset += splittableIndex.size() * 4 * sizeof(int);
 }
 
 /**
  * One step of the inserted edge coding conquest.
  */
 void HiMesh::InsertedEdgeDecodingStep() {
-    pushHehInit();
-    while (!gateQueue.empty()) {
-        MCGAL::Halfedge* h = gateQueue.front();
-        gateQueue.pop();
-
-        // Test if the edge has already been conquered.
-        if (h->isProcessed())
-            continue;
-
-        // Mark the halfedge as processed.
-        h->setProcessed();
-        h->opposite->setProcessed();
-
-        // Test if there is a symbol for this edge.
-        // There is no symbol if the two faces of an edge are unsplitable.
-        if (h->face->isSplittable() || h->opposite->face->isSplittable()) {
-            // Decode the edge symbol.
-            unsigned sym = readChar();
-            // Determine if the edge is original or not.
-            // Mark the edge to be removed.
-            if (sym != 0)
-                h->setAdded();
-        }
-
-        // Add the other halfedges to the queue
-        MCGAL::Halfedge* hIt = h->next;
-        while (hIt->opposite != h) {
-            if (!hIt->isProcessed() && !hIt->isNew())
-                gateQueue.push(hIt);
-            hIt = hIt->opposite->next;
-        }
-        assert(!hIt->isNew());
+    int sampleNumber = sampleNumbers[i_curDecimationId];
+    std::vector<int> stVertex = stVerteices[i_curDecimationId];
+    std::vector<int> halfedgeNumberInGroup;
+    for (int i = 0; i < sampleNumber; i++) {
+        halfedgeNumberInGroup.push_back(readInt());
     }
+    int size = *MCGAL::contextPool.hindex;
+    // 将起始点放入到队列里，充分利用conquered属性
+    int* firstQueue = new int[size];
+    int* secondQueue = new int[size];
+    int currentQueueSize = sampleNumber;
+    int nextQueueSize = 0;
+    for (int i = 0; i < sampleNumber; i++) {
+        int poolId1 = MCGAL::contextPool.vid2PoolId[stVertex[i * 2]];
+        int poolId2 = MCGAL::contextPool.vid2PoolId[stVertex[i * 2 + 1]];
+        MCGAL::Vertex* v1 = MCGAL::contextPool.getVertexByIndex(poolId1);
+        MCGAL::Vertex* v2 = MCGAL::contextPool.getVertexByIndex(poolId2);
+        for (int j = 0; j < v1->halfedges.size(); j++) {
+            if (v1->halfedges[j]->end_vertex == v2) {
+                v1->halfedges[j]->face->forder = i;
+                firstQueue[i] = v1->halfedges[j]->poolId;
+                break;
+            }
+        }
+    }
+    int level = 0;
+    while (currentQueueSize > 0) {
+        int* currentQueue;
+        int* nextQueue;
+        if (level % 2 == 0) {
+            currentQueue = firstQueue;
+            nextQueue = secondQueue;
+        } else {
+            currentQueue = secondQueue;
+            nextQueue = firstQueue;
+        }
+        for (int i = 0; i < currentQueueSize; i++) {
+            int current = currentQueue[i];
+            MCGAL::Halfedge* h = MCGAL::contextPool.getHalfedgeByIndex(current);
+            if (h->isProcessed()) {
+                continue;
+            }
+            MCGAL::Halfedge* hIt = h->next;
+            unsigned long long idx = 1;
+            while (hIt->opposite != h) {
+                unsigned long long order = h->horder << 4 | idx;
+
+                if (!hIt->isProcessed()) {
+                    hIt->horder = order < hIt->horder ? order : hIt->horder;
+                    if (hIt->groupId != -1) {
+                        hIt->groupId = min(h->face->groupId, hIt->groupId);
+                    }
+                    int position = nextQueueSize++;
+                    nextQueue[position] = hIt->poolId;
+                }
+                hIt = hIt->opposite->next;
+            };
+        }
+        currentQueueSize = nextQueueSize;
+        nextQueueSize = 0;
+    }
+    // 排好序之后直接开始按顺序读取
+    sort(halfedges.begin(), halfedges.end(), cmpHorder);
+
+    for (int i = 0; i < halfedges.size(); i++) {
+        char symbol = readCharByOffset(dataOffset + i);
+        if (symbol) {
+            halfedges[i]->setAdded();
+        }
+    }
+    dataOffset += halfedges.size();
 }
 
 /**

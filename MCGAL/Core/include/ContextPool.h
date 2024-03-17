@@ -88,6 +88,7 @@ class ContextPool {
 
     inline MCGAL::Vertex* allocateVertexFromPool(MCGAL::Point p) {
         vpool[*vindex].setPoint(p);
+        vid2PoolId[p.id] = *vindex;
         return &vpool[(*vindex)++];
     }
 

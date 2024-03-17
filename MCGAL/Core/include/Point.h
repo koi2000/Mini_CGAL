@@ -1,7 +1,7 @@
 #ifndef POINT_H
 #define POINT_H
 #include <assert.h>
-#include<stdexcept>
+#include <stdexcept>
 namespace MCGAL {
 class Point {
   public:
@@ -15,6 +15,13 @@ class Point {
         v[0] = x;
         v[1] = y;
         v[2] = z;
+    }
+
+    Point(float x, float y, float z, int id) {
+        v[0] = x;
+        v[1] = y;
+        v[2] = z;
+        this->id = id;
     }
 
     Point(Point* pt) {

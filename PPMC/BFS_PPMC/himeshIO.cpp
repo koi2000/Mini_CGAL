@@ -136,6 +136,7 @@ void HiMesh::writeChar(unsigned char i) {
     *(unsigned char*)(p_data + dataOffset) = i;
     dataOffset += sizeof(unsigned char);
 }
+
 float HiMesh::readFloatByOffset(int offset) {
     float f = *(float*)(p_data + offset);
     return f;
